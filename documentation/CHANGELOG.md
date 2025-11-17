@@ -7,6 +7,49 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ---
 
+## [0.9.5.3] - 2025-11-17 ⚡ Elementor-Kompatibilität
+
+**Umfassende Elementor-Kompatibilität** für Frontend-Darstellung ohne Layout-Konflikte.
+
+### ⚡ Neu
+
+#### Elementor Page Builder Unterstützung
+- **Elementor-spezifische CSS-Overrides:** Verhindert Layout-Konflikte
+- **Höherer z-index:** Modals (9.999.999) über Elementor-Popups (10.000)
+- **Container-Fixes:** Width/Padding-Anpassungen für Elementor-Sections
+- **Grid-Overrides:** Verhindert Elementor-Flexbox-Konflikte mit unseren Grids
+- **Typography Reset:** Schriften werden nicht von Elementor überschrieben
+- **Button-Styles:** Elementor-Button-Styles werden isoliert
+
+### 🔧 Verbesserungen
+
+#### CSS-Robustheit
+- **!important auf kritischen Styles:** Grid, Display, Width, Z-Index
+- **Box-sizing Override:** Auch für ::before und ::after Pseudo-Elemente
+- **Background-Fixes:** Karten behalten weißen Hintergrund
+- **Spacing-Isolation:** Elementor-Spacing beeinflusst Plugin nicht mehr
+
+#### Editor-Modus
+- **Elementor Editor:** Z-Index noch höher (99.999.999) im Editor-Modus
+- **Live-Preview:** Funktioniert korrekt in Elementor-Vorschau
+
+### 📋 Technisches
+
+#### CSS-Selektoren
+- `.elementor .dp-public-container` - Container in Elementor
+- `.elementor-section .dp-events-grid` - Grid-Overrides
+- `.elementor-popup-modal` - Z-Index niedriger als unsere Modals
+- `.elementor-editor-active .dp-modal` - Extra-hoher Z-Index im Editor
+
+#### Kompatibilität
+- ✅ Elementor Free
+- ✅ Elementor Pro
+- ✅ Elementor Flexbox Container
+- ✅ Elementor Grid Container
+- ✅ Elementor Popups
+
+---
+
 ## [0.9.5.2] - 2025-11-17 🔧 Vereins-Auswahl Fallback
 
 **Bugfix:** "Keine Vereine verfügbar" wird nicht mehr angezeigt, auch wenn keine Dienste angelegt sind.

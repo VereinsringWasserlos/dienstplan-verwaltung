@@ -1,12 +1,27 @@
 /**
  * Dienstplan Public Styles - Xoyondo-inspiriert
  * Clean, modern, responsive design
+ * Elementor-kompatibel
  */
 
 /* WordPress Seitentitel unterdrücken */
 .page .entry-title,
 .page-template-default .entry-header .entry-title {
     display: none !important;
+}
+
+/* Elementor-spezifische Overrides */
+.elementor-widget-container .dp-public-container,
+.elementor-section .dp-public-container,
+.elementor-column .dp-public-container {
+    width: 100% !important;
+    max-width: 100% !important;
+}
+
+/* Reset Elementor Styles für Plugin-Elemente */
+.dp-public-container .elementor-widget-container,
+.dp-public-container .elementor-element {
+    all: revert !important;
 }
 
 :root {
@@ -72,11 +87,15 @@
     padding: var(--dp-spacing-lg) !important;
     font-family: var(--dp-font-family) !important;
     box-sizing: border-box !important;
+    width: 100% !important;
+    clear: both !important;
 }
 
-/* Theme Override: Verhindere Layout-Probleme */
-.dp-public-container * {
-    box-sizing: border-box;
+/* Theme & Elementor Override: Verhindere Layout-Probleme */
+.dp-public-container *,
+.dp-public-container *::before,
+.dp-public-container *::after {
+    box-sizing: border-box !important;
 }
 
 .dp-public-container p,
@@ -85,6 +104,13 @@
 .dp-public-container h3,
 .dp-public-container h4 {
     margin: revert !important;
+}
+
+/* Elementor Container/Section Fixes */
+.elementor-section .dp-public-container,
+.elementor-container .dp-public-container {
+    padding-left: var(--dp-spacing-lg) !important;
+    padding-right: var(--dp-spacing-lg) !important;
 }
 
 /* =================================================================
@@ -112,22 +138,30 @@
    Event List - Cards Grid
    ================================================================= */
 .dp-events-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-    gap: var(--dp-spacing-lg);
-    margin-top: var(--dp-spacing-xl);
+    display: grid !important;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)) !important;
+    gap: var(--dp-spacing-lg) !important;
+    margin-top: var(--dp-spacing-xl) !important;
+    width: 100% !important;
+}
+
+/* Elementor Grid Override */
+.elementor-section .dp-events-grid,
+.elementor-container .dp-events-grid {
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)) !important;
 }
 
 .dp-event-card {
-    background: white;
-    border-radius: var(--dp-radius-lg);
-    box-shadow: var(--dp-shadow);
-    padding: var(--dp-spacing-lg);
-    transition: var(--dp-transition);
-    text-decoration: none;
-    color: inherit;
-    display: flex;
-    flex-direction: column;
+    background: white !important;
+    border-radius: var(--dp-radius-lg) !important;
+    box-shadow: var(--dp-shadow) !important;
+    padding: var(--dp-spacing-lg) !important;
+    transition: var(--dp-transition) !important;
+    text-decoration: none !important;
+    color: inherit !important;
+    display: flex !important;
+    flex-direction: column !important;
+    width: 100% !important;
 }
 
 .dp-event-card:hover {
@@ -635,7 +669,7 @@
     left: 0 !important;
     right: 0 !important;
     bottom: 0 !important;
-    z-index: 999999 !important;
+    z-index: 9999999 !important; /* Höher als Elementor (Standard: 10000) */
     align-items: center !important;
     justify-content: center !important;
     padding: var(--dp-spacing-lg) !important;
@@ -656,6 +690,7 @@
     background: rgba(0, 0, 0, 0.5) !important;
     backdrop-filter: blur(4px);
     cursor: pointer !important;
+    z-index: 9999998 !important;
 }
 
 .dp-modal-content {
@@ -664,6 +699,13 @@
     box-shadow: var(--dp-shadow-xl) !important;
     max-width: 900px !important;
     width: 100% !important;
+    max-height: 90vh !important;
+    overflow: auto !important;
+    position: relative !important;
+    z-index: 9999999 !important;
+    animation: modalSlideIn 0.3s ease !important;
+    padding: var(--dp-spacing-xl) !important;
+}
     max-height: 90vh !important;
     overflow: auto !important;
     position: relative !important;
@@ -1439,4 +1481,96 @@
     .dp-timeline-bar-name {
         font-size: 0.75rem;
     }
+}
+
+/* =================================================================
+   Elementor Compatibility
+   ================================================================= */
+
+/* Verhindere Elementor-Container-Konflikte */
+.elementor .dp-public-container,
+.elementor-section .dp-public-container,
+.elementor-column .dp-public-container {
+    max-width: 100% !important;
+    width: 100% !important;
+    padding: var(--dp-spacing-lg) !important;
+}
+
+/* Elementor Flexbox Override */
+.elementor-widget-container > .dp-public-container {
+    display: block !important;
+}
+
+/* Elementor Widget Spacing Reset */
+.elementor-widget-shortcode .dp-public-container {
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+}
+
+/* Elementor Grid/Flex Overrides für unsere Grids */
+.elementor .dp-events-grid,
+.elementor .dp-verein-grid,
+.elementor .dp-dienste-grid {
+    display: grid !important;
+    width: 100% !important;
+}
+
+/* Elementor Button/Link Reset */
+.elementor .dp-public-container a:not(.dp-btn):not(.dp-breadcrumb-link) {
+    color: inherit !important;
+}
+
+.elementor .dp-public-container .dp-btn {
+    all: revert !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: var(--dp-spacing-sm) var(--dp-spacing-lg) !important;
+    border-radius: var(--dp-radius) !important;
+    font-weight: 600 !important;
+    transition: var(--dp-transition) !important;
+    text-decoration: none !important;
+    cursor: pointer !important;
+    border: none !important;
+}
+
+/* Elementor Typography Reset */
+.elementor .dp-public-container h1,
+.elementor .dp-public-container h2,
+.elementor .dp-public-container h3,
+.elementor .dp-public-container h4,
+.elementor .dp-public-container p {
+    font-family: var(--dp-font-family) !important;
+    line-height: 1.5 !important;
+}
+
+/* Elementor Spacing/Padding Override */
+.elementor-widget-container .dp-events-grid,
+.elementor-widget-container .dp-verein-grid,
+.elementor-widget-container .dp-dienste-grid {
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+/* Elementor Modal Z-Index Fix */
+.elementor-popup-modal {
+    z-index: 999 !important; /* Niedriger als unsere Modals */
+}
+
+/* Verhindere Elementor Column/Section Padding-Probleme */
+.elementor-section.elementor-section-boxed > .elementor-container .dp-public-container {
+    padding-left: var(--dp-spacing-lg) !important;
+    padding-right: var(--dp-spacing-lg) !important;
+}
+
+/* Elementor Background-Konflikte */
+.elementor .dp-event-card,
+.elementor .dp-verein-card,
+.elementor .dp-dienst-card {
+    background: white !important;
+}
+
+/* Elementor Editor Mode */
+.elementor-editor-active .dp-modal {
+    z-index: 99999999 !important; /* Noch höher im Editor */
 }
