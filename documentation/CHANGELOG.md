@@ -7,6 +7,28 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ---
 
+## [0.9.5.2] - 2025-11-17 🔧 Vereins-Auswahl Fallback
+
+**Bugfix:** "Keine Vereine verfügbar" wird nicht mehr angezeigt, auch wenn keine Dienste angelegt sind.
+
+### 🔧 Bugfixes
+
+#### Vereins-Auswahl im Frontend
+- **3-stufiger Fallback:**
+  1. Explizit zugewiesene Vereine (`veranstaltung_vereine` Tabelle)
+  2. Vereine mit Diensten in der Veranstaltung
+  3. **NEU:** Alle aktiven Vereine (wenn keine Dienste angelegt)
+- **Fix:** "Keine Vereine verfügbar" tritt nicht mehr auf
+- **Bessere UX:** Benutzer können sich auch ohne angelegte Dienste für einen Verein eintragen
+
+### 📋 Technisches
+
+#### SQL-Abfrage
+- Fallback auf alle aktiven Vereine wenn keine Dienste vorhanden
+- Sortierung nach Vereinsname (alphabetisch)
+
+---
+
 ## [0.9.5.1] - 2025-11-17 🔧 Neuer Kontakt bei Veranstaltungen
 
 **Bugfix:** "Neuer Kontakt" Button bei Veranstaltungen funktioniert jetzt korrekt.

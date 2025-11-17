@@ -27,10 +27,10 @@ if (!$veranstaltung) {
 }
 
 // Lade Vereine für diese Veranstaltung
-// Erst aus veranstaltung_vereine Tabelle
+// 1. Versuch: Aus veranstaltung_vereine Tabelle (explizit zugewiesene Vereine)
 $vereine = $db->get_veranstaltung_vereine($veranstaltung_id);
 
-// Falls keine Vereine zugewiesen: Hole alle Vereine, die Dienste haben
+// 2. Versuch: Falls keine Vereine zugewiesen - Hole alle Vereine, die Dienste haben
 if (empty($vereine)) {
     global $wpdb;
     $prefix = DIENSTPLAN_DB_PREFIX;
@@ -47,6 +47,20 @@ if (empty($vereine)) {
         ORDER BY v.name ASC",
         $veranstaltung_id
     ));
+}
+
+// 3. Versuch: Falls immer noch keine Vereine - Zeige alle aktiven Vereine
+if (empty($vereine)) {
+    $vereine = $wpdb->get_results(
+        "SELECT 
+            id as verein_id,
+            name as verein_name,
+            kuerzel as verein_kuerzel,
+            aktiv
+        FROM {$prefix}vereine
+        WHERE aktiv = 1
+        ORDER BY name ASC"
+    );
 }
 
 // Hole ausgewählten Verein (aus GET-Parameter)
