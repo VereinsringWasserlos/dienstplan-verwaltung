@@ -7,6 +7,110 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ---
 
+## [0.9.2] - 2025-11-17 🚀 Produktionsserver-Support
+
+**GitHub API Fallback** - Plugin funktioniert jetzt auch auf Servern ohne Git-Installation.
+
+### ✨ Neu
+
+#### 🌐 Automatischer Update-Modus
+- **Ohne Git (Produktion):** Nutzt GitHub Releases API für Updates
+- **Mit Git (Entwicklung):** Weiterhin Git-basierte Updates
+- Automatische Erkennung der Umgebung beim Plugin-Start
+- Keine Git-Abhängigkeit mehr für normale WordPress-Installationen
+
+### 🔧 Verbesserungen
+
+#### Update-Verwaltung
+- **Update-Seite zeigt aktiven Modus:** "Git (Entwicklung)" oder "GitHub API (Produktion)"
+- Bessere Fehlermeldungen wenn Git nicht verfügbar
+- Klare Information über Update-Quelle in der Admin-Oberfläche
+- Keine störenden Git-Fehlermeldungen mehr auf Produktionsservern
+
+#### GitHub API Integration
+- Liest neueste Version aus GitHub Releases
+- Lädt ZIP-Asset automatisch herunter
+- Fallback auf Zipball-URL wenn kein Asset vorhanden
+- Changelog aus Release-Notes
+
+### 🐛 Bugfixes
+
+#### Git-Status-Anzeige
+- Behebt "Git ist nicht verfügbar" Warnung auf Produktionsservern
+- Korrekte Anzeige des Update-Modus in Admin-Oberfläche
+- Keine unnötigen Git-Befehle auf Servern ohne Git
+
+### 📝 Technische Änderungen
+
+#### class-updater.php
+- Neue Methode: `get_update_info_from_github()` - Holt Updates von GitHub API
+- Umbenannt: `get_update_info()` → `get_update_info_from_git()` (Git-spezifisch)
+- `get_update_info()` wählt automatisch zwischen Git und GitHub API
+- `$git_available` Flag wird beim Start gesetzt
+- `get_git_status()` gibt jetzt `mode` zurück (Git/GitHub API)
+
+#### create-release.ps1
+- Liest Version jetzt dynamisch aus Plugin-Datei
+- Kein manueller Parameter mehr nötig
+
+---
+
+## [0.9.1] - 2025-11-17 🎨 Frontend Timeline & Auto-Update
+
+**Timeline-View Optimierung** - Services nebeneinander + Automatische Updates.
+
+### ✨ Neu
+
+#### 🎯 Auto-Update-Feature
+- Checkbox in Update-Einstellungen: "Automatische Updates aktivieren"
+- WordPress auto_update_plugin Filter integriert
+- Plugin erscheint in Auto-Update-Spalte der Plugin-Liste
+- Speichert Einstellung in: `dienstplan_auto_update_enabled`
+
+#### 🎨 Frontend Timeline-View (KOMPLETT ÜBERARBEITET!)
+- **Zeit-Slot-Gruppierung:** Services zur gleichen Zeit erscheinen nebeneinander
+- **Grid-Layout:** CSS Grid mit fixierter linker Spalte (280px)
+- **Scroll-Synchronisierung:** 
+  - Horizontal: Header ↔ Grid
+  - Vertikal: Left-Panel ↔ Grid
+- **Linke Spalte:** Zeigt Zeit + Anzahl Dienste (z.B. "14:00 - 3 Dienste")
+- **Responsive Design:** Mobile-optimiert mit reduzierten Breiten
+- **286 Zeilen neues CSS** in dp-public.css
+
+### 🔧 Verbesserungen
+
+#### Git-Integration
+- Automatische Git-Pfad-Erkennung für Windows
+- Sucht in Standard-Pfaden: `C:\Program Files\Git\`
+- Fallback auf System-PATH
+- Keine manuelle Git-Konfiguration mehr nötig
+
+#### Plugin-Basename
+- Dynamisch via `plugin_basename(DIENSTPLAN_PLUGIN_FILE)`
+- Funktioniert mit versionierten Ordnernamen (z.B. `dienstplan-verwaltung-0.9.1/`)
+- Behebt Problem bei Updates über ZIP
+
+### 🐛 Bugfixes
+
+#### Timeline-View
+- Services werden nicht mehr untereinander angezeigt
+- Services zur gleichen Zeit erscheinen in einer Zeile
+- `selected_verein` wird korrekt aus `available_vereine` geholt
+- Dienste werden nach Verein-Auswahl angezeigt
+
+#### Auto-Update-Spalte
+- Plugin erscheint jetzt immer in Plugin-Liste (via `no_update[]`)
+- Auto-Update-Spalte wird auch ohne verfügbares Update angezeigt
+
+### 📦 WordPress-ZIP
+- Forward Slashes (Unix-Style) statt Backslashes
+- .NET System.IO.Compression API für präzise Pfad-Kontrolle
+- Ordnername ohne Version: `dienstplan-verwaltung/`
+- Dateiname ohne Version: `dienstplan-verwaltung.zip`
+- Größe: 0.27 MB (89 Dateien)
+
+---
+
 ## [0.9.0] - 2025-11-17 🚀 UAT Release
 
 **User Acceptance Testing Release** - Bereit für produktive Tests mit echten Nutzern.

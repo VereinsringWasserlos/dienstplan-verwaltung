@@ -1,14 +1,21 @@
 ﻿# WordPress Plugin Release Creator
 # Erstellt WordPress-konforme ZIP mit Forward Slashes
 
-param([string]$Version = "0.9.1")
-
 $ErrorActionPreference = "Stop"
 $pluginDir = $PSScriptRoot
 $parentDir = Split-Path $pluginDir -Parent
 $tempDir = Join-Path $parentDir "temp-release"
 $pluginName = "dienstplan-verwaltung"
 $zipFile = Join-Path $parentDir "$pluginName.zip"
+
+# Version aus Plugin-Datei auslesen
+$pluginFile = Join-Path $pluginDir "$pluginName.php"
+$content = Get-Content $pluginFile -Raw
+if ($content -match 'Version:\s*([0-9.]+)') {
+    $Version = $matches[1]
+} else {
+    $Version = "unknown"
+}
 
 Write-Host "`nWordPress Plugin Release Creator" -ForegroundColor Cyan
 Write-Host "Version: $Version`n" -ForegroundColor Yellow
