@@ -99,7 +99,7 @@ window.saveVerein = function() {
         if (response.success) {
             alert('Verein erfolgreich gespeichert');
             closeVereinModal();
-            location.reload();
+            if(typeof dpSafeReload === "function") { dpSafeReload(); } else { location.reload(); };
         } else {
             alert('Fehler beim Speichern: ' + (response.data?.message || 'Unbekannter Fehler'));
         }
@@ -120,7 +120,7 @@ window.deleteVerein = function(vereinId) {
     }, function(response) {
         if (response.success) {
             alert('Verein erfolgreich gelöscht');
-            location.reload();
+            if(typeof dpSafeReload === "function") { dpSafeReload(); } else { location.reload(); };
         } else {
             alert('Fehler beim Löschen: ' + (response.data?.message || 'Unbekannter Fehler'));
         }
@@ -251,7 +251,7 @@ window.saveVeranstaltung = function() {
         if (response.success) {
             alert('Veranstaltung erfolgreich gespeichert');
             closeVeranstaltungModal();
-            location.reload();
+            if(typeof dpSafeReload === "function") { dpSafeReload(); } else { location.reload(); };
         } else {
             alert('Fehler beim Speichern: ' + (response.data?.message || 'Unbekannter Fehler'));
         }
@@ -272,7 +272,7 @@ window.deleteVeranstaltung = function(veranstaltungId) {
     }, function(response) {
         if (response.success) {
             alert('Veranstaltung erfolgreich gelöscht');
-            location.reload();
+            if(typeof dpSafeReload === "function") { dpSafeReload(); } else { location.reload(); };
         } else {
             alert('Fehler beim Löschen: ' + (response.data?.message || 'Unbekannter Fehler'));
         }
@@ -354,7 +354,7 @@ window.createPageForEvent = function(veranstaltungId) {
     }, function(response) {
         if (response.success) {
             alert('Seite erfolgreich erstellt');
-            location.reload();
+            if(typeof dpSafeReload === "function") { dpSafeReload(); } else { location.reload(); };
         } else {
             alert('Fehler beim Erstellen der Seite: ' + (response.data?.message || 'Unbekannter Fehler'));
         }
@@ -375,7 +375,7 @@ window.updatePageForEvent = function(veranstaltungId) {
     }, function(response) {
         if (response.success) {
             alert('Seite erfolgreich aktualisiert');
-            location.reload();
+            if(typeof dpSafeReload === "function") { dpSafeReload(); } else { location.reload(); };
         } else {
             alert('Fehler beim Aktualisieren der Seite: ' + (response.data?.message || 'Unbekannter Fehler'));
         }
@@ -475,7 +475,7 @@ window.saveDienst = function() {
         if (response.success) {
             alert('Dienst erfolgreich gespeichert');
             closeDienstModal();
-            location.reload();
+            if(typeof dpSafeReload === "function") { dpSafeReload(); } else { location.reload(); };
         } else {
             alert('Fehler beim Speichern: ' + (response.data?.message || 'Unbekannter Fehler'));
         }
@@ -496,7 +496,7 @@ window.deleteDienst = function(dienstId) {
     }, function(response) {
         if (response.success) {
             alert('Dienst erfolgreich gelöscht');
-            location.reload();
+            if(typeof dpSafeReload === "function") { dpSafeReload(); } else { location.reload(); };
         } else {
             alert('Fehler beim Löschen: ' + (response.data?.message || 'Unbekannter Fehler'));
         }
@@ -642,7 +642,7 @@ window.saveBereich = function() {
         if (response.success) {
             alert('Bereich erfolgreich gespeichert');
             closeBereichModal();
-            location.reload();
+            if(typeof dpSafeReload === "function") { dpSafeReload(); } else { location.reload(); };
         } else {
             alert('Fehler beim Speichern: ' + (response.data?.message || 'Unbekannter Fehler'));
         }
@@ -728,7 +728,7 @@ window.saveTaetigkeit = function() {
         if (response.success) {
             alert('Tätigkeit erfolgreich gespeichert');
             closeTaetigkeitModal();
-            location.reload();
+            if(typeof dpSafeReload === "function") { dpSafeReload(); } else { location.reload(); };
         } else {
             alert('Fehler beim Speichern: ' + (response.data?.message || 'Unbekannter Fehler'));
         }
@@ -749,7 +749,7 @@ window.deleteTaetigkeit = function(taetigkeitId) {
     }, function(response) {
         if (response.success) {
             alert('Tätigkeit erfolgreich gelöscht');
-            location.reload();
+            if(typeof dpSafeReload === "function") { dpSafeReload(); } else { location.reload(); };
         } else {
             alert('Fehler beim Löschen: ' + (response.data?.message || 'Unbekannter Fehler'));
         }

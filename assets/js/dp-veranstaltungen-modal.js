@@ -326,7 +326,7 @@
                         fontWeight: '600'
                     }).text('✓ Gespeichert!');
                     $('body').append(msg);
-                    setTimeout(() => location.reload(), 500);
+                    setTimeout(() => { if(typeof dpSafeReload === "function") { dpSafeReload(); } else { location.reload(); } }, 500);
                 } else {
                     alert('Fehler: ' + (response.data ? response.data.message : 'Unbekannt'));
                 }
@@ -526,7 +526,7 @@
             },
             success: function(response) {
                 if (response.success) {
-                    location.reload();
+                    if(typeof dpSafeReload === "function") { dpSafeReload(); } else { location.reload(); };
                 } else if (response.data && response.data.message === 'confirm_delete_dienste') {
                     const dienstCount = response.data.dienste_count;
                     const message = `Diese Veranstaltung hat ${dienstCount} Dienst${dienstCount > 1 ? 'e' : ''}.\n\n` +
@@ -547,7 +547,7 @@
                                 if (deleteResponse.success) {
                                     const deletedCount = deleteResponse.data.dienste_deleted || 0;
                                     alert(`Veranstaltung und ${deletedCount} Dienst${deletedCount > 1 ? 'e' : ''} wurden gelöscht.`);
-                                    location.reload();
+                                    if(typeof dpSafeReload === "function") { dpSafeReload(); } else { location.reload(); };
                                 } else {
                                     alert('Fehler: ' + (deleteResponse.data ? deleteResponse.data.message : 'Unbekannt'));
                                 }
@@ -618,7 +618,7 @@
                         fontWeight: '600'
                     }).text('✓ Seite erstellt!');
                     $('body').append(msg);
-                    setTimeout(() => location.reload(), 800);
+                    setTimeout(() => { if(typeof dpSafeReload === "function") { dpSafeReload(); } else { location.reload(); } }, 800);
                 } else {
                     $btn.prop('disabled', false).html(originalHtml);
                     alert('Fehler: ' + (response.data ? response.data.message : 'Unbekannt'));
@@ -666,7 +666,7 @@
                         fontWeight: '600'
                     }).text('✓ Seite aktualisiert!');
                     $('body').append(msg);
-                    setTimeout(() => location.reload(), 800);
+                    setTimeout(() => { if(typeof dpSafeReload === "function") { dpSafeReload(); } else { location.reload(); } }, 800);
                 } else {
                     $btn.prop('disabled', false).html(originalHtml);
                     alert('Fehler: ' + (response.data ? response.data.message : 'Unbekannt'));

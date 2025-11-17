@@ -173,14 +173,7 @@ if (!defined('ABSPATH')) exit;
                             echo '<div class="notice notice-success" style="margin-top: 1rem;"><p>';
                             printf(__('Rolle erfolgreich zu %s hinzugefügt!', 'dienstplan-verwaltung'), '<strong>' . esc_html($user->display_name) . '</strong>');
                             echo '</p></div>';
-                            echo '<script>setTimeout(function(){ 
-                                // Prüfe ob ein Modal/Popup geöffnet ist
-                                var modals = document.querySelectorAll(".modal[style*=\"display: block\"]");
-                                var openModals = Array.from(modals).filter(function(m) { return m.style.display !== "none" && window.getComputedStyle(m).display !== "none"; });
-                                if (openModals.length === 0) {
-                                    location.reload(); 
-                                }
-                            }, 3000);</script>';
+                            echo '<script>if(typeof dpSafeReload === "function") { dpSafeReload(2000); }</script>';
                         }
                     }
                 }

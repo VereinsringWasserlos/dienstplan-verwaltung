@@ -197,14 +197,7 @@ $active_tab = isset($_GET['tab']) ? $_GET['tab'] : 'general';
                     
                     $notifications->save_user_settings(get_current_user_id(), $settings);
                     echo '<div class="notice notice-success"><p>' . __('Benachrichtigungseinstellungen gespeichert!', 'dienstplan-verwaltung') . '</p></div>';
-                    echo '<script>setTimeout(function(){ 
-                        // Prüfe ob ein Modal/Popup geöffnet ist
-                        var modals = document.querySelectorAll(".modal[style*=\"display: block\"]");
-                        var openModals = Array.from(modals).filter(function(m) { return m.style.display !== "none" && window.getComputedStyle(m).display !== "none"; });
-                        if (openModals.length === 0) {
-                            location.reload(); 
-                        }
-                    }, 3000);</script>';
+                    echo '<script>if(typeof dpSafeReload === "function") { dpSafeReload(2000); }</script>';
                 }
                 ?>
             </div>

@@ -110,7 +110,7 @@
                 data: formData,
                 success: function(response) {
                     if (response.success) {
-                        location.reload();
+                        if(typeof dpSafeReload === "function") { dpSafeReload(); } else { location.reload(); };
                     } else {
                         alert('Fehler: ' + response.data.message);
                     }
@@ -138,7 +138,7 @@
                 data: formData,
                 success: function(response) {
                     if (response.success) {
-                        location.reload();
+                        if(typeof dpSafeReload === "function") { dpSafeReload(); } else { location.reload(); };
                     } else {
                         alert('Fehler: ' + response.data.message);
                     }
@@ -166,7 +166,7 @@
                 },
                 success: function(response) {
                     if (response.success) {
-                        location.reload();
+                        if(typeof dpSafeReload === "function") { dpSafeReload(); } else { location.reload(); };
                     } else {
                         alert('Fehler: ' + response.data.message);
                     }
@@ -192,7 +192,7 @@
                 },
                 success: function(response) {
                     if (response.success) {
-                        location.reload();
+                        if(typeof dpSafeReload === "function") { dpSafeReload(); } else { location.reload(); };
                     } else {
                         alert('Fehler: ' + response.data.message);
                     }
@@ -217,7 +217,7 @@
                 },
                 success: function(response) {
                     if (response.success) {
-                        location.reload();
+                        if(typeof dpSafeReload === "function") { dpSafeReload(); } else { location.reload(); };
                     }
                 }
             });
@@ -303,7 +303,7 @@
                 success: function(response) {
                     if (response.success) {
                         alert(response.data.message);
-                        location.reload();
+                        if(typeof dpSafeReload === "function") { dpSafeReload(); } else { location.reload(); };
                     } else {
                         alert('Fehler: ' + response.data.message);
                     }
@@ -327,7 +327,7 @@
                 success: function(response) {
                     if (response.success) {
                         alert(response.data.message);
-                        location.reload();
+                        if(typeof dpSafeReload === "function") { dpSafeReload(); } else { location.reload(); };
                     } else {
                         alert('Fehler: ' + response.data.message);
                     }
@@ -350,7 +350,7 @@
                 success: function(response) {
                     if (response.success) {
                         alert(response.data.message);
-                        location.reload();
+                        if(typeof dpSafeReload === "function") { dpSafeReload(); } else { location.reload(); };
                     } else {
                         alert('Fehler: ' + response.data.message);
                     }

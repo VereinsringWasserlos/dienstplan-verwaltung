@@ -75,7 +75,7 @@
                 success: function(response) {
                     console.log('Bulk Delete Response:', response);
                     if (response.success) {
-                        location.reload();
+                        if(typeof dpSafeReload === "function") { dpSafeReload(); } else { location.reload(); };
                     } else {
                         alert('Fehler: ' + (response.data ? response.data.message : 'Unbekannt'));
                         $button.prop('disabled', false).text(originalText);

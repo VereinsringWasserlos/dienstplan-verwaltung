@@ -234,7 +234,7 @@
             success: function(response) {
                 console.log('Save Response:', response);
                 if (response.success) {
-                    location.reload();
+                    if(typeof dpSafeReload === "function") { dpSafeReload(); } else { location.reload(); };
                 } else {
                     alert('Fehler: ' + (response.data ? response.data.message : 'Unbekannt'));
                 }
@@ -349,7 +349,7 @@
             },
             success: function(response) {
                 if (response.success) {
-                    location.reload();
+                    if(typeof dpSafeReload === "function") { dpSafeReload(); } else { location.reload(); };
                 } else {
                     alert('Fehler: ' + (response.data ? response.data.message : 'Unbekannt'));
                 }
@@ -379,7 +379,7 @@
             success: function(response) {
                 if (response.success) {
                     alert(response.data.message || (count + ' Dienst(e) wurden erfolgreich kopiert.'));
-                    location.reload();
+                    if(typeof dpSafeReload === "function") { dpSafeReload(); } else { location.reload(); };
                 } else {
                     alert('Fehler: ' + (response.data ? response.data.message : 'Unbekannt'));
                 }

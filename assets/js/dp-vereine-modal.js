@@ -473,7 +473,7 @@
 
                     // Seite nach kurzer Verzögerung neu laden
                     setTimeout(function() {
-                        location.reload();
+                        if(typeof dpSafeReload === "function") { dpSafeReload(); } else { location.reload(); };
                     }, 500);
                 } else {
                     alert('Fehler: ' + (response.data ? response.data.message : 'Unbekannter Fehler'));
@@ -500,7 +500,7 @@
         }, function(response) {
             if (response.success) {
                 alert(response.data.message);
-                location.reload();
+                if(typeof dpSafeReload === "function") { dpSafeReload(); } else { location.reload(); };
             } else {
                 alert('Fehler: ' + (response.data ? response.data.message : 'Unbekannter Fehler'));
             }

@@ -161,7 +161,7 @@
                     console.log('AJAX Success Response:', response);
                     if (response.success) {
                         alert('Dienste wurden gelöscht.');
-                        location.reload();
+                        if(typeof dpSafeReload === "function") { dpSafeReload(); } else { location.reload(); };
                     } else {
                         alert('Fehler: ' + (response.data?.message || 'Unbekannter Fehler'));
                     }
@@ -269,7 +269,7 @@
                     console.log('Response Success:', response.success);
                     if (response.success) {
                         alert('Dienste wurden aktualisiert.');
-                        location.reload();
+                        if(typeof dpSafeReload === "function") { dpSafeReload(); } else { location.reload(); };
                     } else {
                         const errorMsg = response.data?.message || 'Unbekannter Fehler';
                         console.error('Backend Error:', errorMsg);
@@ -312,7 +312,7 @@
                 // Nur aktualisieren wenn kein Modal offen ist
                 if (!$('#dienst-modal').is(':visible') && !$('#besetzung-modal').is(':visible')) {
                     console.log('Auto-Refresh: Seite wird aktualisiert...');
-                    location.reload();
+                    if(typeof dpSafeReload === "function") { dpSafeReload(); } else { location.reload(); };
                 }
             }, 30000); // 30 Sekunden
         }

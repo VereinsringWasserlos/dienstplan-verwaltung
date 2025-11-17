@@ -1,12 +1,63 @@
 /**
  * Dienstplan Verwaltung - Admin JavaScript
- * @version 0.2.1
+ * @version 0.2.2
  */
 
 jQuery(document).ready(function($) {
     console.log('Dienstplan Admin JS geladen');
     console.log('dpAjax verfügbar:', typeof dpAjax !== 'undefined');
 });
+
+/**
+ * ===== SAFE PAGE RELOAD =====
+ * Reload nur wenn keine Modals/Dialogs/Popups offen sind
+ */
+window.dpSafeReload = function(delay) {
+    delay = delay || 3000; // Standard: 3 Sekunden (Zeit zum Lesen der Erfolgsmeldung)
+    
+    setTimeout(function() {
+        // Prüfe verschiedene Modal-Typen
+        var hasOpenModal = false;
+        
+        // 1. Inline-Style Modals (display: block)
+        var inlineModals = document.querySelectorAll('.modal, .dialog, .popup, [role="dialog"]');
+        for (var i = 0; i < inlineModals.length; i++) {
+            var elem = inlineModals[i];
+            var style = window.getComputedStyle(elem);
+            if (style.display !== 'none' && style.visibility !== 'hidden' && style.opacity !== '0') {
+                hasOpenModal = true;
+                break;
+            }
+        }
+        
+        // 2. jQuery UI Dialogs
+        if (typeof jQuery !== 'undefined') {
+            if (jQuery('.ui-dialog:visible').length > 0) {
+                hasOpenModal = true;
+            }
+        }
+        
+        // 3. Bootstrap Modals
+        if (typeof jQuery !== 'undefined') {
+            if (jQuery('.modal.show, .modal.in').length > 0) {
+                hasOpenModal = true;
+            }
+        }
+        
+        // 4. Custom Modal Classes
+        var customModals = document.querySelectorAll('.dp-modal-open, .modal-open, .popup-open');
+        if (customModals.length > 0) {
+            hasOpenModal = true;
+        }
+        
+        // Reload nur wenn keine Modals offen
+        if (!hasOpenModal) {
+            if(typeof dpSafeReload === "function") { dpSafeReload(); } else { location.reload(); };
+        } else {
+            console.log('Reload unterdrückt: Modal ist geöffnet');
+        }
+    }, delay);
+};
 
 /**
  * ===== DROPDOWN MENU TOGGLE =====

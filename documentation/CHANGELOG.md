@@ -7,6 +7,72 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ---
 
+## [0.9.3] - 2025-11-17 🎯 Smart Reload & UX-Verbesserungen
+
+**Safe Page Reload** - Seiten-Reloads respektieren jetzt offene Modals und geben User Zeit zum Lesen.
+
+### ✨ Neu
+
+#### 🛡️ Safe Reload System
+- **Zentrale `dpSafeReload()` Funktion** in `dp-admin.js`
+- Prüft vor Reload auf offene Modals/Dialogs:
+  - Inline-Style Modals (`.modal`, `.dialog`, `[role="dialog"]`)
+  - jQuery UI Dialogs (`.ui-dialog:visible`)
+  - Bootstrap Modals (`.modal.show`)
+  - Custom Modal-Classes (`.dp-modal-open`)
+- **Kein Reload mehr bei offenen Modals** - verhindert Datenverlust
+- **Verzögertes Reload** - 3 Sekunden Standard für bessere Lesbarkeit von Erfolgsmeldungen
+
+### 🔧 Verbesserungen
+
+#### User Experience
+- **38 Reload-Aufrufe optimiert** in 9 JavaScript-Dateien
+- User hat Zeit, Erfolgsmeldungen zu lesen (3s statt sofort)
+- Keine verlorenen Eingaben mehr in offenen Modals
+- Konsistentes Reload-Verhalten auf allen Admin-Seiten
+- Console-Log bei unterdrücktem Reload: "Reload unterdrückt: Modal ist geöffnet"
+
+#### Betroffene Bereiche
+- **Dienste-Verwaltung:** 6 Reloads → Safe Reload
+- **Veranstaltungen:** 7 Reloads → Safe Reload
+- **Bereiche & Tätigkeiten:** 8 Reloads → Safe Reload
+- **Mitarbeiter:** 3 Reloads → Safe Reload
+- **Vereine:** 2 Reloads → Safe Reload
+- **Dienste-Tabelle:** 3 Reloads → Safe Reload
+- **Admin-Modals:** 11 Reloads → Safe Reload
+
+### 🐛 Bugfixes
+
+#### Reload-Probleme
+- Behebt: Seite lädt neu während Modal-Eingabe
+- Behebt: Erfolgsmeldung verschwindet sofort (keine Lesezeit)
+- Behebt: Form-Daten gehen verloren bei vorzeitigem Reload
+- Behebt: Inkonsistentes Reload-Timing auf verschiedenen Seiten
+
+### 📝 Technische Änderungen
+
+#### JavaScript-Dateien (9)
+- **dp-admin.js:** Neue `dpSafeReload()` Funktion mit Modal-Detection
+- **dp-admin-modals.js:** 11x `location.reload()` → `dpSafeReload()`
+- **dp-bereiche-taetigkeiten.js:** 8x ersetzt
+- **dp-veranstaltungen-modal.js:** 7x ersetzt (inkl. Syntax-Fixes)
+- **dp-dienst-modal.js:** 3x ersetzt
+- **dp-dienste-table.js:** 3x ersetzt
+- **dp-vereine-modal.js:** 2x ersetzt
+- **dp-mitarbeiter-modal.js:** 2x ersetzt
+- **dp-mitarbeiter.js:** 1x ersetzt
+
+#### Fallback-Sicherheit
+```javascript
+if(typeof dpSafeReload === "function") { 
+    dpSafeReload(delay); 
+} else { 
+    location.reload(); // Fallback
+}
+```
+
+---
+
 ## [0.9.2] - 2025-11-17 🚀 Produktionsserver-Support
 
 **GitHub API Fallback** - Plugin funktioniert jetzt auch auf Servern ohne Git-Installation.
