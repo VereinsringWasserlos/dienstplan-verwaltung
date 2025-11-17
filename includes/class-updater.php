@@ -47,6 +47,12 @@ class Dienstplan_Updater {
     private $update_info;
 
     /**
+     * Git Command Pfad
+     * @var string
+     */
+    private $git_cmd = 'git';
+
+    /**
      * Initialisiert den Updater
      */
     public function __construct() {
@@ -59,10 +65,44 @@ class Dienstplan_Updater {
         $this->git_repo_url = 'https://github.com/VereinsringWasserlos/dienstplan-verwaltung.git';
         $this->git_branch = 'main';
 
+        // Finde Git-Executable
+        $this->find_git_executable();
+
         // WordPress Hooks für Update-System
         add_filter('site_transient_update_plugins', array($this, 'check_for_updates'));
         add_filter('plugins_api', array($this, 'plugin_info'), 20, 3);
         add_action('upgrader_process_complete', array($this, 'after_update'), 10, 2);
+        
+        // Automatische Updates aktivieren wenn gewünscht
+        add_filter('auto_update_plugin', array($this, 'enable_auto_update'), 10, 2);
+    }
+
+    /**
+     * Findet den Git-Executable Pfad
+     */
+    private function find_git_executable() {
+        // Mögliche Git-Pfade (Windows)
+        $possible_paths = array(
+            'C:\\Program Files\\Git\\cmd\\git.exe',
+            'C:\\Program Files\\Git\\bin\\git.exe',
+            'C:\\Program Files (x86)\\Git\\cmd\\git.exe',
+            'C:\\Program Files (x86)\\Git\\bin\\git.exe',
+            'git' // Fallback für PATH
+        );
+
+        foreach ($possible_paths as $path) {
+            $output = array();
+            $return_var = 0;
+            @exec('"' . $path . '" --version 2>&1', $output, $return_var);
+            
+            if ($return_var === 0) {
+                $this->git_cmd = $path;
+                error_log('DP Updater: Git gefunden: ' . $path);
+                return;
+            }
+        }
+        
+        error_log('DP Updater: Kein Git-Executable gefunden');
     }
 
     /**
@@ -89,6 +129,25 @@ class Dienstplan_Updater {
             );
 
             $transient->response[$this->plugin_basename] = (object) $plugin_info;
+        } else {
+            // Auch wenn kein Update verfügbar ist, Plugin in no_update Liste eintragen
+            // damit die Auto-Update-Spalte angezeigt wird
+            if (!isset($transient->no_update)) {
+                $transient->no_update = array();
+            }
+            
+            $plugin_info = array(
+                'slug' => $this->plugin_slug,
+                'plugin' => $this->plugin_basename,
+                'new_version' => $this->current_version,
+                'url' => $this->git_repo_url,
+                'package' => '',
+                'tested' => '6.4',
+                'requires_php' => '7.4',
+                'compatibility' => new stdClass(),
+            );
+            
+            $transient->no_update[$this->plugin_basename] = (object) $plugin_info;
         }
 
         return $transient;
@@ -155,15 +214,27 @@ class Dienstplan_Updater {
     private function is_git_available() {
         // Prüfe ob .git Verzeichnis existiert
         if (!is_dir($this->plugin_dir . '.git')) {
+            error_log('DP Updater: .git Verzeichnis nicht gefunden in ' . $this->plugin_dir);
+            return false;
+        }
+
+        // Prüfe ob exec() Funktion verfügbar ist
+        if (!function_exists('exec')) {
+            error_log('DP Updater: exec() Funktion ist deaktiviert');
             return false;
         }
 
         // Prüfe ob git Befehl verfügbar ist
         $output = array();
         $return_var = 0;
-        exec('git --version 2>&1', $output, $return_var);
+        @exec('"' . $this->git_cmd . '" --version 2>&1', $output, $return_var);
         
-        return $return_var === 0;
+        if ($return_var !== 0) {
+            error_log('DP Updater: Git Befehl nicht verfügbar (Return: ' . $return_var . ')');
+            return false;
+        }
+        
+        return true;
     }
 
     /**
@@ -175,7 +246,7 @@ class Dienstplan_Updater {
 
         try {
             // Fetch Remote-Changes
-            exec('git fetch origin ' . escapeshellarg($this->git_branch) . ' 2>&1', $output, $return_var);
+            exec('"' . $this->git_cmd . '" fetch origin ' . escapeshellarg($this->git_branch) . ' 2>&1', $output, $return_var);
             
             if ($return_var !== 0) {
                 error_log('DP Updater: Git fetch fehlgeschlagen');
@@ -184,7 +255,7 @@ class Dienstplan_Updater {
             }
 
             // Hole Version aus remote Plugin-Datei
-            $remote_file_cmd = 'git show origin/' . escapeshellarg($this->git_branch) . ':dienstplan-verwaltung.php';
+            $remote_file_cmd = '"' . $this->git_cmd . '" show origin/' . escapeshellarg($this->git_branch) . ':dienstplan-verwaltung.php';
             exec($remote_file_cmd . ' 2>&1', $file_output, $return_var);
             
             if ($return_var !== 0) {
@@ -276,10 +347,10 @@ class Dienstplan_Updater {
 
         try {
             // Sichere lokale Änderungen
-            exec('git stash 2>&1', $output, $return_var);
+            exec('"' . $this->git_cmd . '" stash 2>&1', $output, $return_var);
             
             // Pull Updates
-            $pull_cmd = 'git pull origin ' . escapeshellarg($this->git_branch) . ' 2>&1';
+            $pull_cmd = '"' . $this->git_cmd . '" pull origin ' . escapeshellarg($this->git_branch) . ' 2>&1';
             exec($pull_cmd, $pull_output, $return_var);
             
             if ($return_var !== 0) {
@@ -348,6 +419,20 @@ class Dienstplan_Updater {
     }
 
     /**
+     * Aktiviert automatische Updates wenn in Einstellungen aktiviert
+     */
+    public function enable_auto_update($update, $item) {
+        // Prüfe ob es sich um unser Plugin handelt
+        if (isset($item->slug) && $item->slug === $this->plugin_slug) {
+            // Hole Einstellung
+            $auto_update_enabled = get_option('dienstplan_auto_update_enabled', 0);
+            return (bool) $auto_update_enabled;
+        }
+        
+        return $update;
+    }
+
+    /**
      * Manuelle Update-Prüfung
      */
     public function check_update_manually() {
@@ -392,19 +477,19 @@ class Dienstplan_Updater {
 
         try {
             // Hole aktuellen Branch
-            exec('git rev-parse --abbrev-ref HEAD 2>&1', $branch_output, $return_var);
+            exec('"' . $this->git_cmd . '" rev-parse --abbrev-ref HEAD 2>&1', $branch_output, $return_var);
             $current_branch = $return_var === 0 ? trim($branch_output[0]) : 'unknown';
 
             // Hole letzten Commit
-            exec('git log -1 --pretty=format:"%h - %s (%cr)" 2>&1', $commit_output, $return_var);
+            exec('"' . $this->git_cmd . '" log -1 --pretty=format:"%h - %s (%cr)" 2>&1', $commit_output, $return_var);
             $last_commit = $return_var === 0 ? trim($commit_output[0]) : 'unknown';
 
             // Hole Remote-URL
-            exec('git config --get remote.origin.url 2>&1', $remote_output, $return_var);
+            exec('"' . $this->git_cmd . '" config --get remote.origin.url 2>&1', $remote_output, $return_var);
             $remote_url = $return_var === 0 ? trim($remote_output[0]) : 'not configured';
 
             // Prüfe auf uncommitted changes
-            exec('git status --porcelain 2>&1', $status_output, $return_var);
+            exec('"' . $this->git_cmd . '" status --porcelain 2>&1', $status_output, $return_var);
             $has_changes = !empty($status_output);
 
             chdir($current_dir);

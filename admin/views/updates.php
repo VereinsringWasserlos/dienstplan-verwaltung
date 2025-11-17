@@ -27,6 +27,20 @@ try {
     );
 }
 
+// Automatische Updates aktivieren/deaktivieren
+if (isset($_POST['save_auto_update']) && check_admin_referer('dienstplan_auto_update_settings')) {
+    $auto_update_enabled = isset($_POST['auto_update_enabled']) ? 1 : 0;
+    update_option('dienstplan_auto_update_enabled', $auto_update_enabled);
+    
+    echo '<div class="notice notice-success"><p><strong>Einstellungen gespeichert!</strong> ';
+    if ($auto_update_enabled) {
+        echo 'Automatische Updates sind jetzt aktiviert.';
+    } else {
+        echo 'Automatische Updates sind jetzt deaktiviert.';
+    }
+    echo '</p></div>';
+}
+
 // Manuelle Update-Prüfung
 if (isset($_POST['check_update']) && check_admin_referer('dienstplan_check_update')) {
     if (isset($updater)) {
@@ -170,6 +184,38 @@ if (isset($_POST['perform_update']) && check_admin_referer('dienstplan_perform_u
 
         <!-- Sidebar -->
         <div>
+            
+            <!-- Automatische Updates -->
+            <div class="card" style="max-width: none; margin-bottom: 20px;">
+                <h3>⚙️ Update-Einstellungen</h3>
+                <form method="post" action="" style="margin-top: 15px;">
+                    <?php wp_nonce_field('dienstplan_auto_update_settings'); ?>
+                    
+                    <label style="display: flex; align-items: center; cursor: pointer; padding: 12px; background: #f6f7f7; border-radius: 4px; margin-bottom: 10px;">
+                        <input type="checkbox" 
+                               name="auto_update_enabled" 
+                               id="auto_update_enabled"
+                               value="1" 
+                               <?php checked(get_option('dienstplan_auto_update_enabled', 0), 1); ?>
+                               style="margin: 0 10px 0 0; width: 20px; height: 20px;">
+                        <span style="flex: 1;">
+                            <strong>Automatische Updates</strong><br>
+                            <small style="color: #646970;">Updates werden automatisch installiert</small>
+                        </span>
+                    </label>
+                    
+                    <button type="submit" 
+                            name="save_auto_update" 
+                            class="button button-primary" 
+                            style="width: 100%;">
+                        💾 Einstellungen speichern
+                    </button>
+                    
+                    <p style="margin-top: 10px; padding: 10px; background: #fff3cd; border-left: 4px solid #ffc107; font-size: 12px; line-height: 1.6;">
+                        <strong>⚠️ Hinweis:</strong> Bei aktivierten automatischen Updates wird das Plugin automatisch aktualisiert, sobald eine neue Version verfügbar ist. Erstellen Sie regelmäßig Backups!
+                    </p>
+                </form>
+            </div>
             
             <!-- Version-Info -->
             <div class="card" style="max-width: none; margin-bottom: 20px;">
