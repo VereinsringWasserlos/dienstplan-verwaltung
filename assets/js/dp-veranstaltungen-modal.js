@@ -61,6 +61,9 @@
     
     window.closeVeranstaltungModal = function() {
         $('#veranstaltung-modal').hide();
+        if(typeof dpCheckPendingReload === 'function') {
+            dpCheckPendingReload();
+        }
     };
     
     window.toggleMehrtaegig = function() {

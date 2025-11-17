@@ -7,6 +7,85 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ---
 
+## [0.9.5] - 2025-11-17 🔄 Reload beim Modal-Schließen
+
+**Pending Reload System** - Seite aktualisiert sich automatisch beim Schließen von Modals nach Änderungen.
+
+### ✨ Neu
+
+#### 🔄 Automatischer Reload beim Modal-Schließen
+- **Neues System:** Wenn Reload unterdrückt wurde (Modal offen), wird er beim Schließen ausgeführt
+- **`dpCheckPendingReload()`** - Prüft und führt ausstehenden Reload aus
+- **Flag:** `window.dpReloadPending` merkt sich unterdrückte Reloads
+- **Integriert in alle Modal-Close-Funktionen:**
+  - `closeDienstModal()`
+  - `closeBesetzungModal()`
+  - `closeMitarbeiterModal()`
+  - `closeVeranstaltungModal()`
+  - `closeVereinModal()`
+
+### 🔧 Verbesserungen
+
+#### User Experience
+- **Automatische Aktualisierung:** Modal schließen → Seite lädt automatisch neu
+- **Keine manuelle Aktualisierung mehr nötig**
+- **Zeitsparend:** Änderungen sind sofort sichtbar nach Modal-Schließen
+- **Konsistent:** Funktioniert für alle Modal-Typen
+
+#### Verhalten
+1. Änderung in Modal speichern → `dpSafeReload()` wird aufgerufen
+2. Modal ist noch offen → Reload wird unterdrückt, `dpReloadPending = true`
+3. User schließt Modal → `dpCheckPendingReload()` führt Reload aus
+4. Seite zeigt aktuelle Daten
+
+### 🐛 Bugfixes
+
+#### Rekursiver Aufruf in dpSafeReload()
+- **Problem:** `if(typeof dpSafeReload === "function") { dpSafeReload(); }` erzeugte Endlosschleife
+- **Lösung:** Geändert zu `location.reload();`
+
+### 📝 Technische Änderungen
+
+#### dp-admin.js
+```javascript
+window.dpReloadPending = false;
+
+window.dpSafeReload = function(delay) {
+    // ... Modal-Checks ...
+    if (!hasOpenModal) {
+        location.reload();
+    } else {
+        window.dpReloadPending = true; // Merken!
+    }
+};
+
+window.dpCheckPendingReload = function() {
+    if (window.dpReloadPending) {
+        window.dpReloadPending = false;
+        location.reload();
+    }
+};
+```
+
+#### Modal-Close-Funktionen (5 Dateien)
+- **dp-dienst-modal.js**
+- **dp-besetzung-modal.js**
+- **dp-mitarbeiter-modal.js**
+- **dp-veranstaltungen-modal.js**
+- **dp-vereine-modal.js**
+
+Alle erweitert um:
+```javascript
+window.closeXxxModal = function() {
+    $('#xxx-modal').hide();
+    if(typeof dpCheckPendingReload === 'function') {
+        dpCheckPendingReload();
+    }
+};
+```
+
+---
+
 ## [0.9.4] - 2025-11-17 🔧 Update-Mechanismus Fix
 
 **Kritischer Fix** - Manuelle Updates auf Produktionsservern ohne Git funktionieren jetzt.

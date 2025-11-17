@@ -286,6 +286,9 @@
     window.closeVereinModal = function() {
         console.log('closeVereinModal called');
         $('#verein-modal').hide();
+        if(typeof dpCheckPendingReload === 'function') {
+            dpCheckPendingReload();
+        }
     };
 
     /**

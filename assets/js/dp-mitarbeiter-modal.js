@@ -15,6 +15,9 @@
     
     window.closeMitarbeiterModal = function() {
         $('#mitarbeiter-modal').hide();
+        if(typeof dpCheckPendingReload === 'function') {
+            dpCheckPendingReload();
+        }
     };
     
     window.editMitarbeiter = function(id) {

@@ -59,6 +59,9 @@
      */
     window.closeBesetzungModal = function() {
         $('#besetzung-modal').hide();
+        if(typeof dpCheckPendingReload === 'function') {
+            dpCheckPendingReload();
+        }
     };
 
     /**

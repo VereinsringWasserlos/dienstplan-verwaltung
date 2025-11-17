@@ -185,6 +185,9 @@
      */
     window.closeDienstModal = function() {
         $('#dienst-modal').hide();
+        if(typeof dpCheckPendingReload === 'function') {
+            dpCheckPendingReload();
+        }
     };
 
     /**
