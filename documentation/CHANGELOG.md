@@ -7,6 +7,55 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ---
 
+## [0.9.4] - 2025-11-17 🔧 Update-Mechanismus Fix
+
+**Kritischer Fix** - Manuelle Updates auf Produktionsservern ohne Git funktionieren jetzt.
+
+### 🐛 Bugfixes
+
+#### Manuelles Update auf Produktionsservern
+- **Problem:** `perform_update()` verlangte Git, auch auf Produktionsservern
+- **Lösung:** Zeigt hilfreiche Meldung mit Anleitung für WordPress Plugin-Update
+- **Meldung:** "Bitte nutzen Sie die WordPress Plugin-Verwaltung für Updates. Gehen Sie zu: Plugins → Installierte Plugins → Dienstplan Verwaltung → 'Jetzt aktualisieren'"
+
+### 🔧 Verbesserungen
+
+#### Update-Methoden
+- `perform_update()` erkennt jetzt `$this->git_available`
+- Entwicklungsumgebungen: Weiterhin Git-basiertes Update
+- Produktionsserver: Verweis auf WordPress Standard-Update
+- Verhindert irreführende "Git ist nicht verfügbar" Fehlermeldung
+
+### 📝 Technische Änderungen
+
+**class-updater.php:**
+```php
+public function perform_update() {
+    if (!$this->git_available) {
+        // Produktionsserver → WordPress Update nutzen
+        return array(
+            'success' => false, 
+            'message' => 'Bitte nutzen Sie die WordPress Plugin-Verwaltung...'
+        );
+    }
+    // Entwicklung → Git Pull
+}
+```
+
+### 💡 Für Administratoren
+
+**Update auf Produktionsservern:**
+1. WordPress Admin → Plugins
+2. "Dienstplan Verwaltung" finden
+3. Auf "Jetzt aktualisieren" klicken
+4. WordPress lädt automatisch von GitHub
+
+**Update auf Entwicklungsservern:**
+- Weiterhin über Admin → Updates → "Update durchführen" (Git Pull)
+- Oder manuell: `git pull origin main`
+
+---
+
 ## [0.9.3] - 2025-11-17 🎯 Smart Reload & UX-Verbesserungen
 
 **Safe Page Reload** - Seiten-Reloads respektieren jetzt offene Modals und geben User Zeit zum Lesen.

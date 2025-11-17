@@ -407,13 +407,18 @@ class Dienstplan_Updater {
     }
 
     /**
-     * Führt Update über Git durch
+     * Führt Update durch (Git oder WordPress-Standard)
      */
     public function perform_update() {
-        if (!$this->is_git_available()) {
-            return array('success' => false, 'message' => 'Git ist nicht verfügbar');
+        // Auf Produktionsservern ohne Git: WordPress Update-Mechanismus nutzen
+        if (!$this->git_available) {
+            return array(
+                'success' => false, 
+                'message' => 'Bitte nutzen Sie die WordPress Plugin-Verwaltung für Updates. Gehen Sie zu: Plugins → Installierte Plugins → Dienstplan Verwaltung → "Jetzt aktualisieren"'
+            );
         }
 
+        // Git-basiertes Update (nur für Entwicklungsumgebungen)
         $current_dir = getcwd();
         chdir($this->plugin_dir);
 
