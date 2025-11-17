@@ -46,7 +46,7 @@ Moderne Dienstplan-Verwaltung für Events und Veranstaltungen mit Slot-System, F
 ### Manuell
 ```bash
 cd wp-content/plugins/
-git clone https://github.com/yourusername/dienstplan-verwaltung.git
+git clone https://github.com/VereinsringWasserlos/dienstplan-verwaltung.git
 ```
 
 Dann in WordPress Admin das Plugin aktivieren.
