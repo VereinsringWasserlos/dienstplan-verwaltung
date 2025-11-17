@@ -67,10 +67,24 @@
 
 /* Container */
 .dp-public-container {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: var(--dp-spacing-lg);
-    font-family: var(--dp-font-family);
+    max-width: 1200px !important;
+    margin: 0 auto !important;
+    padding: var(--dp-spacing-lg) !important;
+    font-family: var(--dp-font-family) !important;
+    box-sizing: border-box !important;
+}
+
+/* Theme Override: Verhindere Layout-Probleme */
+.dp-public-container * {
+    box-sizing: border-box;
+}
+
+.dp-public-container p,
+.dp-public-container h1,
+.dp-public-container h2,
+.dp-public-container h3,
+.dp-public-container h4 {
+    margin: revert !important;
 }
 
 /* =================================================================
@@ -615,41 +629,47 @@
    Modal
    ================================================================= */
 .dp-modal {
-    display: none;
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    z-index: 9999;
-    align-items: center;
-    justify-content: center;
-    padding: var(--dp-spacing-lg);
+    display: none !important;
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    z-index: 999999 !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: var(--dp-spacing-lg) !important;
+}
+
+/* Modal sichtbar machen wenn style="display: flex" gesetzt ist */
+.dp-modal[style*="display: flex"],
+.dp-modal[style*="display:flex"] {
+    display: flex !important;
 }
 
 .dp-modal-overlay {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.5);
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    background: rgba(0, 0, 0, 0.5) !important;
     backdrop-filter: blur(4px);
-    cursor: pointer;
+    cursor: pointer !important;
 }
 
 .dp-modal-content {
-    background: white;
-    border-radius: var(--dp-radius-lg);
-    box-shadow: var(--dp-shadow-xl);
-    max-width: 900px;
-    width: 100%;
-    max-height: 90vh;
-    overflow: auto;
-    position: relative;
-    z-index: 10000;
-    animation: modalSlideIn 0.3s ease;
-    padding: var(--dp-spacing-xl);
+    background: white !important;
+    border-radius: var(--dp-radius-lg) !important;
+    box-shadow: var(--dp-shadow-xl) !important;
+    max-width: 900px !important;
+    width: 100% !important;
+    max-height: 90vh !important;
+    overflow: auto !important;
+    position: relative !important;
+    z-index: 1000000 !important;
+    animation: modalSlideIn 0.3s ease !important;
+    padding: var(--dp-spacing-xl) !important;
 }
 
 @keyframes modalSlideIn {

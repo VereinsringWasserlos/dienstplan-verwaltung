@@ -3,7 +3,7 @@
  * Plugin Name: Dienstplan Verwaltung V2
  * Plugin URI: https://vereinsring-wasserlos.de
  * Description: Moderne Dienstplan-Verwaltung für Vereine und Veranstaltungen
- * Version:           0.9.5
+ * Version:           0.9.5.0
  * Author: Kai Naumann
  * Author URI: https://vereinsring-wasserlos.de
  * License: GPL v2 or later
@@ -23,7 +23,7 @@ if (!defined('ABSPATH')) {
 /**
  * Plugin-Konstanten
  */
-define('DIENSTPLAN_VERSION', '0.9.5');
+define('DIENSTPLAN_VERSION', '0.9.5.0');
 define('DIENSTPLAN_PLUGIN_FILE', __FILE__);
 define('DIENSTPLAN_PLUGIN_PATH', plugin_dir_path(__FILE__));
 define('DIENSTPLAN_PLUGIN_URL', plugin_dir_url(__FILE__));

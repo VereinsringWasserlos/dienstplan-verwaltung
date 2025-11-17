@@ -2,8 +2,32 @@
 
 Alle wichtigen Änderungen an diesem Projekt werden in dieser Datei dokumentiert.
 
-Das Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
+Das Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.0/0/),
 und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
+
+---
+
+## [0.9.5.0] - 2025-11-17 🔧 Bugfixes & 4-stellige Versionierung
+
+**Wichtige Bugfixes** für Frontend-Display und Vereins-Auswahl.
+
+### 🔧 Bugfixes
+
+#### Frontend-Darstellung
+- **CSS robuster gemacht:** !important-Regeln gegen Theme-Konflikte
+- **Modal-Display:** Höherer z-index (999999) für bessere Sichtbarkeit
+- **Container:** Box-sizing und Layout-Fixes für Theme-Kompatibilität
+- **Modal-Visibility:** Explizite Regel für display: flex
+
+#### Vereins-Auswahl
+- **Fallback-Logik:** Wenn keine Vereine explizit zugewiesen sind, werden automatisch alle Vereine angezeigt, die Dienste in der Veranstaltung haben
+- **Fix:** "Keine Vereine verfügbar" wird nicht mehr fälschlicherweise angezeigt
+
+### 📋 Technisches
+
+#### Versionierung
+- **4-stellige Versionsnummern:** Umstellung auf MAJOR.MINOR.PATCH.BUILD Format
+- **Semantic Versioning 2.0:** Konform mit WordPress Best Practices
 
 ---
 
