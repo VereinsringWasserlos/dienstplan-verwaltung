@@ -56,7 +56,7 @@ class Dienstplan_Updater {
         $this->current_version = DIENSTPLAN_VERSION;
         
         // Git-Repository Konfiguration
-        $this->git_repo_url = 'https://github.com/FEGAschaffenburg/dienstplan-verwaltung.git';
+        $this->git_repo_url = 'https://github.com/VereinsringWasserlos/dienstplan-verwaltung.git';
         $this->git_branch = 'main';
 
         // WordPress Hooks für Update-System
