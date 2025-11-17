@@ -7,6 +7,37 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ---
 
+## [0.9.5.4] - 2025-11-17 🔧 Fix: Neuer Kontakt Modal (Vereine)
+
+**Bugfix:** "Neuer Kontakt" Button im Vereine-Modal öffnet jetzt korrekt das Modal.
+
+### 🔧 Bugfixes
+
+#### Vereine-Modal: Neuer Kontakt
+- **Button vereinfacht:** Entfernt komplexe inline-Logik
+- **Modal-Display:** CSS-Regeln für `display: flex` hinzugefügt
+- **JavaScript verstärkt:** Mehrere Display-Methoden für Kompatibilität
+- **Debug-Logging:** Console-Logs zur Fehlersuche hinzugefügt
+
+#### CSS-Fixes
+- `#new-contact-modal` spezifische Styles
+- `!important` auf display/visibility/opacity
+- Fallback-Regeln für alle `.dp-modal` Elemente
+
+### 📋 Technisches
+
+#### Modal-Öffnung
+- Direkter DOM-Zugriff + jQuery Fallback
+- Styles: `display: flex`, `visibility: visible`, `opacity: 1`
+- Z-Index: 100.000 (Admin-Bereich)
+
+#### Betroffene Dateien
+- `admin/views/partials/vereine-modal.php`
+- `assets/js/dp-vereine-modal.js`
+- `assets/css/dp-admin.css`
+
+---
+
 ## [0.9.5.3] - 2025-11-17 ⚡ Elementor-Kompatibilität
 
 **Umfassende Elementor-Kompatibilität** für Frontend-Darstellung ohne Layout-Konflikte.

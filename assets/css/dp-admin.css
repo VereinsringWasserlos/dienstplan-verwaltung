@@ -373,6 +373,20 @@ body {
     animation: fadeIn var(--dp-transition-fast);
 }
 
+/* Modal sichtbar machen wenn JS display: flex setzt */
+.dp-modal[style*="display: flex"],
+.dp-modal[style*="display:flex"] {
+    display: flex !important;
+}
+
+/* Spezifisch für New Contact Modal */
+#new-contact-modal[style*="display: flex"],
+#new-contact-modal[style*="display:flex"] {
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+}
+
 @keyframes fadeIn {
     from { opacity: 0; }
     to { opacity: 1; }

@@ -516,11 +516,38 @@
      * Öffnet das New Contact Modal
      */
     window.openNewContactModal = function() {
-        console.log('openNewContactModal called!');
+        console.log('=== openNewContactModal START ===');
+        const modal = document.getElementById('new-contact-modal');
+        console.log('Modal element:', modal);
+        
+        if (!modal) {
+            console.error('Modal #new-contact-modal nicht gefunden!');
+            alert('Fehler: Modal konnte nicht gefunden werden. Bitte Seite neu laden.');
+            return;
+        }
+        
+        // Form zurücksetzen
         $('#new-contact-form')[0].reset();
         $('#nc-email-check-result').html('');
-        $('#new-contact-modal').css('display', 'flex');
-        console.log('Modal display set to flex');
+        
+        // Modal anzeigen - mehrere Methoden für Kompatibilität
+        modal.style.display = 'flex';
+        modal.style.visibility = 'visible';
+        modal.style.opacity = '1';
+        
+        // jQuery als Fallback
+        $('#new-contact-modal').show().css({
+            'display': 'flex',
+            'visibility': 'visible',
+            'opacity': '1'
+        });
+        
+        console.log('Modal styles gesetzt:', {
+            display: modal.style.display,
+            visibility: modal.style.visibility,
+            opacity: modal.style.opacity
+        });
+        console.log('=== openNewContactModal END ===');
     };
 
     /**
