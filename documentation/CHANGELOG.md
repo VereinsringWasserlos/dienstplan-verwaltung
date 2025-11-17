@@ -7,6 +7,66 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ---
 
+## [0.5.11] - 2025-11-17 ✅ Feature: Neuer Kontakt in Veranstaltungen
+
+### 🎯 Problem gelöst
+Button "Neuer Mitarbeiter" im Veranstaltungs-Modal sollte eigentlich **WordPress-Benutzer** anlegen, nicht einfache Mitarbeiter-Kontakte.
+
+### ✨ Was ist neu?
+
+#### Button umbenannt & korrigiert
+- ❌ **Vorher:** "Neuer Mitarbeiter" → öffnete falsches Modal
+- ✅ **Jetzt:** "Neuer Kontakt" → öffnet WordPress-User-Modal
+- ✅ **Funktion:** Legt WordPress-Benutzer mit Rollen-Konzept an
+- ✅ **E-Mail:** Automatische Einladung mit Passwort-Link
+
+#### "Neuer Kontakt" Modal in Veranstaltungen
+- ✅ Modal wird jetzt in `veranstaltungen.php` eingebunden
+- ✅ Formular: Name, E-Mail, Rolle (Vereins-Admin, Veranstaltungs-Admin, etc.)
+- ✅ Validierung: E-Mail-Prüfung, Duplikat-Check
+- ✅ Automatischer Versand: Einladungs-E-Mail mit Passwort-Link
+
+#### Smart Reload nach Speichern
+```javascript
+// Neu: Unterscheidung zwischen Dropdown und Checkboxen
+if (source === 'veranstaltung-checkboxes') {
+    reloadVerantwortlicheCheckboxes(userData.user_id); // Neu
+} else {
+    // Dropdown: User hinzufügen
+}
+```
+
+- ✅ **Veranstaltungs-Modal:** Checkboxen werden neu geladen
+- ✅ **Neuer User:** Automatisch ausgewählt nach Anlegen
+- ✅ **Vereine-Modal:** Dropdown wird wie bisher aktualisiert
+
+### 📝 Betroffene Dateien
+
+- `admin/views/veranstaltungen.php` - "Neuer Kontakt" Modal eingebunden
+- `admin/views/partials/veranstaltungen-modal.php` - Button korrigiert
+- `assets/js/dp-veranstaltungen-modal.js` - `reloadVerantwortlicheCheckboxes()` Funktion
+- `assets/js/dp-vereine-modal.js` - `saveNewContact()` erweitert für Checkboxen
+
+### ✅ Was funktioniert jetzt
+
+- ✅ **Button öffnet korrektes Modal** (WordPress-User statt Mitarbeiter)
+- ✅ **WordPress-Benutzer werden angelegt** mit optionaler Rolle
+- ✅ **Einladungs-E-Mail** wird automatisch versendet
+- ✅ **Verantwortlichen-Liste** wird nach Speichern neu geladen
+- ✅ **Neuer User** ist automatisch ausgewählt
+- ✅ **Funktioniert in beiden Modals** (Vereine & Veranstaltungen)
+
+### 💡 Hintergrund
+
+**Verantwortliche in Veranstaltungen** sind WordPress-Benutzer mit Zugriffsrechten, keine einfachen Kontakte. Sie benötigen:
+- ✅ WordPress-Login
+- ✅ Dienstplan-Rollen (Vereins-Admin, Event-Admin, etc.)
+- ✅ E-Mail-Benachrichtigungen
+
+Daher wurde der Button von "Neuer Mitarbeiter" auf "Neuer Kontakt" umbenannt und öffnet jetzt das korrekte Modal.
+
+---
+
 ## [0.5.10] - 2025-11-17 🔧 Bugfix: Mitarbeiter Modal
 
 ### Problem behoben

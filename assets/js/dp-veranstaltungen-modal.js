@@ -7,6 +7,48 @@
         console.log('Veranstaltungen Modal geladen');
     });
     
+    /**
+     * Lädt Verantwortliche-Checkboxen neu (z.B. nach Anlegen eines neuen Kontakts)
+     */
+    window.reloadVerantwortlicheCheckboxes = function(selectUserId) {
+        console.log('reloadVerantwortlicheCheckboxes', selectUserId);
+        
+        $('#v_verantwortliche-checkboxes').html('<p style="color: #666; margin: 0;">Lädt...</p>');
+        
+        $.ajax({
+            url: dpAjax.ajaxurl,
+            type: 'POST',
+            data: {
+                action: 'dp_get_all_users',
+                nonce: dpAjax.nonce
+            },
+            success: function(response) {
+                if (response.success && response.data) {
+                    let html = '';
+                    response.data.forEach(function(user) {
+                        const name = user.name || 'Unbekannt';
+                        const email = user.email || '';
+                        const checked = selectUserId && user.id == selectUserId ? ' checked' : '';
+                        
+                        html += '<label style="display: block; padding: 0.5rem; cursor: pointer; border-radius: 4px; margin-bottom: 0.25rem;" ' +
+                                'onmouseover="this.style.background=\'#f0f6fc\'" ' +
+                                'onmouseout="this.style.background=\'transparent\'">' +
+                                '<input type="checkbox" name="verantwortliche[]" value="' + user.id + '"' + checked + ' style="margin-right: 0.5rem;"> ' +
+                                '<strong>' + name + '</strong>' +
+                                (email ? ' <span style="color: #666;">(" + email + ")</span>' : '') +
+                                '</label>';
+                    });
+                    $('#v_verantwortliche-checkboxes').html(html || '<p style="color: #999; margin: 0;">Keine Benutzer gefunden</p>');
+                } else {
+                    $('#v_verantwortliche-checkboxes').html('<p style="color: #999; margin: 0;">Keine Benutzer gefunden</p>');
+                }
+            },
+            error: function() {
+                $('#v_verantwortliche-checkboxes').html('<p style="color: #dc2626; margin: 0;">Fehler beim Laden</p>');
+            }
+        });
+    };
+    
     window.openVeranstaltungModal = function() {
         console.log('openVeranstaltungModal');
         $('#veranstaltung-form')[0].reset();

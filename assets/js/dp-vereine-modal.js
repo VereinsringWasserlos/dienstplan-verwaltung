@@ -598,16 +598,24 @@
 
                     const userData = response.data;
                     const source = window.newContactSource || 'verein';
-                    const selectId = source === 'veranstaltung' ? '#v_verantwortliche' : '#verantwortliche';
 
-                    // Neuen User zum entsprechenden Dropdown hinzufügen und auswählen
-                    $(selectId).append(
-                        $('<option>', {
-                            value: userData.user_id,
-                            text: userData.user_name + ' (' + userData.user_email + ')',
-                            selected: true
-                        })
-                    );
+                    // Unterschiedliche Behandlung je nach Quelle
+                    if (source === 'veranstaltung-checkboxes') {
+                        // Veranstaltungs-Modal: Checkboxen neu laden und neuen User auswählen
+                        if (typeof reloadVerantwortlicheCheckboxes === 'function') {
+                            reloadVerantwortlicheCheckboxes(userData.user_id);
+                        }
+                    } else {
+                        // Verein/Veranstaltung-Dropdown: User hinzufügen
+                        const selectId = source === 'veranstaltung' ? '#v_verantwortliche' : '#verantwortliche';
+                        $(selectId).append(
+                            $('<option>', {
+                                value: userData.user_id,
+                                text: userData.user_name + ' (' + userData.user_email + ')',
+                                selected: true
+                            })
+                        );
+                    }
 
                     // Reset source
                     window.newContactSource = null;
