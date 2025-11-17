@@ -1,3 +1,4 @@
+<?php
 /**
  * Update-Verwaltung View
  *
@@ -10,11 +11,21 @@ if (!defined('ABSPATH')) {
 }
 
 // Updater initialisieren
-require_once DIENSTPLAN_PLUGIN_PATH . 'includes/class-updater.php';
-$updater = new Dienstplan_Updater();
+if (!class_exists('Dienstplan_Updater')) {
+    require_once DIENSTPLAN_PLUGIN_PATH . 'includes/class-updater.php';
+}
 
-// Git-Status holen
-$git_status = $updater->get_git_status();
+try {
+    $updater = new Dienstplan_Updater();
+    
+    // Git-Status holen
+    $git_status = $updater->get_git_status();
+} catch (Exception $e) {
+    $git_status = array(
+        'available' => false,
+        'message' => 'Fehler beim Initialisieren: ' . $e->getMessage()
+    );
+}
 
 // Aktuelle Einstellungen
 $git_repo_url = get_option('dienstplan_git_repo_url', '');
@@ -36,25 +47,33 @@ if (isset($_POST['save_git_settings']) && check_admin_referer('dienstplan_git_se
 
 // Manuelle Update-Prüfung
 if (isset($_POST['check_update']) && check_admin_referer('dienstplan_check_update')) {
-    $update_check = $updater->check_update_manually();
-    
-    if ($update_check['has_update']) {
-        echo '<div class="notice notice-info"><p><strong>' . esc_html($update_check['message']) . '</strong></p></div>';
+    if (isset($updater)) {
+        $update_check = $updater->check_update_manually();
+        
+        if ($update_check['has_update']) {
+            echo '<div class="notice notice-info"><p><strong>' . esc_html($update_check['message']) . '</strong></p></div>';
+        } else {
+            echo '<div class="notice notice-success"><p>' . esc_html($update_check['message']) . '</p></div>';
+        }
     } else {
-        echo '<div class="notice notice-success"><p>' . esc_html($update_check['message']) . '</p></div>';
+        echo '<div class="notice notice-error"><p>Updater konnte nicht initialisiert werden.</p></div>';
     }
 }
 
 // Update durchführen
 if (isset($_POST['perform_update']) && check_admin_referer('dienstplan_perform_update')) {
-    $update_result = $updater->perform_update();
-    
-    if ($update_result['success']) {
-        echo '<div class="notice notice-success"><p><strong>Update erfolgreich!</strong><br>' . 
-             nl2br(esc_html($update_result['output'])) . '</p></div>';
+    if (isset($updater)) {
+        $update_result = $updater->perform_update();
+        
+        if ($update_result['success']) {
+            echo '<div class="notice notice-success"><p><strong>Update erfolgreich!</strong><br>' . 
+                 nl2br(esc_html($update_result['output'])) . '</p></div>';
+        } else {
+            echo '<div class="notice notice-error"><p><strong>Update fehlgeschlagen:</strong><br>' . 
+                 esc_html($update_result['message']) . '</p></div>';
+        }
     } else {
-        echo '<div class="notice notice-error"><p><strong>Update fehlgeschlagen:</strong><br>' . 
-             esc_html($update_result['message']) . '</p></div>';
+        echo '<div class="notice notice-error"><p>Updater konnte nicht initialisiert werden.</p></div>';
     }
 }
 ?>
@@ -204,8 +223,9 @@ if (isset($_POST['perform_update']) && check_admin_referer('dienstplan_perform_u
                     </form>
 
                     <?php
-                    $update_check = $updater->check_update_manually();
-                    if ($update_check['has_update']):
+                    if (isset($updater)) {
+                        $update_check = $updater->check_update_manually();
+                        if ($update_check['has_update']):
                     ?>
                         <form method="post" style="display: inline-block;" 
                               onsubmit="return confirm('Möchten Sie das Update jetzt durchführen?\n\nHinweis: Erstellen Sie vorher ein Backup!');">
@@ -214,10 +234,13 @@ if (isset($_POST['perform_update']) && check_admin_referer('dienstplan_perform_u
                                 ⬆️ Update auf Version <?php echo esc_html($update_check['new_version']); ?> durchführen
                             </button>
                         </form>
-                    <?php endif; ?>
+                    <?php 
+                        endif;
+                    }
+                    ?>
                 </div>
 
-                <?php if ($git_status['has_uncommitted_changes']): ?>
+                <?php if (isset($git_status['has_uncommitted_changes']) && $git_status['has_uncommitted_changes']): ?>
                     <div class="notice notice-warning inline" style="margin-top: 20px;">
                         <p>
                             <strong>Warnung:</strong> Es gibt lokale Änderungen im Plugin-Verzeichnis. 

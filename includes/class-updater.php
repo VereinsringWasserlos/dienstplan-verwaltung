@@ -52,7 +52,7 @@ class Dienstplan_Updater {
     public function __construct() {
         $this->plugin_slug = 'dienstplan-verwaltung';
         $this->plugin_basename = 'dienstplan-verwaltung/dienstplan-verwaltung.php';
-        $this->plugin_dir = plugin_dir_path(dirname(__FILE__));
+        $this->plugin_dir = DIENSTPLAN_PLUGIN_PATH;
         $this->current_version = DIENSTPLAN_VERSION;
         
         // Git-Repository Konfiguration (später in Einstellungen verschieben)
@@ -150,7 +150,7 @@ class Dienstplan_Updater {
             );
 
             // Cache für 12 Stunden
-            set_transient($cache_key, $update_info, 12 * HOUR_IN_SECONDS);
+            set_transient($cache_key, $update_info, 43200); // 12 * 3600
             
             $this->update_info = $update_info;
             return $update_info;
