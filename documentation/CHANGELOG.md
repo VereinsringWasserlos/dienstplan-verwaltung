@@ -7,7 +7,148 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ---
 
-## [0.9.5.4] - 2025-11-17 🔧 Fix: Neuer Kontakt Modal (Vereine)
+## [0.5.9] - 2025-11-17 🎉 Stable Base - Basis-Funktionalität komplett
+
+**Konsolidierung aller Features und Bugfixes** aus 0.9.x als stabile Basis-Version.
+
+### ✅ Kern-Funktionalität
+
+#### CRUD-Verwaltung
+- ✅ **Veranstaltungen:** Erstellen, Bearbeiten, Löschen (Eintägig & Mehrtägig)
+- ✅ **Dienste:** Zeitfenster, Besetzung, Slots-System
+- ✅ **Mitarbeiter:** Kontaktverwaltung, Dienst-Zuweisung
+- ✅ **Vereine:** Logo-Upload, Verantwortliche, WordPress-User-Integration
+- ✅ **Bereiche & Tätigkeiten:** Kategorisierung mit Farben
+
+#### Frontend
+- ✅ **Veranstaltungs-Listen:** Card-Grid-Layout (Xoyondo-inspiriert)
+- ✅ **Veranstaltungs-Detail:** Tage-Ansicht mit Dienst-Slots
+- ✅ **Vereins-Auswahl:** Modal mit Statistiken
+- ✅ **Dienst-Eintragung:** Selbst-Registrierung für Mitglieder
+- ✅ **Responsive Design:** Mobile-optimiert
+
+#### Shortcodes
+- `[dienstplan]` - Veranstaltungs-Detail mit Diensten
+- `[veranstaltungen_liste]` - Grid-Ansicht aller Veranstaltungen
+
+### 🔧 Bugfixes (konsolidiert aus 0.9.5.x)
+
+#### 0.9.5.0: Frontend & Vereins-Auswahl
+- **CSS robuster:** !important-Regeln gegen Theme-Konflikte
+- **Modal z-index:** 9.999.999 für bessere Sichtbarkeit
+- **3-stufiger Fallback:** Vereins-Auswahl auch ohne Dienste
+- **Box-sizing Fixes:** Container-Layout-Probleme behoben
+
+#### 0.9.5.1: Veranstaltungen - Neuer Mitarbeiter
+- **Button "Neuer Mitarbeiter":** Öffnet Mitarbeiter-Modal statt Kontakt-Modal
+- **Intelligentes Reload:** Nur Verantwortlichen-Liste wird neu geladen
+- **Veranstaltungs-Modal:** Bleibt offen beim Hinzufügen
+
+#### 0.9.5.2: Vereins-Fallback
+- **3-stufige Prüfung:** Explizit zugewiesen → Mit Diensten → Alle aktiven
+- **Fix:** "Keine Vereine verfügbar" tritt nicht mehr auf
+
+#### 0.9.5.3: Elementor-Basis-Kompatibilität
+- **CSS-Overrides:** Elementor-spezifische Selektoren
+- **Container-Fixes:** Width/Padding für Elementor-Sections
+- **Z-Index:** Modal über Elementor-Popups
+- **Grid-Overrides:** Verhindert Flexbox-Konflikte
+
+#### 0.9.5.4: Vereine - Neuer Kontakt Modal
+- **Button vereinfacht:** Direkter Aufruf von openNewContactModal
+- **JavaScript verstärkt:** Mehrere Display-Methoden
+- **CSS-Fixes:** Spezifische Regeln für #new-contact-modal
+
+### 📋 Technische Features
+
+#### Safe Reload System
+- **dpSafeReload():** 3 Sekunden Delay, Modal-Detection
+- **38 location.reload()** durch sichere Version ersetzt
+- **Pending Reload:** Automatischer Reload beim Modal-Schließen
+
+#### Rollen-System
+- **WordPress-Integration:** Custom Capabilities
+- **3 Rollen:** Club Admin, Event Admin, General Admin
+- **Berechtigungen:** Granulare Zugriffskontrolle
+
+#### Update-Mechanismus
+- **Git-basiert:** Für Entwicklung
+- **WordPress-Standard:** Für Produktionsserver
+- **Auto-Detection:** Prüft Git-Verfügbarkeit
+
+### 🚧 Bekannte Limitierungen
+
+#### Page-Builder-Integration
+- ⚠️ **Nur Shortcode-basiert** (kein natives Elementor-Widget)
+- ⚠️ **Kein Live-Editing** im Page-Builder
+- ⚠️ **Eingeschränkte Styling-Optionen** über Elementor-Controls
+- ✅ **CSS-Kompatibilität:** Elementor, Divi, Gutenberg funktionieren
+
+#### Frontend-Einschränkungen
+- ⚠️ Keine Timeline-Ansicht
+- ⚠️ Keine Kalender-Integration
+- ⚠️ Keine PDF-Export-Funktion
+- ⚠️ Keine E-Mail-Benachrichtigungen an Mitarbeiter
+
+### 🔮 Roadmap - Nächste Versionen
+
+```
+0.5.9  ✅ Stable Base (AKTUELL)
+       └─ Basis-Features komplett
+       └─ Shortcode-basiert  
+       └─ CSS-Fixes für Page-Builder
+
+0.6.0  🚧 Elementor Foundation (geplant)
+       ├─ Native Elementor-Widgets
+       ├─ Live-Editing im Editor
+       └─ Visual Controls
+
+0.7.0  📅 Advanced Features (geplant)
+       ├─ Template-System
+       ├─ Dynamic Tags
+       └─ Theme Builder
+
+0.8.0  🎨 Pro Features (optional)
+       ├─ Popup-Integration
+       └─ Loop-Grid
+
+0.9.0  ⚡ Performance & Polish (geplant)
+       ├─ Lazy Loading
+       └─ Cache-Optimierung
+
+1.0.0  🎉 Production Ready (Ziel)
+```
+
+### 📖 Dokumentation
+
+- **ELEMENTOR_ROADMAP.md:** Detaillierte Elementor-Integration-Planung
+- **VERSION_STRATEGY.md:** Versionierungs-Strategie & Empfehlungen
+- **DATABASE_STRUCTURE.md:** Datenbank-Schema
+- **ROLLEN-UEBERSICHT.md:** Berechtigungskonzept
+
+### ⚠️ Wichtige Hinweise
+
+#### Versionierungs-Änderung
+**WICHTIG:** Diese Version springt von 0.9.5.4 zurück auf 0.5.9!
+
+**Grund:** 
+- Version 0.9.x suggerierte "fast fertig" (90% complete)
+- Realität: Elementor-Integration fehlt komplett
+- 0.5.9 = ehrlichere Einschätzung des Entwicklungsstands
+
+**Keine Breaking Changes:**
+- Alle Features aus 0.9.5.x sind enthalten
+- Datenbank-Schema unverändert
+- API-kompatibel
+
+#### Migration von 0.9.5.x
+Kein Action erforderlich - einfach aktualisieren. Alle Daten bleiben erhalten.
+
+---
+
+## Versions-Historie 0.9.5.x (konsolidiert)
+
+### [0.9.5.4] - 2025-11-17 🔧 Fix: Neuer Kontakt Modal (Vereine)
 
 **Bugfix:** "Neuer Kontakt" Button im Vereine-Modal öffnet jetzt korrekt das Modal.
 
