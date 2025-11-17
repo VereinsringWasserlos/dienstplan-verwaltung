@@ -7,6 +7,49 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ---
 
+## [0.5.10] - 2025-11-17 🔧 Bugfix: Mitarbeiter Modal
+
+### Problem behoben
+Mitarbeiter-Modal öffnete nicht korrekt - Fehler: `Cannot read properties of undefined (reading 'reset')`
+
+### 🔧 Fixes
+
+#### Inline-JavaScript entfernt
+- ❌ **Alter Code:** Inline-JavaScript in `mitarbeiter-modal.php` überschrieb externe JS-Datei
+- ✅ **Neu:** Nur noch externe Datei `dp-mitarbeiter-modal.js` wird verwendet
+- ✅ **Vorteil:** Keine Konflikte mehr zwischen inline und extern
+
+#### Error-Handling verstärkt
+```javascript
+// VORHER: Fehler wenn Form nicht existiert
+$('#mitarbeiter-form')[0].reset();
+
+// NACHHER: Sicherer Check
+const form = document.getElementById('mitarbeiter-form');
+if (form) {
+    form.reset();
+} else {
+    console.warn('Form nicht gefunden');
+}
+```
+
+#### Modal-Öffnung robuster
+- ✅ Mehrere Display-Methoden (DOM + jQuery)
+- ✅ Explizite Styles: `display: flex`, `visibility: visible`, `opacity: 1`
+- ✅ Debug-Logging für Fehlersuche
+
+### 📝 Betroffene Dateien
+- `admin/views/partials/mitarbeiter-modal.php` - Inline-Code entfernt
+- `assets/js/dp-mitarbeiter-modal.js` - Error-Handling + robuste Modal-Öffnung
+
+### ✅ Was funktioniert jetzt
+- ✅ Button "Öffnet Mitarbeiter-Modal ohne Fehler
+- ✅ Form wird korrekt zurückgesetzt
+- ✅ Modal ist sichtbar mit korrekten Styles
+- ✅ Funktioniert aus Veranstaltungs-Modal heraus
+
+---
+
 ## [0.5.9] - 2025-11-17 🎉 Stable Base - Basis-Funktionalität komplett
 
 **Konsolidierung aller Features und Bugfixes** aus 0.9.x als stabile Basis-Version.

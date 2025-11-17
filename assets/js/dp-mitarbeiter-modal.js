@@ -6,11 +6,35 @@
     });
     
     window.openMitarbeiterModal = function() {
-        console.log('openMitarbeiterModal');
-        $('#mitarbeiter-form')[0].reset();
+        console.log('=== openMitarbeiterModal START ===');
+        
+        // Form zurücksetzen mit Error-Handling
+        const form = document.getElementById('mitarbeiter-form');
+        if (form) {
+            form.reset();
+        } else {
+            console.warn('Form #mitarbeiter-form nicht gefunden');
+        }
+        
         $('#mitarbeiter_id').val('');
         $('#mitarbeiter-modal-title').text('Neuer Mitarbeiter');
-        $('#mitarbeiter-modal').css('display', 'flex');
+        
+        // Modal anzeigen - mehrere Methoden für Kompatibilität
+        const modal = document.getElementById('mitarbeiter-modal');
+        if (modal) {
+            modal.style.display = 'flex';
+            modal.style.visibility = 'visible';
+            modal.style.opacity = '1';
+        }
+        
+        // jQuery Fallback
+        $('#mitarbeiter-modal').show().css({
+            'display': 'flex',
+            'visibility': 'visible',
+            'opacity': '1'
+        });
+        
+        console.log('=== openMitarbeiterModal END ===');
     };
     
     window.closeMitarbeiterModal = function() {
