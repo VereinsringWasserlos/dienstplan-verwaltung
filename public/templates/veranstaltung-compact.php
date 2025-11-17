@@ -137,6 +137,17 @@ ksort($dienste_nach_tagen);
         }
         ksort($dienste_nach_tagen);
     }
+    
+    // Get selected verein object
+    $selected_verein = null;
+    if ($verein_id) {
+        foreach ($available_vereine as $v) {
+            if (intval($v->id) === intval($verein_id)) {
+                $selected_verein = $v;
+                break;
+            }
+        }
+    }
     ?>
 
     <!-- STAGE 1: Vereinsauswahl (wenn nicht ausgewählt) -->
@@ -377,18 +388,34 @@ ksort($dienste_nach_tagen);
                     foreach ($tage as $idx => $tag):
                         $tag_services = $dienste_nach_tagen[$tag->id] ?? [];
                         
-                        // Gruppiere Services nach Bereich
+                        // Gruppiere Services nach Bereich UND Zeit-Slot
+                        // Damit Services die gleichzeitig laufen in derselben Zeile erscheinen
                         $services_by_bereich = [];
+                        $time_slots = []; // Track unique time slots per Bereich
+                        
                         foreach ($tag_services as $service) {
                             $bereich_key = $service->bereich_id ?? 0;
                             if (!isset($services_by_bereich[$bereich_key])) {
                                 $services_by_bereich[$bereich_key] = [
                                     'name' => $service->bereich_name ?? 'Ohne Bereich',
                                     'farbe' => $service->bereich_farbe ?? '#667eea',
-                                    'services' => []
+                                    'time_slots' => []
                                 ];
                             }
-                            $services_by_bereich[$bereich_key]['services'][] = $service;
+                            
+                            // Erstelle einen eindeutigen Zeitslot-Key (Start-Zeit)
+                            $time_key = date('H:i', strtotime($service->von_zeit));
+                            
+                            if (!isset($services_by_bereich[$bereich_key]['time_slots'][$time_key])) {
+                                $services_by_bereich[$bereich_key]['time_slots'][$time_key] = [];
+                            }
+                            
+                            $services_by_bereich[$bereich_key]['time_slots'][$time_key][] = $service;
+                        }
+                        
+                        // Sortiere Zeitslots innerhalb jedes Bereichs
+                        foreach ($services_by_bereich as &$bereich) {
+                            ksort($bereich['time_slots']);
                         }
                     ?>
                         <div class="dp-timeline-day-container" data-day-id="<?php echo $tag->id; ?>" style="display: <?php echo $idx === 0 ? 'block' : 'none'; ?>;">
@@ -406,11 +433,17 @@ ksort($dienste_nach_tagen);
                                                 <?php echo esc_html($bereich['name']); ?>
                                             </div>
                                             
-                                            <?php foreach ($bereich['services'] as $service): ?>
-                                                <div class="dp-timeline-row-label" data-service-id="<?php echo $service->id; ?>">
-                                                    <div class="dp-timeline-service-title"><?php echo esc_html($service->taetigkeit_name); ?></div>
+                                            <?php foreach ($bereich['time_slots'] as $time_key => $services_in_slot): ?>
+                                                <div class="dp-timeline-row-label" data-time-slot="<?php echo $time_key; ?>">
+                                                    <div class="dp-timeline-service-title">
+                                                        <?php 
+                                                        // Zeige alle Services in diesem Slot
+                                                        $names = array_map(function($s) { return $s->taetigkeit_name; }, $services_in_slot);
+                                                        echo esc_html($time_key);
+                                                        ?>
+                                                    </div>
                                                     <div class="dp-timeline-service-time-label">
-                                                        <?php echo date('H:i', strtotime($service->von_zeit)); ?> - <?php echo date('H:i', strtotime($service->bis_zeit)); ?>
+                                                        <?php echo count($services_in_slot); ?> Dienst<?php echo count($services_in_slot) > 1 ? 'e' : ''; ?>
                                                     </div>
                                                 </div>
                                             <?php endforeach; ?>
@@ -435,11 +468,11 @@ ksort($dienste_nach_tagen);
                                     <!-- Timeline Grid (scrollbar vertikal und horizontal) -->
                                     <div class="dp-timeline-grid-scroll">
                                         <?php 
-                                        // Zähle total Rows (Bereich-Header + Services)
+                                        // Zähle total Rows (Bereich-Header + Time-Slots)
                                         $total_rows = 0;
                                         foreach ($services_by_bereich as $bereich) {
                                             $total_rows++; // Header
-                                            $total_rows += count($bereich['services']); // Services
+                                            $total_rows += count($bereich['time_slots']); // Time slots
                                         }
                                         ?>
                                         <div class="dp-timeline-grid" style="grid-template-columns: repeat(<?php echo $total_slots; ?>, 60px); grid-template-rows: repeat(<?php echo $total_rows; ?>, 50px);">
@@ -450,49 +483,54 @@ ksort($dienste_nach_tagen);
                                                 <?php endfor; ?>
                                             </div>
                                             
-                                            <!-- Service Bars (Vordergrund) -->
+                                            <!-- Service Bars (Vordergrund) - Mehrere nebeneinander -->
                                             <?php 
                                             $row = 1;
                                             foreach ($services_by_bereich as $bereich_id => $bereich): 
                                                 // Bereich-Header-Zeile überspringen
                                                 $row++; 
                                                 
-                                                foreach ($bereich['services'] as $service):
-                                                    // Berechne Zeit-Position
-                                                    $start_time = strtotime($service->von_zeit);
-                                                    $end_time = strtotime($service->bis_zeit);
-                                                    $start_minutes = intval(date('H', $start_time)) * 60 + intval(date('i', $start_time));
-                                                    $end_minutes = intval(date('H', $end_time)) * 60 + intval(date('i', $end_time));
-                                                    
-                                                    $start_col = floor($start_minutes / 30) + 1;
-                                                    $duration_slots = max(1, ceil(($end_minutes - $start_minutes) / 30));
-                                                    
-                                                    // Slots zählen
-                                                    $slots = $db->get_dienst_slots($service->id);
-                                                    $free_slots = 0;
-                                                    foreach ($slots as $slot) {
-                                                        if (!$slot->mitarbeiter_id) {
-                                                            $free_slots++;
+                                                foreach ($bereich['time_slots'] as $time_key => $services_in_slot):
+                                                    // Alle Services in diesem Slot nebeneinander anzeigen
+                                                    $service_index = 0;
+                                                    foreach ($services_in_slot as $service):
+                                                        // Berechne Zeit-Position
+                                                        $start_time = strtotime($service->von_zeit);
+                                                        $end_time = strtotime($service->bis_zeit);
+                                                        $start_minutes = intval(date('H', $start_time)) * 60 + intval(date('i', $start_time));
+                                                        $end_minutes = intval(date('H', $end_time)) * 60 + intval(date('i', $end_time));
+                                                        
+                                                        $start_col = floor($start_minutes / 30) + 1;
+                                                        $duration_slots = max(1, ceil(($end_minutes - $start_minutes) / 30));
+                                                        
+                                                        // Slots zählen
+                                                        $slots = $db->get_dienst_slots($service->id);
+                                                        $free_slots = 0;
+                                                        foreach ($slots as $slot) {
+                                                            if (!$slot->mitarbeiter_id) {
+                                                                $free_slots++;
+                                                            }
                                                         }
-                                                    }
-                                                    $total_slots_count = count($slots);
-                                            ?>
-                                                    <div class="dp-timeline-bar" 
-                                                         style="grid-column: <?php echo $start_col; ?> / span <?php echo $duration_slots; ?>; 
-                                                                grid-row: <?php echo $row; ?>; 
-                                                                background: linear-gradient(135deg, <?php echo esc_attr($bereich['farbe']); ?> 0%, <?php echo esc_attr($bereich['farbe']); ?>dd 100%);"
-                                                         onclick="dpOpenRegistrationModal(<?php echo $service->id; ?>, '<?php echo esc_js($service->taetigkeit_name); ?>')">
-                                                        <div class="dp-timeline-bar-content">
-                                                            <span class="dp-timeline-bar-name"><?php echo esc_html($service->taetigkeit_name); ?></span>
-                                                            <?php if ($free_slots > 0): ?>
-                                                                <span class="dp-timeline-bar-slots">🟢 <?php echo $free_slots; ?>/<?php echo $total_slots_count; ?></span>
-                                                            <?php else: ?>
-                                                                <span class="dp-timeline-bar-slots">🔴 Voll</span>
-                                                            <?php endif; ?>
+                                                        $total_slots_count = count($slots);
+                                                ?>
+                                                        <div class="dp-timeline-bar" 
+                                                             style="grid-column: <?php echo $start_col; ?> / span <?php echo $duration_slots; ?>; 
+                                                                    grid-row: <?php echo $row; ?>; 
+                                                                    background: linear-gradient(135deg, <?php echo esc_attr($bereich['farbe']); ?> 0%, <?php echo esc_attr($bereich['farbe']); ?>dd 100%);"
+                                                             onclick="dpOpenRegistrationModal(<?php echo $service->id; ?>, '<?php echo esc_js($service->taetigkeit_name); ?>')">
+                                                            <div class="dp-timeline-bar-content">
+                                                                <span class="dp-timeline-bar-name"><?php echo esc_html($service->taetigkeit_name); ?></span>
+                                                                <?php if ($free_slots > 0): ?>
+                                                                    <span class="dp-timeline-bar-slots">🟢 <?php echo $free_slots; ?>/<?php echo $total_slots_count; ?></span>
+                                                                <?php else: ?>
+                                                                    <span class="dp-timeline-bar-slots">🔴 Voll</span>
+                                                                <?php endif; ?>
+                                                            </div>
                                                         </div>
-                                                    </div>
-                                            <?php 
-                                                    $row++;
+                                                <?php 
+                                                        $service_index++;
+                                                    endforeach;
+                                                    $row++; // Nächste Zeile für nächsten Zeitslot
                                                 endforeach;
                                             endforeach;
                                             ?>

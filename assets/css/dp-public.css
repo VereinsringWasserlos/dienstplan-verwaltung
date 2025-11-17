@@ -1153,3 +1153,270 @@
         gap: var(--dp-spacing-xs);
     }
 }
+
+/* =================================================================
+   Timeline View (Grid-based)
+   ================================================================= */
+.dp-timeline-view {
+    background: white;
+    border-radius: var(--dp-radius-lg);
+    box-shadow: var(--dp-shadow);
+    overflow: hidden;
+}
+
+/* Tag-Tabs */
+.dp-timeline-tabs {
+    display: flex;
+    gap: var(--dp-spacing-xs);
+    padding: var(--dp-spacing-md);
+    background: var(--dp-gray-50);
+    border-bottom: 1px solid var(--dp-gray-200);
+    overflow-x: auto;
+}
+
+.dp-timeline-tab {
+    padding: var(--dp-spacing-sm) var(--dp-spacing-lg);
+    border: 1px solid var(--dp-gray-300);
+    background: white;
+    border-radius: var(--dp-radius);
+    font-size: var(--dp-font-size-sm);
+    font-weight: 600;
+    color: var(--dp-gray-700);
+    cursor: pointer;
+    transition: var(--dp-transition);
+    white-space: nowrap;
+}
+
+.dp-timeline-tab:hover {
+    background: var(--dp-gray-100);
+    border-color: var(--dp-primary);
+}
+
+.dp-timeline-tab.active {
+    background: var(--dp-primary);
+    border-color: var(--dp-primary);
+    color: white;
+}
+
+.dp-timeline-tab small {
+    display: block;
+    font-size: 0.75rem;
+    opacity: 0.9;
+    margin-top: 2px;
+}
+
+/* Timeline Wrapper */
+.dp-timeline-wrapper {
+    display: flex;
+    height: 600px;
+    overflow: hidden;
+}
+
+/* Linke Spalte (Dienst-Namen) - fixiert */
+.dp-timeline-left {
+    width: 280px;
+    flex-shrink: 0;
+    background: var(--dp-gray-50);
+    border-right: 2px solid var(--dp-gray-200);
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+}
+
+.dp-timeline-left-header {
+    position: sticky;
+    top: 0;
+    background: var(--dp-gray-100);
+    padding: var(--dp-spacing-md);
+    font-weight: 700;
+    font-size: var(--dp-font-size-base);
+    border-bottom: 2px solid var(--dp-gray-300);
+    z-index: 2;
+}
+
+.dp-timeline-rows {
+    flex: 1;
+}
+
+.dp-timeline-row-group-header {
+    padding: var(--dp-spacing-sm) var(--dp-spacing-md);
+    font-weight: 700;
+    font-size: var(--dp-font-size-sm);
+    color: white;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+    position: sticky;
+    top: 52px;
+    z-index: 1;
+}
+
+.dp-timeline-row-label {
+    padding: var(--dp-spacing-md);
+    border-bottom: 1px solid var(--dp-gray-200);
+    height: 50px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.dp-timeline-service-title {
+    font-weight: 600;
+    font-size: var(--dp-font-size-sm);
+    color: var(--dp-gray-900);
+    margin-bottom: 2px;
+}
+
+.dp-timeline-service-time-label {
+    font-size: 0.75rem;
+    color: var(--dp-gray-500);
+}
+
+/* Rechte Spalte (Zeit-Grid) - scrollbar */
+.dp-timeline-right {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+/* Zeit-Header (fixiert oben, scrollt horizontal) */
+.dp-timeline-header-scroll {
+    overflow-x: auto;
+    overflow-y: hidden;
+    position: sticky;
+    top: 0;
+    z-index: 3;
+    background: white;
+    border-bottom: 2px solid var(--dp-gray-300);
+}
+
+.dp-timeline-time-header {
+    display: grid;
+    grid-auto-flow: column;
+    min-width: min-content;
+    height: 52px;
+    background: var(--dp-gray-100);
+}
+
+.dp-timeline-hour-header {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: var(--dp-font-size-sm);
+    color: var(--dp-gray-700);
+    border-right: 1px solid var(--dp-gray-300);
+}
+
+.dp-timeline-half-marker {
+    border-right: 1px dashed var(--dp-gray-300);
+}
+
+/* Grid Scroll Container */
+.dp-timeline-grid-scroll {
+    flex: 1;
+    overflow: auto;
+    position: relative;
+}
+
+/* Timeline Grid */
+.dp-timeline-grid {
+    display: grid;
+    position: relative;
+    min-width: min-content;
+    background: white;
+}
+
+/* Grid-Linien (Hintergrund) */
+.dp-timeline-grid-lines {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    pointer-events: none;
+}
+
+.dp-timeline-grid-line {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background: var(--dp-gray-200);
+}
+
+.dp-timeline-grid-line.hour {
+    background: var(--dp-gray-300);
+    width: 2px;
+}
+
+.dp-timeline-grid-line.half {
+    background: var(--dp-gray-200);
+    opacity: 0.5;
+}
+
+/* Service Bars (Vordergrund) */
+.dp-timeline-bar {
+    position: relative;
+    border-radius: var(--dp-radius);
+    padding: var(--dp-spacing-sm);
+    margin: 2px;
+    cursor: pointer;
+    transition: var(--dp-transition);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+}
+
+.dp-timeline-bar:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 6px rgba(0,0,0,0.15);
+    z-index: 1;
+}
+
+.dp-timeline-bar-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--dp-spacing-sm);
+    width: 100%;
+    color: white;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+}
+
+.dp-timeline-bar-name {
+    font-weight: 600;
+    font-size: var(--dp-font-size-sm);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex: 1;
+}
+
+.dp-timeline-bar-slots {
+    font-size: 0.75rem;
+    font-weight: 700;
+    white-space: nowrap;
+    background: rgba(255,255,255,0.2);
+    padding: 2px 6px;
+    border-radius: 3px;
+}
+
+/* Responsive Timeline */
+@media (max-width: 768px) {
+    .dp-timeline-wrapper {
+        height: 500px;
+    }
+    
+    .dp-timeline-left {
+        width: 200px;
+    }
+    
+    .dp-timeline-service-title {
+        font-size: 0.75rem;
+    }
+    
+    .dp-timeline-bar-name {
+        font-size: 0.75rem;
+    }
+}

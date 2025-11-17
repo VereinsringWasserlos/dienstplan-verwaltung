@@ -61,9 +61,34 @@ jQuery(document).ready(function($) {
         jQuery('.dp-timeline-tab').removeClass('active');
         jQuery(button).addClass('active');
         
-        jQuery('.dp-timeline-day').hide();
+        jQuery('.dp-timeline-day-container').hide();
         jQuery('[data-day-id="' + dayId + '"]').show();
     };
+    
+    // Timeline Scroll-Synchronisierung
+    jQuery(document).ready(function($) {
+        // Synchronisiere horizontales Scrollen zwischen Header und Grid
+        $('.dp-timeline-grid-scroll').on('scroll', function() {
+            const scrollLeft = $(this).scrollLeft();
+            $('.dp-timeline-header-scroll').scrollLeft(scrollLeft);
+        });
+        
+        $('.dp-timeline-header-scroll').on('scroll', function() {
+            const scrollLeft = $(this).scrollLeft();
+            $('.dp-timeline-grid-scroll').scrollLeft(scrollLeft);
+        });
+        
+        // Synchronisiere vertikales Scrollen zwischen Left-Panel und Grid
+        $('.dp-timeline-left').on('scroll', function() {
+            const scrollTop = $(this).scrollTop();
+            $('.dp-timeline-grid-scroll').scrollTop(scrollTop);
+        });
+        
+        $('.dp-timeline-grid-scroll').on('scroll', function() {
+            const scrollTop = $(this).scrollTop();
+            $('.dp-timeline-left').scrollTop(scrollTop);
+        });
+    });
     
     // ===================================
     // Hilfsfunktionen

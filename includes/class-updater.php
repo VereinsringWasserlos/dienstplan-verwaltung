@@ -53,11 +53,17 @@ class Dienstplan_Updater {
     private $git_cmd = 'git';
 
     /**
+     * Git verfügbar?
+     * @var bool
+     */
+    private $git_available = false;
+
+    /**
      * Initialisiert den Updater
      */
     public function __construct() {
         $this->plugin_slug = 'dienstplan-verwaltung';
-        $this->plugin_basename = 'dienstplan-verwaltung/dienstplan-verwaltung.php';
+        $this->plugin_basename = plugin_basename(DIENSTPLAN_PLUGIN_FILE);
         $this->plugin_dir = DIENSTPLAN_PLUGIN_PATH;
         $this->current_version = DIENSTPLAN_VERSION;
         
@@ -65,8 +71,9 @@ class Dienstplan_Updater {
         $this->git_repo_url = 'https://github.com/VereinsringWasserlos/dienstplan-verwaltung.git';
         $this->git_branch = 'main';
 
-        // Finde Git-Executable
+        // Finde Git-Executable und prüfe Verfügbarkeit
         $this->find_git_executable();
+        $this->git_available = $this->is_git_available();
 
         // WordPress Hooks für Update-System
         add_filter('site_transient_update_plugins', array($this, 'check_for_updates'));
@@ -154,7 +161,7 @@ class Dienstplan_Updater {
     }
 
     /**
-     * Holt Update-Informationen aus Git
+     * Holt Update-Informationen (Git oder GitHub API)
      */
     private function get_update_info() {
         if (!empty($this->update_info)) {
@@ -173,13 +180,27 @@ class Dienstplan_Updater {
             return $cached;
         }
 
-        try {
-            // Prüfe ob Git verfügbar ist
-            if (!$this->is_git_available()) {
-                error_log('DP Updater: Git ist nicht verfügbar');
-                return false;
-            }
+        // Verwende Git wenn verfügbar, sonst GitHub API
+        if ($this->git_available) {
+            $update_info = $this->get_update_info_from_git();
+        } else {
+            $update_info = $this->get_update_info_from_github();
+        }
 
+        if ($update_info) {
+            // Cache die Update-Info
+            set_transient($cache_key, $update_info, 43200); // 12 Stunden
+            $this->update_info = $update_info;
+        }
+
+        return $update_info;
+    }
+
+    /**
+     * Holt Update-Informationen aus Git (Entwicklungsumgebung)
+     */
+    private function get_update_info_from_git() {
+        try {
             // Hole Remote-Version aus Git
             $remote_version = $this->get_remote_version();
             
@@ -187,7 +208,7 @@ class Dienstplan_Updater {
                 return false;
             }
 
-            $update_info = array(
+            return array(
                 'version' => $remote_version,
                 'url' => $this->git_repo_url,
                 'download_url' => $this->get_download_url(),
@@ -196,16 +217,67 @@ class Dienstplan_Updater {
                 'changelog' => $this->get_changelog(),
             );
 
-            // Cache für 12 Stunden
-            set_transient($cache_key, $update_info, 43200); // 12 * 3600
-            
-            $this->update_info = $update_info;
-            return $update_info;
-
         } catch (Exception $e) {
-            error_log('DP Updater Fehler: ' . $e->getMessage());
+            error_log('DP Updater: Git-Fehler: ' . $e->getMessage());
             return false;
         }
+    }
+
+    /**
+     * Holt Update-Informationen von GitHub API (Produktionsserver)
+     */
+    private function get_update_info_from_github() {
+        // GitHub API: Neuestes Release
+        $api_url = 'https://api.github.com/repos/VereinsringWasserlos/dienstplan-verwaltung/releases/latest';
+        
+        $response = wp_remote_get($api_url, array(
+            'timeout' => 10,
+            'headers' => array(
+                'Accept' => 'application/vnd.github.v3+json',
+                'User-Agent' => 'WordPress/' . get_bloginfo('version') . '; ' . get_bloginfo('url')
+            )
+        ));
+
+        if (is_wp_error($response)) {
+            error_log('DP Updater: GitHub API Fehler: ' . $response->get_error_message());
+            return false;
+        }
+
+        $body = wp_remote_retrieve_body($response);
+        $release_data = json_decode($body, true);
+
+        if (!$release_data || !isset($release_data['tag_name'])) {
+            error_log('DP Updater: Ungültige GitHub API Antwort');
+            return false;
+        }
+
+        // Version aus Tag (z.B. "v0.9.1" -> "0.9.1")
+        $version = ltrim($release_data['tag_name'], 'v');
+        
+        // Finde ZIP-Asset
+        $download_url = '';
+        if (isset($release_data['assets']) && is_array($release_data['assets'])) {
+            foreach ($release_data['assets'] as $asset) {
+                if (isset($asset['name']) && strpos($asset['name'], '.zip') !== false) {
+                    $download_url = $asset['browser_download_url'];
+                    break;
+                }
+            }
+        }
+        
+        // Fallback: Zipball URL
+        if (empty($download_url) && isset($release_data['zipball_url'])) {
+            $download_url = $release_data['zipball_url'];
+        }
+
+        return array(
+            'version' => $version,
+            'url' => isset($release_data['html_url']) ? $release_data['html_url'] : $this->git_repo_url,
+            'download_url' => $download_url,
+            'tested' => '6.4',
+            'requires_php' => '7.4',
+            'changelog' => isset($release_data['body']) ? $release_data['body'] : ''
+        );
     }
 
     /**
@@ -465,11 +537,14 @@ class Dienstplan_Updater {
      * Holt Git-Status
      */
     public function get_git_status() {
-        if (!$this->is_git_available()) {
-            return array(
-                'available' => false,
-                'message' => 'Git ist nicht verfügbar'
-            );
+        $status = array(
+            'available' => $this->git_available,
+            'mode' => $this->git_available ? 'Git (Entwicklung)' : 'GitHub API (Produktion)'
+        );
+
+        if (!$this->git_available) {
+            $status['message'] = 'Git ist nicht verfügbar. Updates werden über GitHub API bezogen.';
+            return $status;
         }
 
         $current_dir = getcwd();
@@ -494,20 +569,20 @@ class Dienstplan_Updater {
 
             chdir($current_dir);
 
-            return array(
-                'available' => true,
-                'current_branch' => $current_branch,
-                'last_commit' => $last_commit,
-                'remote_url' => $remote_url,
-                'has_uncommitted_changes' => $has_changes,
-                'configured_branch' => $this->git_branch,
-                'configured_repo' => $this->git_repo_url
-            );
+            $status['current_branch'] = $current_branch;
+            $status['last_commit'] = $last_commit;
+            $status['remote_url'] = $remote_url;
+            $status['has_uncommitted_changes'] = $has_changes;
+            $status['configured_branch'] = $this->git_branch;
+            $status['configured_repo'] = $this->git_repo_url;
+
+            return $status;
 
         } catch (Exception $e) {
             chdir($current_dir);
             return array(
                 'available' => false,
+                'mode' => 'Fehler',
                 'message' => 'Fehler: ' . $e->getMessage()
             );
         }

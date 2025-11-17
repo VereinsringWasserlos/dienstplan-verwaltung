@@ -89,19 +89,34 @@ if (isset($_POST['perform_update']) && check_admin_referer('dienstplan_perform_u
             
             <!-- Git-Status -->
             <div class="card" style="max-width: none; margin-bottom: 20px;">
-                <h2>Git-Status</h2>
+                <h2>Update-Modus</h2>
+                
+                <table class="widefat" style="margin-top: 15px;">
+                    <tbody>
+                        <tr>
+                            <td style="width: 200px;"><strong>Update-Quelle:</strong></td>
+                            <td>
+                                <?php if ($git_status['available']): ?>
+                                    <span style="color: #46b450; font-weight: bold;">✓ <?php echo esc_html($git_status['mode']); ?></span>
+                                <?php else: ?>
+                                    <span style="color: #2271b1; font-weight: bold;">ℹ <?php echo esc_html($git_status['mode']); ?></span>
+                                <?php endif; ?>
+                            </td>
+                        </tr>
+                        <?php if (!empty($git_status['message'])): ?>
+                        <tr>
+                            <td><strong>Info:</strong></td>
+                            <td><?php echo esc_html($git_status['message']); ?></td>
+                        </tr>
+                        <?php endif; ?>
+                    </tbody>
+                </table>
                 
                 <?php if ($git_status['available']): ?>
                     <table class="widefat" style="margin-top: 15px;">
                         <tbody>
                             <tr>
-                                <td style="width: 200px;"><strong>Git verfügbar:</strong></td>
-                                <td>
-                                    <span style="color: #46b450; font-weight: bold;">✓ Ja</span>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td><strong>Aktueller Branch:</strong></td>
+                                <td style="width: 200px;"><strong>Aktueller Branch:</strong></td>
                                 <td><code><?php echo esc_html($git_status['current_branch']); ?></code></td>
                             </tr>
                             <tr>
@@ -130,13 +145,6 @@ if (isset($_POST['perform_update']) && check_admin_referer('dienstplan_perform_u
                             </tr>
                         </tbody>
                     </table>
-                <?php else: ?>
-                    <div class="notice notice-warning inline" style="margin: 15px 0;">
-                        <p>
-                            <strong>Git ist nicht verfügbar</strong><br>
-                            <?php echo esc_html($git_status['message']); ?>
-                        </p>
-                    </div>
                 <?php endif; ?>
             </div>
 
