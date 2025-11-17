@@ -85,7 +85,14 @@
             success: function(response) {
                 console.log('Save Response:', response);
                 if (response.success) {
-                    if(typeof dpSafeReload === "function") { dpSafeReload(); } else { location.reload(); };
+                    // Prüfe ob Veranstaltungs-Modal offen ist
+                    if (window.veranstaltungModalIsOpen && typeof reloadVerantwortlicheList === 'function') {
+                        closeMitarbeiterModal();
+                        reloadVerantwortlicheList();
+                        window.veranstaltungModalIsOpen = false;
+                    } else {
+                        if(typeof dpSafeReload === "function") { dpSafeReload(); } else { location.reload(); };
+                    }
                 } else {
                     alert('Fehler: ' + (response.data ? response.data.message : 'Unbekannt'));
                 }

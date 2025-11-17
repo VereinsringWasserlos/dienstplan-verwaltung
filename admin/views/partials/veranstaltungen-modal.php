@@ -80,13 +80,13 @@ if (!defined('ABSPATH')) exit;
                                 <div id="v_verantwortliche-checkboxes" style="flex: 1; border: 1px solid #ddd; padding: 0.75rem; border-radius: 4px; max-height: 200px; overflow-y: auto; background: #fff;">
                                     <p style="color: #666; margin: 0;"><?php _e('Lädt...', 'dienstplan-verwaltung'); ?></p>
                                 </div>
-                                <button type="button" class="button button-secondary" onclick="openNewContactModalVeranstaltung()" style="white-space: nowrap;">
+                                <button type="button" class="button button-secondary" onclick="openMitarbeiterModal()" style="white-space: nowrap;">
                                     <span class="dashicons dashicons-plus-alt" style="margin-top: 3px;"></span> 
-                                    <?php _e('Neuer Kontakt', 'dienstplan-verwaltung'); ?>
+                                    <?php _e('Neuer Mitarbeiter', 'dienstplan-verwaltung'); ?>
                                 </button>
                             </div>
                             <p class="description">
-                                <?php _e('Aktuell zugewiesene Verantwortliche. Über "Neuer Kontakt" können weitere Personen hinzugefügt werden.', 'dienstplan-verwaltung'); ?>
+                                <?php _e('Wählen Sie Verantwortliche aus oder erstellen Sie neue Mitarbeiter über "Neuer Mitarbeiter".', 'dienstplan-verwaltung'); ?>
                             </p>
                         </td>
                     </tr>

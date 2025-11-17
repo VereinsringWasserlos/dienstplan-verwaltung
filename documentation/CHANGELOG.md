@@ -7,6 +7,27 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ---
 
+## [0.9.5.1] - 2025-11-17 🔧 Neuer Kontakt bei Veranstaltungen
+
+**Bugfix:** "Neuer Kontakt" Button bei Veranstaltungen funktioniert jetzt korrekt.
+
+### 🔧 Bugfixes
+
+#### Veranstaltungs-Verantwortliche
+- **Button "Neuer Mitarbeiter":** Öffnet jetzt das Mitarbeiter-Modal statt des Kontakt-Modals
+- **Intelligentes Reload:** Nach dem Erstellen eines Mitarbeiters wird nur die Verantwortlichen-Liste neu geladen, nicht die ganze Seite
+- **Bessere UX:** Veranstaltungs-Modal bleibt offen beim Hinzufügen neuer Mitarbeiter
+- **Neue Funktion:** `reloadVerantwortlicheList()` für gezieltes Neuladen der Liste
+
+### 📋 Technisches
+
+#### JavaScript-Änderungen
+- `dp-veranstaltungen-modal.js`: Neue Funktion `reloadVerantwortlicheList()`
+- `dp-mitarbeiter-modal.js`: Flag-basierte Erkennung ob Veranstaltungs-Modal offen
+- Smart Reload: Nur Reload wenn nicht aus Veranstaltung heraus aufgerufen
+
+---
+
 ## [0.9.5.0] - 2025-11-17 🔧 Bugfixes & 4-stellige Versionierung
 
 **Wichtige Bugfixes** für Frontend-Display und Vereins-Auswahl.
