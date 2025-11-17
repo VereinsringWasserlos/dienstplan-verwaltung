@@ -55,26 +55,15 @@ class Dienstplan_Updater {
         $this->plugin_dir = DIENSTPLAN_PLUGIN_PATH;
         $this->current_version = DIENSTPLAN_VERSION;
         
-        // Git-Repository Konfiguration (später in Einstellungen verschieben)
-        $this->git_repo_url = get_option('dienstplan_git_repo_url', '');
-        $this->git_branch = get_option('dienstplan_git_branch', 'main');
+        // Git-Repository Konfiguration
+        // TODO: Nach GitHub-Push diese URL anpassen
+        $this->git_repo_url = 'https://github.com/yourusername/dienstplan-verwaltung.git';
+        $this->git_branch = 'main';
 
         // WordPress Hooks für Update-System
         add_filter('site_transient_update_plugins', array($this, 'check_for_updates'));
         add_filter('plugins_api', array($this, 'plugin_info'), 20, 3);
         add_action('upgrader_process_complete', array($this, 'after_update'), 10, 2);
-        
-        // Admin-Hooks
-        add_action('admin_init', array($this, 'register_settings'));
-    }
-
-    /**
-     * Registriert Einstellungen
-     */
-    public function register_settings() {
-        register_setting('dienstplan_settings', 'dienstplan_git_repo_url');
-        register_setting('dienstplan_settings', 'dienstplan_git_branch');
-        register_setting('dienstplan_settings', 'dienstplan_auto_update');
     }
 
     /**

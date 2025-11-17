@@ -27,24 +27,6 @@ try {
     );
 }
 
-// Aktuelle Einstellungen
-$git_repo_url = get_option('dienstplan_git_repo_url', '');
-$git_branch = get_option('dienstplan_git_branch', 'main');
-$auto_update = get_option('dienstplan_auto_update', false);
-
-// Einstellungen speichern
-if (isset($_POST['save_git_settings']) && check_admin_referer('dienstplan_git_settings')) {
-    update_option('dienstplan_git_repo_url', sanitize_text_field($_POST['git_repo_url']));
-    update_option('dienstplan_git_branch', sanitize_text_field($_POST['git_branch']));
-    update_option('dienstplan_auto_update', isset($_POST['auto_update']));
-    
-    echo '<div class="notice notice-success"><p>Einstellungen gespeichert.</p></div>';
-    
-    $git_repo_url = get_option('dienstplan_git_repo_url');
-    $git_branch = get_option('dienstplan_git_branch');
-    $auto_update = get_option('dienstplan_auto_update');
-}
-
 // Manuelle Update-Prüfung
 if (isset($_POST['check_update']) && check_admin_referer('dienstplan_check_update')) {
     if (isset($updater)) {
@@ -144,72 +126,6 @@ if (isset($_POST['perform_update']) && check_admin_referer('dienstplan_perform_u
                 <?php endif; ?>
             </div>
 
-            <!-- Update-Einstellungen -->
-            <div class="card" style="max-width: none; margin-bottom: 20px;">
-                <h2>Update-Einstellungen</h2>
-                
-                <form method="post" style="margin-top: 15px;">
-                    <?php wp_nonce_field('dienstplan_git_settings'); ?>
-                    
-                    <table class="form-table">
-                        <tr>
-                            <th scope="row">
-                                <label for="git_repo_url">Git-Repository URL</label>
-                            </th>
-                            <td>
-                                <input type="text" 
-                                       id="git_repo_url" 
-                                       name="git_repo_url" 
-                                       value="<?php echo esc_attr($git_repo_url); ?>" 
-                                       class="regular-text"
-                                       placeholder="https://github.com/user/repo.git">
-                                <p class="description">
-                                    URL des Git-Repositories für Updates. Leer lassen für lokales Repository.
-                                </p>
-                            </td>
-                        </tr>
-                        <tr>
-                            <th scope="row">
-                                <label for="git_branch">Branch</label>
-                            </th>
-                            <td>
-                                <input type="text" 
-                                       id="git_branch" 
-                                       name="git_branch" 
-                                       value="<?php echo esc_attr($git_branch); ?>" 
-                                       class="regular-text">
-                                <p class="description">
-                                    Branch für Updates (z.B. main, master, develop)
-                                </p>
-                            </td>
-                        </tr>
-                        <tr>
-                            <th scope="row">
-                                <label for="auto_update">Automatische Updates</label>
-                            </th>
-                            <td>
-                                <label>
-                                    <input type="checkbox" 
-                                           id="auto_update" 
-                                           name="auto_update" 
-                                           <?php checked($auto_update); ?>>
-                                    Automatisch nach Updates suchen
-                                </label>
-                                <p class="description">
-                                    Wenn aktiviert, sucht das Plugin regelmäßig nach Updates.
-                                </p>
-                            </td>
-                        </tr>
-                    </table>
-
-                    <p class="submit">
-                        <button type="submit" name="save_git_settings" class="button button-primary">
-                            Einstellungen speichern
-                        </button>
-                    </p>
-                </form>
-            </div>
-
             <!-- Update-Aktionen -->
             <div class="card" style="max-width: none;">
                 <h2>Update-Aktionen</h2>
@@ -286,10 +202,10 @@ if (isset($_POST['perform_update']) && check_admin_referer('dienstplan_perform_u
                 <div style="margin-top: 10px;">
                     <p><strong>So funktioniert das Update-System:</strong></p>
                     <ol style="padding-left: 20px; line-height: 1.8;">
-                        <li>Git-Repository konfigurieren</li>
-                        <li>Nach Updates suchen</li>
-                        <li>Update durchführen (mit Backup!)</li>
-                        <li>Datenbank wird automatisch aktualisiert</li>
+                        <li>Updates werden über WordPress Plugin-Updates angezeigt</li>
+                        <li>Git-Repository wird automatisch geprüft</li>
+                        <li>Bei neuer Version: Update-Button in WordPress</li>
+                        <li>Datenbank wird automatisch migriert</li>
                     </ol>
                     
                     <hr style="margin: 15px 0;">
@@ -297,7 +213,7 @@ if (isset($_POST['perform_update']) && check_admin_referer('dienstplan_perform_u
                     <p><strong>Wichtige Hinweise:</strong></p>
                     <ul style="padding-left: 20px; line-height: 1.8;">
                         <li>Erstellen Sie vor Updates immer ein Backup</li>
-                        <li>Testen Sie Updates zuerst auf einer Test-Umgebung</li>
+                        <li>Updates erfolgen über WordPress Update-System</li>
                         <li>Lokale Änderungen werden mit <code>git stash</code> gesichert</li>
                         <li>Datenbank-Migrationen laufen automatisch</li>
                     </ul>
