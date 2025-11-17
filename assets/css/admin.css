@@ -1,0 +1,20 @@
+:root { --dp-primary: #2563eb; --dp-gray-900: #111827; }
+.vereine-header { background: white; padding: 1rem; margin-bottom: 1.5rem; border-radius: 0.5rem; }
+.button-primary { background: var(--dp-primary) !important; color: white !important; }
+
+/* Dropdown-Sichtbarkeit sicherstellen */
+.wp-list-table tbody, .wp-list-table tr, .wp-list-table td { overflow: visible !important; }
+.dropdown-actions, .dienst-action-dropdown { position: relative; }
+.action-dropdown-menu, .dienst-action-dropdown {
+	z-index: 100000 !important;
+	overflow: visible !important;
+}
+/* Einheitliche Menü-Basis (greift nur wenn kein Inline-Style vorhanden ist) */
+.action-dropdown-menu, .dienst-action-dropdown {
+	background: #fff;
+	border: 1px solid #d1d5db;
+	box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+	border-radius: 6px;
+}
+/* Hover States vereinheitlichen */
+.action-dropdown-menu a:hover, .dienst-action-dropdown a:hover { background: #f3f4f6 !important; }
