@@ -435,15 +435,17 @@ ksort($dienste_nach_tagen);
                                             
                                             <?php foreach ($bereich['time_slots'] as $time_key => $services_in_slot): ?>
                                                 <div class="dp-timeline-row-label" data-time-slot="<?php echo $time_key; ?>">
-                                                    <div class="dp-timeline-service-title">
-                                                        <?php 
-                                                        // Zeige alle Services in diesem Slot
-                                                        $names = array_map(function($s) { return $s->taetigkeit_name; }, $services_in_slot);
-                                                        echo esc_html($time_key);
-                                                        ?>
-                                                    </div>
-                                                    <div class="dp-timeline-service-time-label">
-                                                        <?php echo count($services_in_slot); ?> Dienst<?php echo count($services_in_slot) > 1 ? 'e' : ''; ?>
+                                                    <div class="dp-timeline-service-info">
+                                                        <div class="dp-timeline-service-time">
+                                                            <?php echo esc_html($time_key); ?>
+                                                        </div>
+                                                        <div class="dp-timeline-service-activities">
+                                                            <?php 
+                                                            // Zeige alle Tätigkeiten in diesem Slot
+                                                            $names = array_map(function($s) { return $s->taetigkeit_name; }, $services_in_slot);
+                                                            echo esc_html(implode(', ', $names));
+                                                            ?>
+                                                        </div>
                                                     </div>
                                                 </div>
                                             <?php endforeach; ?>

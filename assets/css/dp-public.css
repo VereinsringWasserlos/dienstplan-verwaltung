@@ -1320,16 +1320,26 @@
     justify-content: center;
 }
 
-.dp-timeline-service-title {
-    font-weight: 600;
-    font-size: var(--dp-font-size-sm);
-    color: var(--dp-gray-900);
-    margin-bottom: 2px;
+/* Service Info Container */
+.dp-timeline-service-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    width: 100%;
 }
 
-.dp-timeline-service-time-label {
-    font-size: 0.75rem;
-    color: var(--dp-gray-500);
+.dp-timeline-service-time {
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: var(--dp-primary);
+    white-space: nowrap;
+}
+
+.dp-timeline-service-activities {
+    font-size: 0.8125rem;
+    color: var(--dp-gray-700);
+    line-height: 1.3;
+    word-wrap: break-word;
 }
 
 /* Rechte Spalte (Zeit-Grid) - scrollbar */
@@ -1474,7 +1484,11 @@
         width: 200px;
     }
     
-    .dp-timeline-service-title {
+    .dp-timeline-service-time {
+        font-size: 0.8125rem;
+    }
+    
+    .dp-timeline-service-activities {
         font-size: 0.75rem;
     }
     
