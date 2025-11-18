@@ -255,6 +255,14 @@ class Dienstplan_Admin {
             $this->version
         );
         
+        // Dienste Tabelle CSS (für verbesserte Lesbarkeit)
+        wp_enqueue_style(
+            'dp-dienste-table-styles',
+            DIENSTPLAN_PLUGIN_URL . 'assets/css/dp-dienste-table.css',
+            array('dp-admin-styles'),
+            $this->version
+        );
+        
         // JS
         wp_enqueue_script('jquery');
         
