@@ -4,6 +4,15 @@
  */
 if (!defined('ABSPATH')) exit;
 
+// Berechtigungsprüfung
+$can_manage_clubs = Dienstplan_Roles::can_manage_clubs() || current_user_can('manage_options');
+$can_manage_events = Dienstplan_Roles::can_manage_events() || current_user_can('manage_options');
+
+// Wenn User keine Berechtigungen hat, Fehler anzeigen
+if (!$can_manage_clubs && !$can_manage_events) {
+    wp_die(__('Sie haben keine Berechtigung für Import/Export.', 'dienstplan-verwaltung'));
+}
+
 // Erhalte WordPress Zeitzone
 $wp_timezone = get_option('timezone_string');
 if (empty($wp_timezone)) {
@@ -66,11 +75,20 @@ if (isset($stats['veranstaltungen'])) {
                             <td>
                                 <select id="import_type" name="import_type" class="regular-text" required>
                                     <option value=""><?php _e('-- Bitte wählen --', 'dienstplan-verwaltung'); ?></option>
+                                    <?php if ($can_manage_clubs): ?>
                                     <option value="vereine"><?php _e('Vereine', 'dienstplan-verwaltung'); ?></option>
+                                    <?php endif; ?>
+                                    <?php if ($can_manage_events): ?>
                                     <option value="veranstaltungen"><?php _e('Veranstaltungen', 'dienstplan-verwaltung'); ?></option>
                                     <option value="dienste"><?php _e('Dienste', 'dienstplan-verwaltung'); ?></option>
+                                    <?php endif; ?>
                                 </select>
-                                <p class="description"><?php _e('Wählen Sie den Typ der Daten, die Sie importieren möchten.', 'dienstplan-verwaltung'); ?></p>
+                                <p class="description">
+                                    <?php _e('Wählen Sie den Typ der Daten, die Sie importieren möchten.', 'dienstplan-verwaltung'); ?>
+                                    <?php if (!$can_manage_clubs || !$can_manage_events): ?>
+                                    <br><em><?php _e('Sie sehen nur Optionen für Ihre zugewiesenen Berechtigungen.', 'dienstplan-verwaltung'); ?></em>
+                                    <?php endif; ?>
+                                </p>
                             </td>
                         </tr>
                         
@@ -241,10 +259,13 @@ if (isset($stats['veranstaltungen'])) {
                 <div style="margin: 1.5rem 0; padding: 1rem; background: #f9fafb; border-radius: 4px;">
                     <h4 style="margin-top: 0;"><?php _e('Verfügbare Daten:', 'dienstplan-verwaltung'); ?></h4>
                     <ul style="list-style: none; padding: 0;">
+                        <?php if ($can_manage_clubs): ?>
                         <li style="padding: 0.5rem 0; border-bottom: 1px solid #e5e7eb;">
                             <span class="dashicons dashicons-groups" style="color: #2271b1;"></span>
                             <strong><?php echo count($stats['vereine']); ?></strong> <?php _e('Vereine', 'dienstplan-verwaltung'); ?>
                         </li>
+                        <?php endif; ?>
+                        <?php if ($can_manage_events): ?>
                         <li style="padding: 0.5rem 0; border-bottom: 1px solid #e5e7eb;">
                             <span class="dashicons dashicons-calendar-alt" style="color: #2271b1;"></span>
                             <strong><?php echo count($stats['veranstaltungen']); ?></strong> <?php _e('Veranstaltungen', 'dienstplan-verwaltung'); ?>
@@ -253,18 +274,22 @@ if (isset($stats['veranstaltungen'])) {
                             <span class="dashicons dashicons-list-view" style="color: #2271b1;"></span>
                             <strong><?php echo count($stats['dienste']); ?></strong> <?php _e('Dienste', 'dienstplan-verwaltung'); ?>
                         </li>
+                        <?php endif; ?>
                     </ul>
                 </div>
                 
                 <h3><?php _e('Export-Optionen', 'dienstplan-verwaltung'); ?></h3>
                 
+                <?php if ($can_manage_clubs): ?>
                 <p>
                     <button type="button" class="button button-secondary" onclick="return exportData('vereine', event);" style="display: block; width: 100%; margin-bottom: 0.5rem;">
                         <span class="dashicons dashicons-download" style="margin-top: 3px;"></span>
                         <?php _e('Vereine exportieren', 'dienstplan-verwaltung'); ?>
                     </button>
                 </p>
+                <?php endif; ?>
                 
+                <?php if ($can_manage_events): ?>
                 <p>
                     <button type="button" class="button button-secondary" onclick="return exportData('veranstaltungen', event);" style="display: block; width: 100%; margin-bottom: 0.5rem;">
                         <span class="dashicons dashicons-download" style="margin-top: 3px;"></span>
@@ -278,13 +303,22 @@ if (isset($stats['veranstaltungen'])) {
                         <?php _e('Dienste exportieren', 'dienstplan-verwaltung'); ?>
                     </button>
                 </p>
+                <?php endif; ?>
                 
+                <?php if ($can_manage_clubs && $can_manage_events): ?>
                 <p>
                     <button type="button" class="button button-primary" onclick="return exportData('all', event);" style="display: block; width: 100%; margin-top: 1rem;">
                         <span class="dashicons dashicons-download" style="margin-top: 3px;"></span>
                         <?php _e('Alles exportieren (ZIP)', 'dienstplan-verwaltung'); ?>
                     </button>
                 </p>
+                <?php endif; ?>
+                
+                <?php if (!$can_manage_clubs || !$can_manage_events): ?>
+                <p class="description">
+                    <em><?php _e('Sie sehen nur Optionen für Ihre zugewiesenen Berechtigungen.', 'dienstplan-verwaltung'); ?></em>
+                </p>
+                <?php endif; ?>
             </div>
         </div>
             </td>

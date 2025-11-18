@@ -7,6 +7,224 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ---
 
+## [0.6.1] - 2025-11-18 🔐 Rollen: Import/Export-Berechtigungen
+
+### 🎯 Problem gelöst
+Import/Export war nur für WordPress-Admins verfügbar. Dienstplan-Admins konnten ihre zugewiesenen Daten nicht exportieren oder importieren.
+
+### ✨ Neue Features
+
+#### 1️⃣ Granulare Import/Export-Berechtigungen
+**Admin können jetzt je nach Rolle importieren und exportieren:**
+
+**Vereins-Admins (`dp_club_admin`):**
+- ✅ Vereine exportieren
+- ✅ Vereine importieren
+- ❌ Keine Veranstaltungen/Dienste
+
+**Veranstaltungs-Admins (`dp_event_admin`):**
+- ✅ Veranstaltungen exportieren
+- ✅ Dienste exportieren
+- ✅ Veranstaltungen importieren
+- ✅ Dienste importieren
+- ❌ Keine Vereine
+
+**Allgemeine Admins (`dp_general_admin`):**
+- ✅ Alles exportieren (ZIP)
+- ✅ Alle Typen importieren
+
+**WordPress-Admins (`manage_options`):**
+- ✅ Volle Kontrolle (Fallback)
+
+#### 2️⃣ Rollen-basierte UI
+**Import/Export-Seite zeigt nur erlaubte Optionen:**
+
+- 🔵 **Import-Dropdown:** Nur erlaubte Typen sichtbar
+- 🔵 **Export-Buttons:** Nur erlaubte Buttons sichtbar
+- 🔵 **Statistiken:** Nur relevante Zahlen angezeigt
+- 💬 **Hinweistext:** "Sie sehen nur Optionen für Ihre zugewiesenen Berechtigungen"
+
+**Beispiel UI für Vereins-Admin:**
+```
+Export-Optionen:
+[Vereine exportieren]  ✅
+(Hinweis: Sie sehen nur Optionen für Ihre zugewiesenen Berechtigungen)
+```
+
+**Beispiel UI für Veranstaltungs-Admin:**
+```
+Export-Optionen:
+[Veranstaltungen exportieren]  ✅
+[Dienste exportieren]          ✅
+(Hinweis: Sie sehen nur Optionen für Ihre zugewiesenen Berechtigungen)
+```
+
+### 🔧 Changed
+
+#### Backend-Änderungen in `admin/class-admin.php`:
+
+**1. Menü-Berechtigung gesenkt (Zeile 145-155):**
+```php
+// VORHER: Nur Settings-Admins
+add_submenu_page(..., Dienstplan_Roles::CAP_MANAGE_SETTINGS, ...);
+
+// NACHHER: Basis-Check, granular in Funktionen
+add_submenu_page(..., 'read', ...);  // Wird in Funktionen geprüft
+```
+
+**2. Export-Handler mit Typ-Check (Zeile 2165-2195):**
+```php
+public function handle_export() {
+    $type = sanitize_text_field($_GET['type']);
+    $can_export = false;
+    
+    switch ($type) {
+        case 'vereine':
+            $can_export = Dienstplan_Roles::can_manage_clubs() 
+                       || current_user_can('manage_options');
+            break;
+        case 'veranstaltungen':
+        case 'dienste':
+            $can_export = Dienstplan_Roles::can_manage_events() 
+                       || current_user_can('manage_options');
+            break;
+        default:
+            $can_export = current_user_can('manage_options');
+    }
+    
+    if (!$can_export) {
+        wp_die('Keine Berechtigung für diesen Export-Typ');
+    }
+    // ... CSV-Export
+}
+```
+
+**3. Import-Handler mit Typ-Check (Zeile 2275-2305):**
+```php
+public function ajax_import_csv() {
+    $import_type = sanitize_text_field($_POST['import_type']);
+    $can_import = false;
+    
+    switch ($import_type) {
+        case 'vereine':
+            $can_import = Dienstplan_Roles::can_manage_clubs() 
+                       || current_user_can('manage_options');
+            break;
+        case 'veranstaltungen':
+        case 'dienste':
+            $can_import = Dienstplan_Roles::can_manage_events() 
+                       || current_user_can('manage_options');
+            break;
+        default:
+            $can_import = current_user_can('manage_options');
+    }
+    
+    if (!$can_import) {
+        wp_send_json_error(array(
+            'message' => 'Keine Berechtigung für diesen Import-Typ'
+        ));
+        return;
+    }
+    // ... CSV-Import
+}
+```
+
+#### Frontend-Änderungen in `admin/views/import-export.php`:
+
+**1. Berechtigungsprüfung am Seitenanfang (Zeile 1-30):**
+```php
+$can_manage_clubs = Dienstplan_Roles::can_manage_clubs() 
+                 || current_user_can('manage_options');
+$can_manage_events = Dienstplan_Roles::can_manage_events() 
+                  || current_user_can('manage_options');
+
+if (!$can_manage_clubs && !$can_manage_events) {
+    wp_die('Sie haben keine Berechtigung für Import/Export.');
+}
+```
+
+**2. Import-Dropdown rollen-basiert (Zeile 70-85):**
+```php
+<select id="import_type" name="import_type" required>
+    <option value="">-- Bitte wählen --</option>
+    <?php if ($can_manage_clubs): ?>
+    <option value="vereine">Vereine</option>
+    <?php endif; ?>
+    <?php if ($can_manage_events): ?>
+    <option value="veranstaltungen">Veranstaltungen</option>
+    <option value="dienste">Dienste</option>
+    <?php endif; ?>
+</select>
+```
+
+**3. Export-Buttons rollen-basiert (Zeile 277-306):**
+```php
+<?php if ($can_manage_clubs): ?>
+<button onclick="exportData('vereine')">Vereine exportieren</button>
+<?php endif; ?>
+
+<?php if ($can_manage_events): ?>
+<button onclick="exportData('veranstaltungen')">Veranstaltungen exportieren</button>
+<button onclick="exportData('dienste')">Dienste exportieren</button>
+<?php endif; ?>
+
+<?php if ($can_manage_clubs && $can_manage_events): ?>
+<button onclick="exportData('all')">Alles exportieren (ZIP)</button>
+<?php endif; ?>
+```
+
+**4. Statistiken rollen-basiert (Zeile 260-276):**
+```php
+<?php if ($can_manage_clubs): ?>
+<li>Vereine: <?php echo count($stats['vereine']); ?></li>
+<?php endif; ?>
+
+<?php if ($can_manage_events): ?>
+<li>Veranstaltungen: <?php echo count($stats['veranstaltungen']); ?></li>
+<li>Dienste: <?php echo count($stats['dienste']); ?></li>
+<?php endif; ?>
+```
+
+### 🔒 Security
+
+- ✅ **Typ-basierte Berechtigungsprüfung:** Switch-Statement prüft jeden Datentyp
+- ✅ **Fallback auf WP-Admin:** Unbekannte Typen nur für WordPress-Admins
+- ✅ **Granulare Checks:** Separate Prüfung für Export (GET) und Import (POST)
+- ✅ **Konsistente Error-Messages:** "Keine Berechtigung für diesen Import/Export-Typ"
+- ✅ **UI-Schutz:** User sehen nur erlaubte Optionen (kein "Access Denied")
+
+### 📦 Dateien geändert
+- `admin/class-admin.php`: +45 Zeilen (Menü, Export, Import)
+- `admin/views/import-export.php`: +30 Zeilen (Berechtigungen, UI)
+
+### 🧪 Testing
+
+**Vereins-Admin sollte:**
+- ✅ Import/Export-Seite sehen
+- ✅ Nur "Vereine" in Import-Dropdown sehen
+- ✅ Nur "Vereine exportieren" Button sehen
+- ✅ Vereine exportieren können
+- ✅ Vereine importieren können
+- ❌ Keine Veranstaltungen/Dienste exportieren können
+- ❌ "Alles exportieren (ZIP)" nicht sehen
+
+**Veranstaltungs-Admin sollte:**
+- ✅ Import/Export-Seite sehen
+- ✅ "Veranstaltungen" und "Dienste" in Dropdown sehen
+- ✅ "Veranstaltungen/Dienste exportieren" Buttons sehen
+- ✅ Veranstaltungen/Dienste exportieren können
+- ✅ Veranstaltungen/Dienste importieren können
+- ❌ Keine Vereine exportieren können
+- ❌ "Alles exportieren (ZIP)" nicht sehen
+
+**Allgemeiner Admin sollte:**
+- ✅ Alle Import-Optionen sehen
+- ✅ Alle Export-Buttons sehen
+- ✅ "Alles exportieren (ZIP)" sehen
+- ✅ Alles exportieren/importieren können
+
+---
+
 ## [0.6.0] - 2025-11-18 ✨ UX: Login-Redirect & Dashboard-Widget
 
 ### 🎯 Problem gelöst

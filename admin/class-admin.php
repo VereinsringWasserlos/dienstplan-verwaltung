@@ -142,12 +142,12 @@ class Dienstplan_Admin {
                 array($this, 'display_settings')
             );
             
-            // Import/Export
+            // Import/Export - für alle mit Verwaltungsrechten
             add_submenu_page(
                 '',
                 __('Import/Export', 'dienstplan-verwaltung'),
                 __('Import/Export', 'dienstplan-verwaltung'),
-                Dienstplan_Roles::CAP_MANAGE_SETTINGS,
+                'read', // Niedrigere Berechtigung, wird in Funktion genauer geprüft
                 'dienstplan-import-export',
                 array($this, 'display_import_export')
             );
@@ -2173,12 +2173,26 @@ class Dienstplan_Admin {
             wp_die('Sicherheitsprüfung fehlgeschlagen');
         }
         
-        // Berechtigungsprüfung - verwende eine niedrigere Berechtigung
-        if (!current_user_can('read')) {
-            wp_die('Keine Berechtigung');
+        $type = isset($_GET['type']) ? sanitize_text_field($_GET['type']) : '';
+        
+        // Granulare Berechtigungsprüfung basierend auf Export-Typ
+        $can_export = false;
+        
+        switch ($type) {
+            case 'vereine':
+                $can_export = Dienstplan_Roles::can_manage_clubs() || current_user_can('manage_options');
+                break;
+            case 'veranstaltungen':
+            case 'dienste':
+                $can_export = Dienstplan_Roles::can_manage_events() || current_user_can('manage_options');
+                break;
+            default:
+                $can_export = current_user_can('manage_options'); // Nur WP-Admin für unbekannte Typen
         }
         
-        $type = isset($_GET['type']) ? sanitize_text_field($_GET['type']) : '';
+        if (!$can_export) {
+            wp_die('Keine Berechtigung für diesen Export-Typ');
+        }
         
         require_once DIENSTPLAN_PLUGIN_PATH . 'includes/class-database.php';
         $db = new Dienstplan_Database($this->db_prefix);
@@ -2280,12 +2294,27 @@ class Dienstplan_Admin {
         
         check_ajax_referer('dp_ajax_nonce', 'nonce');
         
-        // Niedrigere Berechtigung für Import
-        if (!current_user_can('read')) {
-            wp_send_json_error(array('message' => 'Keine Berechtigung'));
+        $import_type = isset($_POST['import_type']) ? sanitize_text_field($_POST['import_type']) : '';
+        
+        // Granulare Berechtigungsprüfung basierend auf Import-Typ
+        $can_import = false;
+        
+        switch ($import_type) {
+            case 'vereine':
+                $can_import = Dienstplan_Roles::can_manage_clubs() || current_user_can('manage_options');
+                break;
+            case 'veranstaltungen':
+            case 'dienste':
+                $can_import = Dienstplan_Roles::can_manage_events() || current_user_can('manage_options');
+                break;
+            default:
+                $can_import = current_user_can('manage_options'); // Nur WP-Admin für unbekannte Typen
         }
         
-        $import_type = isset($_POST['import_type']) ? sanitize_text_field($_POST['import_type']) : '';
+        if (!$can_import) {
+            wp_send_json_error(array('message' => 'Keine Berechtigung für diesen Import-Typ'));
+            return;
+        }
         $import_mode = isset($_POST['import_mode']) ? sanitize_text_field($_POST['import_mode']) : 'create';
         $timezone_input = isset($_POST['timezone']) ? sanitize_text_field($_POST['timezone']) : 'UTC';
         
