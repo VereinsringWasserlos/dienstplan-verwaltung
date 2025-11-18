@@ -196,6 +196,12 @@ class Dienstplan_Verwaltung {
         // Import/Export AJAX Actions
         // Export wird über admin_init in class-admin.php handle_export() behandelt
         $this->loader->add_action('wp_ajax_dp_import_csv', $plugin_admin, 'ajax_import_csv');
+        
+        // Login-Redirect für Dienstplan-Rollen
+        $this->loader->add_filter('login_redirect', $plugin_admin, 'login_redirect', 10, 3);
+        
+        // Dashboard-Widget
+        $this->loader->add_action('wp_dashboard_setup', $plugin_admin, 'add_dashboard_widget');
     }
 
     /**

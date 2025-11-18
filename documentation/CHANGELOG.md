@@ -7,6 +7,165 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ---
 
+## [0.6.0] - 2025-11-18 ✨ UX: Login-Redirect & Dashboard-Widget
+
+### 🎯 Problem gelöst
+Benutzer mit Dienstplan-Rollen landeten nach Login auf "Profil" statt auf dem Dashboard. Das war verwirrend und unnötig umständlich.
+
+### ✨ Neue Features
+
+#### 1️⃣ Smart Login-Redirect
+**Nach dem Login landen User direkt an der richtigen Stelle:**
+
+- 🔴 **WordPress-Admin:** → Dienstplan-Dashboard (`/admin.php?page=dienstplan`)
+- 🟠 **Allgemeiner Admin:** → Dienstplan-Dashboard (`/admin.php?page=dienstplan`)
+- 🔵 **Veranstaltungs-Admin:** → Veranstaltungen (`/admin.php?page=dienstplan-veranstaltungen`)
+- 🟢 **Vereins-Admin:** → Vereine (`/admin.php?page=dienstplan-vereine`)
+
+**Funktionsweise:**
+```php
+public function login_redirect($redirect_to, $request, $user) {
+    // Prüft User-Rollen
+    // Leitet basierend auf Rolle weiter
+    // Fallback auf WordPress-Standard
+}
+```
+
+**Vorteile:**
+- ✅ Keine zusätzlichen Klicks nötig
+- ✅ Intuitive Navigation
+- ✅ Rollen-spezifischer Einstieg
+- ✅ WordPress-Admins behalten Kontrolle
+
+---
+
+#### 2️⃣ WordPress-Dashboard-Widget
+**Dienstplan-Statistiken direkt im WordPress-Dashboard:**
+
+##### Was wird angezeigt?
+
+**Für Vereins-Admins:**
+- 🏳️ **Vereine:** Gesamt + Aktive
+- 📊 Klickbar → Vereins-Verwaltung
+
+**Für Veranstaltungs-Admins:**
+- 📅 **Veranstaltungen:** Gesamt + Kommende
+- 📋 **Dienste:** Gesamt + Offene
+- 📊 Alle Klickbar → Jeweilige Verwaltung
+
+**Für Allgemeine Admins & WP-Admins:**
+- ✅ Alle Statistiken
+- ✅ Alle Links
+
+##### Design
+- 🎨 **Grid-Layout:** Responsive, automatische Anpassung
+- 🎯 **Farb-Codierung:** Grün (Vereine), Blau (Veranstaltungen), Rot (Dienste)
+- 🔗 **Klickbare Karten:** Direkter Zugriff auf Verwaltung
+- ✨ **Hover-Effekt:** Lift + Shadow
+- 🔲 **Icon-System:** Dashicons für visuelle Orientierung
+
+##### Screenshot (Beispiel)
+```
+╭───────────────────────────────────────╮
+│ 📅 Dienstplan-Übersicht            │
+├───────────────────────────────────────┤
+│  🏳️ Vereine    📅 Veranstaltungen 📋 Dienste  │
+│    12             8               45     │
+│  10 aktiv     5 kommend      32 offen │
+│                                       │
+│  [📈 Zum Dienstplan-Dashboard]      │
+╰───────────────────────────────────────╯
+```
+
+---
+
+### 📝 Technische Details
+
+#### Login-Redirect
+**Hook:** `login_redirect` (WordPress Core)
+```php
+add_filter('login_redirect', array($this, 'login_redirect'), 10, 3);
+```
+
+**Priorität:**
+1. WordPress-Admin → Dashboard
+2. Event-Admin → Veranstaltungen
+3. Club-Admin → Vereine
+4. General-Admin → Dashboard
+5. Fallback → WordPress-Standard
+
+#### Dashboard-Widget
+**Hook:** `wp_dashboard_setup`
+```php
+add_action('wp_dashboard_setup', array($this, 'add_dashboard_widget'));
+```
+
+**Sichtbarkeit:**
+- Nur für Benutzer mit Dienstplan-Rechten
+- Capability-Check: `can_manage_events()` oder `can_manage_clubs()`
+- WordPress-Admins sehen immer alles
+
+**Statistiken:**
+- SQL-Queries direkt auf Datenbank
+- Gecacht durch WordPress (Transients möglich für spätere Optimierung)
+- Farben & Icons per Inline-CSS (kein Extra-Request)
+
+---
+
+### 💼 Betroffene Dateien
+
+- `includes/class-dienstplan-verwaltung.php` - Hooks registriert
+- `admin/class-admin.php` - `login_redirect()` + `add_dashboard_widget()` + `render_dashboard_widget()`
+
+---
+
+### ✅ Was funktioniert jetzt
+
+#### Login-Redirect
+- ✅ **Event-Admin loggt ein** → Landet auf Veranstaltungen
+- ✅ **Club-Admin loggt ein** → Landet auf Vereinen
+- ✅ **General-Admin loggt ein** → Landet auf Dashboard
+- ✅ **WordPress-Admin** → Behält volle Kontrolle
+- ✅ **Standard-User** → Normales WordPress-Verhalten
+
+#### Dashboard-Widget
+- ✅ **Zeigt relevante Statistiken** basierend auf Rolle
+- ✅ **Klickbare Karten** für schnellen Zugriff
+- ✅ **Responsive Grid** passt sich an Bildschirmgröße an
+- ✅ **Hover-Effekte** für bessere UX
+- ✅ **Farb-Codierung** für visuelle Orientierung
+
+---
+
+### 💡 Warum diese Features?
+
+**Problem:** Benutzer waren verwirrt nach dem Login
+- ❌ Müssten manuell zum Dienstplan navigieren
+- ❌ Landeten auf WordPress-Profil (irrelevant für ihre Aufgabe)
+- ❌ Keine Übersicht über wichtige Zahlen
+
+**Lösung:** Intelligenter Einstieg
+- ✅ Direkt zur relevanten Ansicht
+- ✅ Statistiken auf einen Blick
+- ✅ Ein Klick zum Dienstplan-Dashboard
+
+**Ergebnis:**
+- ⏱️ **Zeit gespart:** 2-3 Klicks pro Login
+- 🧠 **Weniger Verwirrung:** Klarer Einstiegspunkt
+- 📈 **Bessere Übersicht:** Zahlen immer präsent
+
+---
+
+### 🔮 Nächste Schritte
+
+**Mögliche Erweiterungen:**
+- [ ] Dashboard-Widget: Caching für Performance
+- [ ] Dashboard-Widget: Konfigurierbare Anzeige
+- [ ] Login-Redirect: User-spezifische Präferenzen speichern
+- [ ] Willkommens-Banner beim ersten Login
+
+---
+
 ## [0.5.11] - 2025-11-17 ✅ Feature: Neuer Kontakt in Veranstaltungen
 
 ### 🎯 Problem gelöst

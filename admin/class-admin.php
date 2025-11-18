@@ -3333,6 +3333,237 @@ class Dienstplan_Admin {
             'incomplete' => $incomplete_count
         ));
     }
+    
+    /**
+     * Login-Redirect für Dienstplan-Rollen
+     * 
+     * Leitet Benutzer mit Dienstplan-Rollen nach Login direkt zum Dienstplan-Dashboard,
+     * nicht zum WordPress-Profil
+     */
+    public function login_redirect($redirect_to, $request, $user) {
+        // Prüfe ob User-Objekt existiert und keine Errors hat
+        if (!isset($user->ID) || is_wp_error($user)) {
+            return $redirect_to;
+        }
+        
+        // Prüfe ob User eine Dienstplan-Rolle hat
+        $has_dp_role = false;
+        $user_roles = $user->roles;
+        
+        $dp_roles = array(
+            Dienstplan_Roles::ROLE_GENERAL_ADMIN,
+            Dienstplan_Roles::ROLE_EVENT_ADMIN,
+            Dienstplan_Roles::ROLE_CLUB_ADMIN
+        );
+        
+        foreach ($dp_roles as $role) {
+            if (in_array($role, $user_roles)) {
+                $has_dp_role = true;
+                break;
+            }
+        }
+        
+        // Wenn Dienstplan-Rolle: Redirect zu Dienstplan-Dashboard
+        if ($has_dp_role) {
+            // WordPress-Admin hat Vorrang
+            if (in_array('administrator', $user_roles)) {
+                return admin_url('admin.php?page=dienstplan');
+            }
+            
+            // Event-Admin → Veranstaltungen
+            if (in_array(Dienstplan_Roles::ROLE_EVENT_ADMIN, $user_roles)) {
+                return admin_url('admin.php?page=dienstplan-veranstaltungen');
+            }
+            
+            // Club-Admin → Vereine
+            if (in_array(Dienstplan_Roles::ROLE_CLUB_ADMIN, $user_roles)) {
+                return admin_url('admin.php?page=dienstplan-vereine');
+            }
+            
+            // General-Admin → Dashboard
+            if (in_array(Dienstplan_Roles::ROLE_GENERAL_ADMIN, $user_roles)) {
+                return admin_url('admin.php?page=dienstplan');
+            }
+        }
+        
+        // Standard WordPress-Redirect
+        return $redirect_to;
+    }
+    
+    /**
+     * Dashboard-Widget hinzufügen
+     */
+    public function add_dashboard_widget() {
+        // Nur für Benutzer mit Dienstplan-Rechten
+        if (!Dienstplan_Roles::can_manage_events() && 
+            !Dienstplan_Roles::can_manage_clubs() && 
+            !current_user_can('manage_options')) {
+            return;
+        }
+        
+        wp_add_dashboard_widget(
+            'dienstplan_dashboard_widget',
+            '<span class="dashicons dashicons-calendar-alt" style="font-size: 20px; margin-right: 8px; vertical-align: middle;"></span>' . __('Dienstplan-Übersicht', 'dienstplan-verwaltung'),
+            array($this, 'render_dashboard_widget')
+        );
+    }
+    
+    /**
+     * Dashboard-Widget rendern
+     */
+    public function render_dashboard_widget() {
+        global $wpdb;
+        $prefix = $wpdb->prefix . $this->db_prefix;
+        
+        // Statistiken sammeln
+        $stats = array();
+        
+        // Vereine (wenn berechtigt)
+        if (Dienstplan_Roles::can_manage_clubs() || current_user_can('manage_options')) {
+            $stats['vereine'] = array(
+                'total' => $wpdb->get_var("SELECT COUNT(*) FROM {$prefix}vereine"),
+                'aktiv' => $wpdb->get_var("SELECT COUNT(*) FROM {$prefix}vereine WHERE aktiv = 1"),
+                'icon' => 'dashicons-flag',
+                'color' => '#00a32a',
+                'link' => admin_url('admin.php?page=dienstplan-vereine')
+            );
+        }
+        
+        // Veranstaltungen (wenn berechtigt)
+        if (Dienstplan_Roles::can_manage_events() || current_user_can('manage_options')) {
+            $heute = date('Y-m-d');
+            $stats['veranstaltungen'] = array(
+                'total' => $wpdb->get_var("SELECT COUNT(*) FROM {$prefix}veranstaltungen"),
+                'kommend' => $wpdb->get_var($wpdb->prepare(
+                    "SELECT COUNT(DISTINCT v.id) FROM {$prefix}veranstaltungen v 
+                     INNER JOIN {$prefix}veranstaltungen_tage t ON v.id = t.veranstaltung_id 
+                     WHERE t.datum >= %s",
+                    $heute
+                )),
+                'icon' => 'dashicons-calendar-alt',
+                'color' => '#2271b1',
+                'link' => admin_url('admin.php?page=dienstplan-veranstaltungen')
+            );
+            
+            // Dienste
+            $stats['dienste'] = array(
+                'total' => $wpdb->get_var("SELECT COUNT(*) FROM {$prefix}dienste"),
+                'offen' => $wpdb->get_var("SELECT COUNT(*) FROM {$prefix}dienste WHERE status = 'geplant'"),
+                'icon' => 'dashicons-clipboard',
+                'color' => '#d63638',
+                'link' => admin_url('admin.php?page=dienstplan-dienste')
+            );
+        }
+        
+        // Widget HTML
+        ?>
+        <style>
+            .dp-widget-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+                gap: 1rem;
+                margin-bottom: 1rem;
+            }
+            
+            .dp-widget-stat {
+                background: #f6f7f7;
+                border-left: 4px solid;
+                padding: 1rem;
+                border-radius: 4px;
+                text-decoration: none;
+                color: inherit;
+                display: block;
+                transition: all 0.2s;
+            }
+            
+            .dp-widget-stat:hover {
+                background: #fff;
+                transform: translateY(-2px);
+                box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            }
+            
+            .dp-widget-stat-header {
+                display: flex;
+                align-items: center;
+                gap: 0.5rem;
+                margin-bottom: 0.5rem;
+                font-size: 0.9rem;
+                color: #646970;
+            }
+            
+            .dp-widget-stat-value {
+                font-size: 2rem;
+                font-weight: bold;
+                line-height: 1;
+                margin-bottom: 0.25rem;
+            }
+            
+            .dp-widget-stat-label {
+                font-size: 0.85rem;
+                color: #646970;
+            }
+            
+            .dp-widget-actions {
+                margin-top: 1rem;
+                padding-top: 1rem;
+                border-top: 1px solid #dcdcde;
+            }
+            
+            .dp-widget-link {
+                display: inline-flex;
+                align-items: center;
+                gap: 0.5rem;
+                text-decoration: none;
+                padding: 0.5rem 1rem;
+                background: #2271b1;
+                color: #fff;
+                border-radius: 4px;
+                font-weight: 500;
+                transition: background 0.2s;
+            }
+            
+            .dp-widget-link:hover {
+                background: #135e96;
+                color: #fff;
+            }
+        </style>
+        
+        <div class="dp-widget-grid">
+            <?php foreach ($stats as $key => $stat): ?>
+                <a href="<?php echo esc_url($stat['link']); ?>" 
+                   class="dp-widget-stat" 
+                   style="border-left-color: <?php echo esc_attr($stat['color']); ?>">
+                    <div class="dp-widget-stat-header">
+                        <span class="dashicons <?php echo esc_attr($stat['icon']); ?>" 
+                              style="color: <?php echo esc_attr($stat['color']); ?>; font-size: 20px;"></span>
+                        <span><?php echo esc_html(ucfirst($key)); ?></span>
+                    </div>
+                    <div class="dp-widget-stat-value" style="color: <?php echo esc_attr($stat['color']); ?>">
+                        <?php echo esc_html($stat['total']); ?>
+                    </div>
+                    <div class="dp-widget-stat-label">
+                        <?php 
+                        if (isset($stat['aktiv'])) {
+                            printf(__('%d aktiv', 'dienstplan-verwaltung'), $stat['aktiv']);
+                        } elseif (isset($stat['kommend'])) {
+                            printf(__('%d kommend', 'dienstplan-verwaltung'), $stat['kommend']);
+                        } elseif (isset($stat['offen'])) {
+                            printf(__('%d offen', 'dienstplan-verwaltung'), $stat['offen']);
+                        }
+                        ?>
+                    </div>
+                </a>
+            <?php endforeach; ?>
+        </div>
+        
+        <div class="dp-widget-actions">
+            <a href="<?php echo admin_url('admin.php?page=dienstplan'); ?>" class="dp-widget-link">
+                <span class="dashicons dashicons-dashboard"></span>
+                <?php _e('Zum Dienstplan-Dashboard', 'dienstplan-verwaltung'); ?>
+            </a>
+        </div>
+        <?php
+    }
 }
 
 
