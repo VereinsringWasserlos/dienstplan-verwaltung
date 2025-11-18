@@ -380,18 +380,11 @@ ksort($dienste_nach_tagen);
                     
                     <!-- Timeline pro Tag -->
                     <?php 
-                    $start_hour = 0;
-                    $end_hour = 24;
-                    $slot_duration = 30; // 30 Minuten pro Slot
-                    $total_slots = ($end_hour - $start_hour) * 2; // 48 Slots für 24h
-                    
                     foreach ($tage as $idx => $tag):
                         $tag_services = $dienste_nach_tagen[$tag->id] ?? [];
                         
-                        // Gruppiere Services nach Bereich UND Zeit-Slot
-                        // Damit Services die gleichzeitig laufen in derselben Zeile erscheinen
+                        // Gruppiere Services nach Bereich und Zeit-Slot
                         $services_by_bereich = [];
-                        $time_slots = []; // Track unique time slots per Bereich
                         
                         foreach ($tag_services as $service) {
                             $bereich_key = $service->bereich_id ?? 0;
@@ -403,7 +396,7 @@ ksort($dienste_nach_tagen);
                                 ];
                             }
                             
-                            // Erstelle einen eindeutigen Zeitslot-Key (Start-Zeit)
+                            // Zeitslot-Key (Start-Zeit)
                             $time_key = date('H:i', strtotime($service->von_zeit));
                             
                             if (!isset($services_by_bereich[$bereich_key]['time_slots'][$time_key])) {
@@ -413,12 +406,19 @@ ksort($dienste_nach_tagen);
                             $services_by_bereich[$bereich_key]['time_slots'][$time_key][] = $service;
                         }
                         
-                        // Sortiere Zeitslots innerhalb jedes Bereichs
+                        // Sortiere Zeitslots
                         foreach ($services_by_bereich as &$bereich) {
                             ksort($bereich['time_slots']);
                         }
                     ?>
                         <div class="dp-timeline-day-container" data-day-id="<?php echo $tag->id; ?>" style="display: <?php echo $idx === 0 ? 'block' : 'none'; ?>;">
+                            <?php if (empty($services_by_bereich)): ?>
+                                <div class="dp-empty-state">
+                                    <span class="dp-empty-icon">📭</span>
+                                    <h3>Keine Dienste für diesen Tag</h3>
+                                    <p>Für Tag <?php echo $tag->tag_nummer ?? ($idx + 1); ?> wurden noch keine Dienste angelegt.</p>
+                                </div>
+                            <?php else: ?>
                             <div class="dp-timeline-wrapper">
                                 <!-- Linke Spalte: Dienst-Namen (fixiert) -->
                                 <div class="dp-timeline-left">
@@ -433,19 +433,31 @@ ksort($dienste_nach_tagen);
                                                 <?php echo esc_html($bereich['name']); ?>
                                             </div>
                                             
-                                            <?php foreach ($bereich['time_slots'] as $time_key => $services_in_slot): ?>
-                                                <div class="dp-timeline-row-label" data-time-slot="<?php echo $time_key; ?>">
+                                            <?php foreach ($bereich['time_slots'] as $time_key => $services_in_slot): 
+                                                $service_count = count($services_in_slot);
+                                                $row_height = $service_count * 50; // 50px pro Service
+                                            ?>
+                                                <div class="dp-timeline-row-label" data-time-slot="<?php echo $time_key; ?>" style="min-height: <?php echo $row_height; ?>px;">
                                                     <div class="dp-timeline-service-info">
-                                                        <div class="dp-timeline-service-time">
-                                                            <?php echo esc_html($time_key); ?>
-                                                        </div>
-                                                        <div class="dp-timeline-service-activities">
-                                                            <?php 
-                                                            // Zeige alle Tätigkeiten in diesem Slot
-                                                            $names = array_map(function($s) { return $s->taetigkeit_name; }, $services_in_slot);
-                                                            echo esc_html(implode(', ', $names));
-                                                            ?>
-                                                        </div>
+                                                        <?php 
+                                                        // Zeige jede Tätigkeit mit Zeit und Besonderheiten
+                                                        $first_service = $services_in_slot[0];
+                                                        $von_bis = 'von ' . substr($first_service->von_zeit, 0, 5) . ' bis ' . substr($first_service->bis_zeit, 0, 5);
+                                                        
+                                                        foreach ($services_in_slot as $service) {
+                                                            echo '<div class="dp-timeline-activity-block">';
+                                                            // Erste Zeile: Zeit und Tätigkeit nebeneinander
+                                                            echo '<div class="dp-timeline-activity-header">';
+                                                            echo '<span class="dp-timeline-service-time">' . esc_html($von_bis) . '</span>';
+                                                            echo '<span class="dp-timeline-activity-name">• ' . esc_html($service->taetigkeit_name) . '</span>';
+                                                            echo '</div>';
+                                                            // Zweite Zeile: Besonderheiten darunter (falls vorhanden)
+                                                            if (!empty($service->besonderheiten)) {
+                                                                echo '<div class="dp-timeline-activity-details">' . esc_html($service->besonderheiten) . '</div>';
+                                                            }
+                                                            echo '</div>';
+                                                        }
+                                                        ?>
                                                     </div>
                                                 </div>
                                             <?php endforeach; ?>
@@ -453,93 +465,104 @@ ksort($dienste_nach_tagen);
                                     </div>
                                 </div>
                                 
-                                <!-- Rechte Spalte: Zeitraster (scrollbar) -->
+                                <!-- Rechte Spalte: Zeitraster und Balken -->
                                 <div class="dp-timeline-right">
-                                    <!-- Zeit-Header (fixiert, scrollt horizontal) -->
-                                    <div class="dp-timeline-header-scroll">
-                                        <div class="dp-timeline-time-header">
-                                            <?php for ($hour = $start_hour; $hour < $end_hour; $hour++): ?>
-                                                <div class="dp-timeline-hour-header" style="grid-column: <?php echo (($hour - $start_hour) * 2 + 1); ?> / span 2;">
-                                                    <?php printf("%02d:00", $hour); ?>
-                                                </div>
-                                                <div class="dp-timeline-half-marker" style="grid-column: <?php echo (($hour - $start_hour) * 2 + 2); ?>;"></div>
-                                            <?php endfor; ?>
-                                        </div>
+                                    <?php
+                                    // Berechne min/max Zeiten aus allen Services
+                                    $earliest_minute = 24 * 60; // Start mit 24:00
+                                    $latest_minute = 0;
+                                    
+                                    foreach ($services_by_bereich as $bereich) {
+                                        foreach ($bereich['time_slots'] as $services_in_slot) {
+                                            foreach ($services_in_slot as $service) {
+                                                $start_time = strtotime($service->von_zeit);
+                                                $end_time = strtotime($service->bis_zeit);
+                                                $start_min = intval(date('H', $start_time)) * 60 + intval(date('i', $start_time));
+                                                $end_min = intval(date('H', $end_time)) * 60 + intval(date('i', $end_time));
+                                                
+                                                $earliest_minute = min($earliest_minute, $start_min);
+                                                $latest_minute = max($latest_minute, $end_min);
+                                            }
+                                        }
+                                    }
+                                    
+                                    // Runde auf volle Stunden
+                                    $start_hour = floor($earliest_minute / 60);
+                                    $end_hour = ceil($latest_minute / 60);
+                                    
+                                    // Anzahl 30-Minuten-Slots
+                                    $time_slots_count = ($end_hour - $start_hour) * 2;
+                                    $slot_width = 40; // Breite pro 30-Minuten-Slot in px
+                                    ?>
+                                    
+                                    <!-- Zeit-Header -->
+                                    <div class="dp-timeline-header">
+                                        <?php for ($hour = $start_hour; $hour < $end_hour; $hour++): ?>
+                                            <div class="dp-timeline-hour-label" style="width: <?php echo $slot_width * 2; ?>px;">
+                                                <?php printf("%02d:00", $hour); ?>
+                                            </div>
+                                        <?php endfor; ?>
                                     </div>
                                     
-                                    <!-- Timeline Grid (scrollbar vertikal und horizontal) -->
-                                    <div class="dp-timeline-grid-scroll">
+                                    <!-- Timeline Container mit Balken -->
+                                    <div class="dp-timeline-container">
                                         <?php 
-                                        // Zähle total Rows (Bereich-Header + Time-Slots)
-                                        $total_rows = 0;
-                                        foreach ($services_by_bereich as $bereich) {
-                                            $total_rows++; // Header
-                                            $total_rows += count($bereich['time_slots']); // Time slots
-                                        }
-                                        ?>
-                                        <div class="dp-timeline-grid" style="grid-template-columns: repeat(<?php echo $total_slots; ?>, 60px); grid-template-rows: repeat(<?php echo $total_rows; ?>, 50px);">
-                                            <!-- Vertikale Zeit-Linien als Overlays -->
-                                            <div class="dp-timeline-grid-lines">
-                                                <?php for ($i = 0; $i <= $total_slots; $i++): ?>
-                                                    <div class="dp-timeline-grid-line <?php echo $i % 2 === 0 ? 'hour' : 'half'; ?>" style="left: <?php echo $i * 60; ?>px;"></div>
-                                                <?php endfor; ?>
-                                            </div>
+                                        foreach ($services_by_bereich as $bereich_id => $bereich): 
+                                            // Leerer Bereich-Header für Ausrichtung
+                                            echo '<div class="dp-timeline-bereich-spacer"></div>';
                                             
-                                            <!-- Service Bars (Vordergrund) - Mehrere nebeneinander -->
-                                            <?php 
-                                            $row = 1;
-                                            foreach ($services_by_bereich as $bereich_id => $bereich): 
-                                                // Bereich-Header-Zeile überspringen
-                                                $row++; 
+                                            // Services in diesem Bereich
+                                            foreach ($bereich['time_slots'] as $time_key => $services_in_slot):
+                                                echo '<div class="dp-timeline-slot-row">';
                                                 
-                                                foreach ($bereich['time_slots'] as $time_key => $services_in_slot):
-                                                    // Alle Services in diesem Slot nebeneinander anzeigen
-                                                    $service_index = 0;
-                                                    foreach ($services_in_slot as $service):
-                                                        // Berechne Zeit-Position
-                                                        $start_time = strtotime($service->von_zeit);
-                                                        $end_time = strtotime($service->bis_zeit);
-                                                        $start_minutes = intval(date('H', $start_time)) * 60 + intval(date('i', $start_time));
-                                                        $end_minutes = intval(date('H', $end_time)) * 60 + intval(date('i', $end_time));
-                                                        
-                                                        $start_col = floor($start_minutes / 30) + 1;
-                                                        $duration_slots = max(1, ceil(($end_minutes - $start_minutes) / 30));
-                                                        
-                                                        // Slots zählen
-                                                        $slots = $db->get_dienst_slots($service->id);
-                                                        $free_slots = 0;
-                                                        foreach ($slots as $slot) {
-                                                            if (!$slot->mitarbeiter_id) {
-                                                                $free_slots++;
-                                                            }
+                                                // Alle Services in diesem Zeitslot
+                                                foreach ($services_in_slot as $service):
+                                                    // Zeit-Berechnung
+                                                    $start_time = strtotime($service->von_zeit);
+                                                    $end_time = strtotime($service->bis_zeit);
+                                                    $start_min = intval(date('H', $start_time)) * 60 + intval(date('i', $start_time));
+                                                    $end_min = intval(date('H', $end_time)) * 60 + intval(date('i', $end_time));
+                                                    $duration_min = $end_min - $start_min;
+                                                    
+                                                    // Position und Breite
+                                                    $offset_from_start = $start_min - ($start_hour * 60);
+                                                    $left_px = ($offset_from_start / 30) * $slot_width;
+                                                    $width_px = ($duration_min / 30) * $slot_width;
+                                                    
+                                                    // Slots zählen
+                                                    $slots = $db->get_dienst_slots($service->id);
+                                                    $free_slots = 0;
+                                                    foreach ($slots as $slot) {
+                                                        if (!$slot->mitarbeiter_id) {
+                                                            $free_slots++;
                                                         }
-                                                        $total_slots_count = count($slots);
-                                                ?>
-                                                        <div class="dp-timeline-bar" 
-                                                             style="grid-column: <?php echo $start_col; ?> / span <?php echo $duration_slots; ?>; 
-                                                                    grid-row: <?php echo $row; ?>; 
-                                                                    background: linear-gradient(135deg, <?php echo esc_attr($bereich['farbe']); ?> 0%, <?php echo esc_attr($bereich['farbe']); ?>dd 100%);"
-                                                             onclick="dpOpenRegistrationModal(<?php echo $service->id; ?>, '<?php echo esc_js($service->taetigkeit_name); ?>')">
-                                                            <div class="dp-timeline-bar-content">
-                                                                <span class="dp-timeline-bar-name"><?php echo esc_html($service->taetigkeit_name); ?></span>
-                                                                <?php if ($free_slots > 0): ?>
-                                                                    <span class="dp-timeline-bar-slots">🟢 <?php echo $free_slots; ?>/<?php echo $total_slots_count; ?></span>
-                                                                <?php else: ?>
-                                                                    <span class="dp-timeline-bar-slots">🔴 Voll</span>
-                                                                <?php endif; ?>
-                                                            </div>
+                                                    }
+                                                    $total_slots_count = count($slots);
+                                                    ?>
+                                                    <div class="dp-timeline-bar" 
+                                                         style="left: <?php echo $left_px; ?>px; 
+                                                                width: <?php echo $width_px; ?>px;
+                                                                background: <?php echo esc_attr($bereich['farbe']); ?>;"
+                                                         onclick="dpOpenRegistrationModal(<?php echo $service->id; ?>, '<?php echo esc_js($service->taetigkeit_name); ?>')">
+                                                        <div class="dp-timeline-bar-content">
+                                                            <span class="dp-timeline-bar-name"><?php echo esc_html($service->taetigkeit_name); ?></span>
+                                                            <?php if ($free_slots > 0): ?>
+                                                                <span class="dp-timeline-bar-slots">🟢 <?php echo $free_slots; ?>/<?php echo $total_slots_count; ?></span>
+                                                            <?php else: ?>
+                                                                <span class="dp-timeline-bar-slots">🔴 Voll</span>
+                                                            <?php endif; ?>
                                                         </div>
+                                                    </div>
                                                 <?php 
-                                                        $service_index++;
-                                                    endforeach;
-                                                    $row++; // Nächste Zeile für nächsten Zeitslot
                                                 endforeach;
+                                                echo '</div>'; // slot-row
                                             endforeach;
-                                            ?>
-                                        </div>
+                                        endforeach;
+                                        ?>
                                     </div>
                                 </div>
                             </div>
+                            <?php endif; ?>
                         </div>
                     <?php endforeach; ?>
                 <?php endif; ?>

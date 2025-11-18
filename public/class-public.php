@@ -81,6 +81,15 @@ class Dienstplan_Public {
             $this->version,
             true
         );
+        
+        // Timeline Sync Script
+        wp_enqueue_script(
+            'dp-timeline-sync',
+            DIENSTPLAN_PLUGIN_URL . 'assets/js/dp-timeline-sync.js',
+            array('jquery'),
+            $this->version,
+            true
+        );
 
         // AJAX-Daten für JavaScript
         wp_localize_script('dp-public-scripts', 'dpPublic', array(

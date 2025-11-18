@@ -1274,15 +1274,17 @@
     overflow: hidden;
 }
 
-/* Linke Spalte (Dienst-Namen) - fixiert */
+/* Linke Spalte (Dienst-Namen) - fixiert mit Scroll */
 .dp-timeline-left {
-    width: 280px;
+    width: 380px;
     flex-shrink: 0;
     background: var(--dp-gray-50);
     border-right: 2px solid var(--dp-gray-200);
     display: flex;
     flex-direction: column;
     overflow-y: auto;
+    overflow-x: hidden;
+    max-height: 600px;
 }
 
 .dp-timeline-left-header {
@@ -1306,144 +1308,147 @@
     font-size: var(--dp-font-size-sm);
     color: white;
     text-shadow: 0 1px 2px rgba(0,0,0,0.2);
-    position: sticky;
-    top: 52px;
-    z-index: 1;
+    position: relative;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    width: 100%;
+    box-sizing: border-box;
+    flex-shrink: 0;
 }
 
 .dp-timeline-row-label {
     padding: var(--dp-spacing-md);
     border-bottom: 1px solid var(--dp-gray-200);
-    height: 50px;
     display: flex;
     flex-direction: column;
-    justify-content: center;
+    justify-content: flex-start;
 }
 
 /* Service Info Container */
 .dp-timeline-service-info {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 8px;
     width: 100%;
+}
+
+/* Activity Block - enthält Header (Zeit + Tätigkeit) und Details (Besonderheiten) */
+.dp-timeline-activity-block {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 4px 0;
+}
+
+/* Activity Header - Zeit und Tätigkeit in einer Zeile nebeneinander */
+.dp-timeline-activity-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: nowrap;
 }
 
 .dp-timeline-service-time {
     font-weight: 700;
-    font-size: 0.9rem;
+    font-size: 0.875rem;
     color: var(--dp-primary);
+    line-height: 1.3;
     white-space: nowrap;
+    flex-shrink: 0;
 }
 
-.dp-timeline-service-activities {
-    font-size: 0.8125rem;
+.dp-timeline-activity-name {
+    font-size: 0.875rem;
     color: var(--dp-gray-700);
     line-height: 1.3;
-    word-wrap: break-word;
+    font-weight: 500;
 }
 
-/* Rechte Spalte (Zeit-Grid) - scrollbar */
+/* Activity Details - Besonderheiten darunter */
+.dp-timeline-activity-details {
+    font-size: 0.8125rem;
+    color: var(--dp-gray-600);
+    line-height: 1.4;
+    padding-left: 1rem;
+    font-style: italic;
+}
+
+/* Rechte Spalte (Zeit-Grid und Balken) */
 .dp-timeline-right {
     flex: 1;
     display: flex;
     flex-direction: column;
-    overflow: hidden;
+    overflow-x: auto;
+    overflow-y: auto;
+    max-height: 600px;
+    background: white;
 }
 
-/* Zeit-Header (fixiert oben, scrollt horizontal) */
-.dp-timeline-header-scroll {
-    overflow-x: auto;
-    overflow-y: hidden;
+/* Zeit-Header */
+.dp-timeline-header {
     position: sticky;
     top: 0;
-    z-index: 3;
-    background: white;
+    z-index: 10;
+    display: flex;
+    background: var(--dp-gray-100);
     border-bottom: 2px solid var(--dp-gray-300);
-}
-
-.dp-timeline-time-header {
-    display: grid;
-    grid-auto-flow: column;
     min-width: min-content;
     height: 52px;
-    background: var(--dp-gray-100);
+    flex-shrink: 0;
 }
 
-.dp-timeline-hour-header {
+.dp-timeline-hour-label {
     display: flex;
     align-items: center;
     justify-content: center;
+    height: 52px;
     font-weight: 600;
     font-size: var(--dp-font-size-sm);
     color: var(--dp-gray-700);
     border-right: 1px solid var(--dp-gray-300);
+    flex-shrink: 0;
 }
 
-.dp-timeline-half-marker {
-    border-right: 1px dashed var(--dp-gray-300);
-}
-
-/* Grid Scroll Container */
-.dp-timeline-grid-scroll {
+/* Timeline Container mit Balken */
+.dp-timeline-container {
+    position: relative;
     flex: 1;
-    overflow: auto;
-    position: relative;
-}
-
-/* Timeline Grid */
-.dp-timeline-grid {
-    display: grid;
-    position: relative;
     min-width: min-content;
-    background: white;
 }
 
-/* Grid-Linien (Hintergrund) */
-.dp-timeline-grid-lines {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    pointer-events: none;
+/* Bereich-Spacer - leere Zeile für Ausrichtung mit linkem Bereich-Header */
+.dp-timeline-bereich-spacer {
+    height: 40px;
+    border-bottom: 1px solid var(--dp-gray-200);
 }
 
-.dp-timeline-grid-line {
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    width: 1px;
-    background: var(--dp-gray-200);
-}
-
-.dp-timeline-grid-line.hour {
-    background: var(--dp-gray-300);
-    width: 2px;
-}
-
-.dp-timeline-grid-line.half {
-    background: var(--dp-gray-200);
-    opacity: 0.5;
-}
-
-/* Service Bars (Vordergrund) */
-.dp-timeline-bar {
+/* Slot Row - enthält die Balken für einen Zeitslot */
+.dp-timeline-slot-row {
     position: relative;
+    min-height: 50px;
+    border-bottom: 1px solid var(--dp-gray-200);
+}
+
+/* Service Bars (Balken) */
+.dp-timeline-bar {
+    position: absolute;
+    top: 5px;
+    height: 40px;
     border-radius: var(--dp-radius);
     padding: var(--dp-spacing-sm);
-    margin: 2px;
     cursor: pointer;
     transition: var(--dp-transition);
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
     overflow: hidden;
     display: flex;
     align-items: center;
 }
 
 .dp-timeline-bar:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 6px rgba(0,0,0,0.15);
-    z-index: 1;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+    z-index: 10;
 }
 
 .dp-timeline-bar-content {
@@ -1453,7 +1458,7 @@
     gap: var(--dp-spacing-sm);
     width: 100%;
     color: white;
-    text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+    text-shadow: 0 1px 2px rgba(0,0,0,0.3);
 }
 
 .dp-timeline-bar-name {
@@ -1469,9 +1474,10 @@
     font-size: 0.75rem;
     font-weight: 700;
     white-space: nowrap;
-    background: rgba(255,255,255,0.2);
-    padding: 2px 6px;
+    background: rgba(255,255,255,0.25);
+    padding: 3px 8px;
     border-radius: 3px;
+    flex-shrink: 0;
 }
 
 /* Responsive Timeline */
@@ -1488,7 +1494,7 @@
         font-size: 0.8125rem;
     }
     
-    .dp-timeline-service-activities {
+    .dp-timeline-activity-name {
         font-size: 0.75rem;
     }
     
