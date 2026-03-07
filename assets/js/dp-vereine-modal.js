@@ -220,6 +220,55 @@
     // === VEREIN MODAL FUNKTIONEN ===
 
     /**
+     * Lädt die Verantwortlichen-Checkboxen neu und selektiert optional einen User
+     * @param {number} selectUserId - Optional: User-ID die ausgewählt werden soll
+     */
+    window.reloadVerantwortlicheCheckboxes = function(selectUserId = null) {
+        console.log('reloadVerantwortlicheCheckboxes called, selectUserId:', selectUserId);
+
+        $('#verantwortliche-checkboxes').html('<p style="color: #666; margin: 0;">Lädt...</p>');
+
+        $.ajax({
+            url: dpAjax.ajaxurl,
+            type: 'POST',
+            data: {
+                action: 'dp_get_all_users',
+                nonce: dpAjax.nonce
+            },
+            success: function(response) {
+                console.log('Users geladen:', response);
+                if (response.success && response.data) {
+                    let html = '';
+
+                    response.data.forEach(function(user) {
+                        //Checke den neu angelegten User automatisch
+                        const isChecked = selectUserId && (user.id == selectUserId);
+                        
+                        html += `
+                            <label style="display: block; padding: 0.5rem; cursor: pointer; border-radius: 3px; transition: background 0.2s; ${isChecked ? 'background: #f0f6fc;' : ''}" 
+                                   onmouseover="this.style.background='#f0f6fc'" 
+                                   onmouseout="this.style.background='${isChecked ? '#f0f6fc' : 'transparent'}'">
+                                <input type="checkbox" name="verantwortliche[]" value="${user.id}" ${isChecked ? 'checked' : ''}>
+                                <strong>${user.name}</strong>
+                                <span style="color: #666; font-size: 0.9em;">(${user.email})</span>
+                            </label>
+                        `;
+                    });
+
+                    $('#verantwortliche-checkboxes').html(html || '<p style="color: #666; margin: 0;">Keine Benutzer verfügbar</p>');
+                    console.log('Checkboxen neu geladen, ausgewählte User-ID:', selectUserId);
+                } else {
+                    $('#verantwortliche-checkboxes').html('<p style="color: #dc2626; margin: 0;">Fehler beim Laden der Benutzer</p>');
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('AJAX Fehler beim Laden der Benutzer:', error);
+                $('#verantwortliche-checkboxes').html('<p style="color: #dc2626; margin: 0;">Fehler beim Laden</p>');
+            }
+        });
+    };
+
+    /**
      * Öffnet das Verein-Modal für einen neuen Verein
      */
     window.openVereinModal = function() {
@@ -234,43 +283,7 @@
             $('#user-invite-row').hide();
 
             // Lade alle Benutzer für die Checkbox-Auswahl
-            $('#verantwortliche-checkboxes').html('<p style="color: #666; margin: 0;">Lädt...</p>');
-
-            $.ajax({
-                url: dpAjax.ajaxurl,
-                type: 'POST',
-                data: {
-                    action: 'dp_get_all_users',
-                    nonce: dpAjax.nonce
-                },
-                success: function(response) {
-                    console.log('Users geladen:', response);
-                    if (response.success && response.data) {
-                        let html = '';
-
-                        response.data.forEach(function(user) {
-                            html += `
-                                <label style="display: block; padding: 0.5rem; cursor: pointer; border-radius: 3px; transition: background 0.2s;" 
-                                       onmouseover="this.style.background='#f0f6fc'" 
-                                       onmouseout="this.style.background='transparent'">
-                                    <input type="checkbox" name="verantwortliche[]" value="${user.id}">
-                                    <strong>${user.name}</strong>
-                                    <span style="color: #666; font-size: 0.9em;">(${user.email})</span>
-                                </label>
-                            `;
-                        });
-
-                        $('#verantwortliche-checkboxes').html(html || '<p style="color: #666; margin: 0;">Keine Benutzer verfügbar</p>');
-                        console.log('Checkboxen befüllt');
-                    } else {
-                        $('#verantwortliche-checkboxes').html('<p style="color: #dc2626; margin: 0;">Fehler beim Laden der Benutzer</p>');
-                    }
-                },
-                error: function(xhr, status, error) {
-                    console.error('AJAX Fehler beim Laden der Benutzer:', error);
-                    $('#verantwortliche-checkboxes').html('<p style="color: #dc2626; margin: 0;">Fehler: ' + error + '</p>');
-                }
-            });
+            reloadVerantwortlicheCheckboxes();
 
             $('#verein-modal').css('display', 'flex');
             console.log('Modal Display nach Öffnen:', $('#verein-modal').css('display'));
@@ -593,28 +606,43 @@
                 $saveBtn.prop('disabled', false).html('<span class="dashicons dashicons-plus" style="margin-top: 3px;"></span> Kontakt anlegen & einladen');
 
                 if (response.success) {
+                    const userData = response.data;
+                    const source = window.newContactSource || 'verein';
+                    
+                    console.log('=== NEUER KONTAKT ERSTELLT ===');
+                    console.log('User ID:', userData.user_id);
+                    console.log('Source:', source);
+                    console.log('reloadVerantwortlicheCheckboxes exists?', typeof window.reloadVerantwortlicheCheckboxes);
+
                     // Modal schließen
                     closeNewContactModal();
 
-                    const userData = response.data;
-                    const source = window.newContactSource || 'verein';
-
                     // Unterschiedliche Behandlung je nach Quelle
-                    if (source === 'veranstaltung-checkboxes') {
-                        // Veranstaltungs-Modal: Checkboxen neu laden und neuen User auswählen
-                        if (typeof reloadVerantwortlicheCheckboxes === 'function') {
-                            reloadVerantwortlicheCheckboxes(userData.user_id);
+                    if (source === 'veranstaltung-checkboxes' || source === 'verein-checkboxes') {
+                        console.log('Lade Checkboxen neu für User:', userData.user_id);
+                        // Checkboxen neu laden und neuen User automatisch auswählen
+                        if (typeof window.reloadVerantwortlicheCheckboxes === 'function') {
+                            window.reloadVerantwortlicheCheckboxes(userData.user_id);
+                        } else {
+                            console.error('FEHLER: reloadVerantwortlicheCheckboxes ist keine Funktion!');
+                            // Fallback: Seite neu laden
+                            alert('✓ Kontakt erfolgreich angelegt!\n\nBitte Seite neu laden (F5) um den Kontakt zu sehen.');
                         }
                     } else {
-                        // Verein/Veranstaltung-Dropdown: User hinzufügen
+                        console.log('Legacy Dropdown-Modus, Source:', source);
+                        // Legacy: Verein/Veranstaltung-Dropdown (alte Version, falls noch irgendwo verwendet)
                         const selectId = source === 'veranstaltung' ? '#v_verantwortliche' : '#verantwortliche';
-                        $(selectId).append(
-                            $('<option>', {
-                                value: userData.user_id,
-                                text: userData.user_name + ' (' + userData.user_email + ')',
-                                selected: true
-                            })
-                        );
+                        if ($(selectId).length > 0) {
+                            $(selectId).append(
+                                $('<option>', {
+                                    value: userData.user_id,
+                                    text: userData.user_name + ' (' + userData.user_email + ')',
+                                    selected: true
+                                })
+                            );
+                        } else {
+                            console.warn('Dropdown nicht gefunden:', selectId);
+                        }
                     }
 
                     // Reset source

@@ -94,7 +94,7 @@ class Dienstplan_Public {
         // AJAX-Daten für JavaScript
         wp_localize_script('dp-public-scripts', 'dpPublic', array(
             'ajaxurl' => admin_url('admin-ajax.php'),
-            'nonce' => wp_create_nonce('dp_public_nonce'),
+            'nonce' => wp_create_nonce('dp_public_nonce'), // Public nonce für non-logged-in users
             'i18n' => array(
                 'loading' => __('Lädt...', 'dienstplan-verwaltung'),
                 'error' => __('Ein Fehler ist aufgetreten', 'dienstplan-verwaltung'),
@@ -231,6 +231,12 @@ class Dienstplan_Public {
         }
         
         try {
+            // Nonce-Validierung für Public-AJAX (auch für nopriv)
+            if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'dp_public_nonce')) {
+                wp_send_json_error(array('message' => 'Sicherheitsprüfung fehlgeschlagen'));
+                return;
+            }
+            
             // Validierung Pflichtfelder
             $required = array('slot_id', 'vorname', 'nachname', 'datenschutz');
             foreach ($required as $field) {
@@ -288,11 +294,13 @@ class Dienstplan_Public {
                 return;
             }
             
-            // Speichere Mitarbeiter-ID in Session für spätere Verwendung
-            if (!session_id()) {
-                session_start();
-            }
-            $_SESSION['dp_mitarbeiter_id'] = $mitarbeiter_id;
+            // Speichere Mitarbeiter-ID in Transient statt Session
+            // Verwende Cookie für non-logged-in User
+            $transient_key = 'dp_mitarbeiter_' . md5($_SERVER['REMOTE_ADDR'] . $_SERVER['HTTP_USER_AGENT']);
+            set_transient($transient_key, $mitarbeiter_id, WEEK_IN_SECONDS);
+            
+            // Setze Cookie als Fallback
+            setcookie('dp_mitarbeiter_id', $mitarbeiter_id, time() + WEEK_IN_SECONDS, COOKIEPATH, COOKIE_DOMAIN, is_ssl(), true);
             
             wp_send_json_success(array(
                 'message' => 'Sie wurden erfolgreich eingetragen!',
@@ -329,6 +337,12 @@ class Dienstplan_Public {
         }
         
         try {
+            // Nonce-Validierung
+            if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'dp_public_nonce')) {
+                wp_send_json_error(array('message' => 'Sicherheitsprüfung fehlgeschlagen'));
+                return;
+            }
+            
             // Validierung Pflichtfelder
             $required = array('dienst_id', 'first_name', 'last_name');
             foreach ($required as $field) {
@@ -510,11 +524,10 @@ class Dienstplan_Public {
                 return;
             }
             
-            // Speichere Mitarbeiter-ID in Session
-            if (!session_id()) {
-                session_start();
-            }
-            $_SESSION['dp_mitarbeiter_id'] = $mitarbeiter_id;
+            // Speichere Mitarbeiter-ID in Transient und Cookie
+            $transient_key = 'dp_mitarbeiter_' . md5($_SERVER['REMOTE_ADDR'] . $_SERVER['HTTP_USER_AGENT']);
+            set_transient($transient_key, $mitarbeiter_id, WEEK_IN_SECONDS);
+            setcookie('dp_mitarbeiter_id', $mitarbeiter_id, time() + WEEK_IN_SECONDS, COOKIEPATH, COOKIE_DOMAIN, is_ssl(), true);
             
             $message = 'Sie wurden erfolgreich für den Dienst angemeldet!';
             if ($split_dienst) {
@@ -547,6 +560,12 @@ class Dienstplan_Public {
      */
     public function ajax_remove_assignment() {
         try {
+            // Nonce-Validierung
+            if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'dp_public_nonce')) {
+                wp_send_json_error(array('message' => 'Sicherheitsprüfung fehlgeschlagen'));
+                return;
+            }
+            
             if (empty($_POST['slot_id'])) {
                 wp_send_json_error(array('message' => 'Slot-ID fehlt'));
                 return;
@@ -584,19 +603,24 @@ class Dienstplan_Public {
     }
     
     /**
-     * Hole aktuelle Mitarbeiter-ID aus Session oder GET-Parameter
+     * Hole aktuelle Mitarbeiter-ID aus Transient/Cookie oder GET-Parameter
+     * Session-free implementation für bessere Skalierbarkeit
      *
      * @since    1.0.0
      * @return   int|null    Mitarbeiter-ID oder null
      */
     private function get_current_mitarbeiter_id() {
-        if (!session_id()) {
-            session_start();
+        // Aus Transient (für eindeutige Benutzer-Identifikation)
+        $transient_key = 'dp_mitarbeiter_' . md5($_SERVER['REMOTE_ADDR'] . $_SERVER['HTTP_USER_AGENT']);
+        $mitarbeiter_id = get_transient($transient_key);
+        
+        if ($mitarbeiter_id) {
+            return intval($mitarbeiter_id);
         }
         
-        // Aus Session
-        if (isset($_SESSION['dp_mitarbeiter_id'])) {
-            return intval($_SESSION['dp_mitarbeiter_id']);
+        // Aus Cookie (als Fallback)
+        if (!empty($_COOKIE['dp_mitarbeiter_id'])) {
+            return intval($_COOKIE['dp_mitarbeiter_id']);
         }
         
         // Aus Query-Parameter (für Email-Links)
@@ -605,7 +629,9 @@ class Dienstplan_Public {
             $db = new Dienstplan_Database($this->db_prefix);
             $mitarbeiter = $db->get_mitarbeiter_by_email(sanitize_email($_GET['dp_email']));
             if ($mitarbeiter) {
-                $_SESSION['dp_mitarbeiter_id'] = $mitarbeiter->id;
+                // Speichere in Transient und Cookie
+                set_transient($transient_key, $mitarbeiter->id, WEEK_IN_SECONDS);
+                setcookie('dp_mitarbeiter_id', $mitarbeiter->id, time() + WEEK_IN_SECONDS, COOKIEPATH, COOKIE_DOMAIN, is_ssl(), true);
                 return $mitarbeiter->id;
             }
         }

@@ -434,33 +434,28 @@ ksort($dienste_nach_tagen);
                                             </div>
                                             
                                             <?php foreach ($bereich['time_slots'] as $time_key => $services_in_slot): 
-                                                $service_count = count($services_in_slot);
-                                                $row_height = $service_count * 50; // 50px pro Service
+                                                // Jeder Service bekommt seine eigene Zeile
+                                                foreach ($services_in_slot as $service):
+                                                    $von_bis = 'von ' . substr($service->von_zeit, 0, 5) . ' bis ' . substr($service->bis_zeit, 0, 5);
                                             ?>
-                                                <div class="dp-timeline-row-label" data-time-slot="<?php echo $time_key; ?>" style="min-height: <?php echo $row_height; ?>px;">
+                                                <div class="dp-timeline-row-label" data-time-slot="<?php echo $time_key; ?>">
                                                     <div class="dp-timeline-service-info">
-                                                        <?php 
-                                                        // Zeige jede Tätigkeit mit Zeit und Besonderheiten
-                                                        $first_service = $services_in_slot[0];
-                                                        $von_bis = 'von ' . substr($first_service->von_zeit, 0, 5) . ' bis ' . substr($first_service->bis_zeit, 0, 5);
-                                                        
-                                                        foreach ($services_in_slot as $service) {
-                                                            echo '<div class="dp-timeline-activity-block">';
-                                                            // Erste Zeile: Zeit und Tätigkeit nebeneinander
-                                                            echo '<div class="dp-timeline-activity-header">';
-                                                            echo '<span class="dp-timeline-service-time">' . esc_html($von_bis) . '</span>';
-                                                            echo '<span class="dp-timeline-activity-name">• ' . esc_html($service->taetigkeit_name) . '</span>';
-                                                            echo '</div>';
-                                                            // Zweite Zeile: Besonderheiten darunter (falls vorhanden)
-                                                            if (!empty($service->besonderheiten)) {
-                                                                echo '<div class="dp-timeline-activity-details">' . esc_html($service->besonderheiten) . '</div>';
-                                                            }
-                                                            echo '</div>';
-                                                        }
-                                                        ?>
+                                                        <div class="dp-timeline-activity-block">
+                                                            <!-- Erste Zeile: Zeit und Tätigkeit nebeneinander -->
+                                                            <div class="dp-timeline-activity-header">
+                                                                <span class="dp-timeline-service-time"><?php echo esc_html($von_bis); ?></span>
+                                                                <span class="dp-timeline-activity-name">• <?php echo esc_html($service->taetigkeit_name); ?></span>
+                                                            </div>
+                                                            <!-- Zweite Zeile: Besonderheiten darunter (falls vorhanden) -->
+                                                            <?php if (!empty($service->besonderheiten)): ?>
+                                                                <div class="dp-timeline-activity-details"><?php echo esc_html($service->besonderheiten); ?></div>
+                                                            <?php endif; ?>
+                                                        </div>
                                                     </div>
                                                 </div>
-                                            <?php endforeach; ?>
+                                            <?php 
+                                                endforeach;
+                                            endforeach; ?>
                                         <?php endforeach; ?>
                                     </div>
                                 </div>
@@ -513,10 +508,10 @@ ksort($dienste_nach_tagen);
                                             
                                             // Services in diesem Bereich
                                             foreach ($bereich['time_slots'] as $time_key => $services_in_slot):
-                                                echo '<div class="dp-timeline-slot-row">';
-                                                
-                                                // Alle Services in diesem Zeitslot
+                                                // Jeder Service bekommt seine eigene Row
                                                 foreach ($services_in_slot as $service):
+                                                    echo '<div class="dp-timeline-slot-row">';
+                                                    
                                                     // Zeit-Berechnung
                                                     $start_time = strtotime($service->von_zeit);
                                                     $end_time = strtotime($service->bis_zeit);
@@ -553,9 +548,9 @@ ksort($dienste_nach_tagen);
                                                             <?php endif; ?>
                                                         </div>
                                                     </div>
-                                                <?php 
+                                                    <?php 
+                                                    echo '</div>'; // slot-row
                                                 endforeach;
-                                                echo '</div>'; // slot-row
                                             endforeach;
                                         endforeach;
                                         ?>
@@ -1666,7 +1661,7 @@ window.dpFilterBereich = function(bereichId, button) {
     // Aktuellen Button aktivieren
     button.classList.add('active');
     
-    // Alle Service-Items durchgehen
+    // Alle Service-Items durchgehen (Liste-Ansicht)
     document.querySelectorAll('.dp-service-item').forEach(function(item) {
         var itemBereichId = item.getAttribute('data-bereich-id');
         
@@ -1680,6 +1675,92 @@ window.dpFilterBereich = function(bereichId, button) {
             // Nicht passend
             item.style.display = 'none';
         }
+    });
+    
+    // Timeline-Filter: Bereich-Gruppen in der Timeline filtern
+    document.querySelectorAll('.dp-timeline-row-group-header').forEach(function(header) {
+        var row = header.closest('.dp-timeline-rows');
+        if (!row) return;
+        
+        // Finde die Bereich-ID aus dem ersten Service in dieser Gruppe
+        var firstService = null;
+        var nextElement = header.nextElementSibling;
+        while (nextElement && !nextElement.classList.contains('dp-timeline-row-group-header')) {
+            if (nextElement.classList.contains('dp-timeline-row-label')) {
+                var serviceInfo = nextElement.querySelector('[data-bereich-id]');
+                if (!serviceInfo) {
+                    // Suche data-bereich-id im parent tree
+                    var parent = nextElement;
+                    while (parent && !parent.hasAttribute('data-bereich-id')) {
+                        parent = parent.parentElement;
+                    }
+                    if (parent) {
+                        firstService = parent;
+                        break;
+                    }
+                }
+            }
+            nextElement = nextElement.nextElementSibling;
+        }
+        
+        // Wenn keine data-bereich-id gefunden, prüfe den Bereich-Namen
+        var bereichName = header.textContent.trim();
+        var shouldShow = false;
+        
+        if (bereichId === null || bereichId === 'null') {
+            shouldShow = true;
+        } else {
+            // Sammle alle verfügbaren Bereiche und vergleiche
+            var allBereiche = {};
+            document.querySelectorAll('.dp-filter-btn[data-bereich-color]').forEach(function(btn) {
+                var btnBereichId = btn.getAttribute('onclick').match(/dpFilterBereich\((\d+)/);
+                if (btnBereichId && btnBereichId[1]) {
+                    var btnText = btn.textContent.trim();
+                    allBereiche[btnText] = btnBereichId[1];
+                }
+            });
+            
+            if (allBereiche[bereichName] === String(bereichId)) {
+                shouldShow = true;
+            }
+        }
+        
+        // Header und alle zugehörigen Rows ein/ausblenden
+        header.style.display = shouldShow ? '' : 'none';
+        nextElement = header.nextElementSibling;
+        while (nextElement && !nextElement.classList.contains('dp-timeline-row-group-header')) {
+            if (nextElement.classList.contains('dp-timeline-row-label')) {
+                nextElement.style.display = shouldShow ? '' : 'none';
+            }
+            nextElement = nextElement.nextElementSibling;
+        }
+    });
+    
+    // Timeline-Container: Bereich-Spacer und Slot-Rows filtern
+    document.querySelectorAll('.dp-timeline-container').forEach(function(container) {
+        var children = Array.from(container.children);
+        var currentBereichIndex = -1;
+        
+        // Sammle Bereich-Informationen aus der linken Spalte
+        var bereichHeaders = document.querySelectorAll('.dp-timeline-row-group-header');
+        var bereichVisibility = [];
+        
+        bereichHeaders.forEach(function(header) {
+            var isVisible = (header.style.display !== 'none');
+            bereichVisibility.push(isVisible);
+        });
+        
+        // Finde alle Bereich-Spacer und ihre zugehörigen Rows
+        children.forEach(function(child) {
+            if (child.classList.contains('dp-timeline-bereich-spacer')) {
+                currentBereichIndex++;
+                var shouldShow = bereichVisibility[currentBereichIndex] !== false;
+                child.style.display = shouldShow ? '' : 'none';
+            } else if (child.classList.contains('dp-timeline-slot-row')) {
+                var shouldShow = bereichVisibility[currentBereichIndex] !== false;
+                child.style.display = shouldShow ? '' : 'none';
+            }
+        });
     });
     
     // Prüfe ob Accordions leer sind und verstecke sie
@@ -1781,6 +1862,9 @@ window.dpSwitchTimelineDay = function(button, dayId) {
     if (selectedDay) {
         selectedDay.style.display = 'block';
         
+        // Speichere aktiven Tag in localStorage
+        localStorage.setItem('dp_active_day_id', dayId);
+        
         // Sync scroll zwischen Header und Grid
         var headerScroll = selectedDay.querySelector('.dp-timeline-header-scroll');
         var gridScroll = selectedDay.querySelector('.dp-timeline-grid-scroll');
@@ -1799,13 +1883,40 @@ window.dpSwitchTimelineDay = function(button, dayId) {
 
 // Show first day on page load
 document.addEventListener('DOMContentLoaded', function() {
-    var firstDay = document.querySelector('.dp-timeline-day-container');
-    if (firstDay) {
-        firstDay.style.display = 'block';
+    // Prüfe ob gespeicherter Tag vorhanden ist
+    var savedDayId = localStorage.getItem('dp_active_day_id');
+    var targetDay = null;
+    var targetTab = null;
+    
+    if (savedDayId) {
+        targetDay = document.querySelector('.dp-timeline-day-container[data-day-id="' + savedDayId + '"]');
+        targetTab = document.querySelector('.dp-timeline-tab[onclick*="' + savedDayId + '"]');
+    }
+    
+    // Falls kein gespeicherter Tag oder nicht gefunden, nutze ersten Tag
+    if (!targetDay) {
+        targetDay = document.querySelector('.dp-timeline-day-container');
+        targetTab = document.querySelector('.dp-timeline-tab');
+    }
+    
+    if (targetDay) {
+        // Aktiviere richtigen Tab
+        if (targetTab) {
+            document.querySelectorAll('.dp-timeline-tab').forEach(function(tab) {
+                tab.classList.remove('active');
+            });
+            targetTab.classList.add('active');
+        }
         
-        // Setup scroll sync für ersten Tag
-        var headerScroll = firstDay.querySelector('.dp-timeline-header-scroll');
-        var gridScroll = firstDay.querySelector('.dp-timeline-grid-scroll');
+        // Zeige richtigen Tag
+        document.querySelectorAll('.dp-timeline-day-container').forEach(function(day) {
+            day.style.display = 'none';
+        });
+        targetDay.style.display = 'block';
+        
+        // Setup scroll sync für Tag
+        var headerScroll = targetDay.querySelector('.dp-timeline-header-scroll');
+        var gridScroll = targetDay.querySelector('.dp-timeline-grid-scroll');
         
         if (headerScroll && gridScroll) {
             headerScroll.addEventListener('scroll', function() {

@@ -480,8 +480,15 @@ class Dienstplan_Database {
     // === VEREINE METHODEN ===
     
     public function get_vereine($aktiv_only = false) {
-        $where = $aktiv_only ? "WHERE aktiv = 1" : "";
-        return $this->wpdb->get_results("SELECT * FROM {$this->prefix}vereine {$where} ORDER BY name ASC");
+        if ($aktiv_only) {
+            return $this->wpdb->get_results(
+                $this->wpdb->prepare(
+                    "SELECT * FROM {$this->prefix}vereine WHERE aktiv = %d ORDER BY name ASC",
+                    1
+                )
+            );
+        }
+        return $this->wpdb->get_results("SELECT * FROM {$this->prefix}vereine ORDER BY name ASC");
     }
     
     public function get_verein($id) {
@@ -912,10 +919,16 @@ class Dienstplan_Database {
     // === BEREICHE METHODEN ===
     
     public function get_bereiche($aktiv_only = false) {
-        $where = $aktiv_only ? "WHERE aktiv = 1" : "";
-        return $this->wpdb->get_results(
-            "SELECT * FROM {$this->prefix}bereiche {$where} ORDER BY sortierung ASC, name ASC"
-        );
+        $sql = "SELECT * FROM {$this->prefix}bereiche";
+        if ($aktiv_only) {
+            $sql = $this->wpdb->prepare(
+                "SELECT * FROM {$this->prefix}bereiche WHERE aktiv = %d ORDER BY sortierung ASC, name ASC",
+                1
+            );
+            return $this->wpdb->get_results($sql);
+        }
+        $sql .= " ORDER BY sortierung ASC, name ASC";
+        return $this->wpdb->get_results($sql);
     }
     
     public function get_bereich($id) {
@@ -1009,14 +1022,14 @@ class Dienstplan_Database {
     
     // Alle Tätigkeiten laden (für Admin-Übersicht)
     public function get_taetigkeiten($aktiv_only = false) {
-        $where = $aktiv_only ? "WHERE t.aktiv = 1" : "";
-        return $this->wpdb->get_results(
-            "SELECT t.*, b.name as bereich_name, b.farbe as bereich_farbe 
-             FROM {$this->prefix}taetigkeiten t
-             LEFT JOIN {$this->prefix}bereiche b ON t.bereich_id = b.id
-             {$where} 
-             ORDER BY b.sortierung ASC, b.name ASC, t.sortierung ASC, t.name ASC"
-        );
+        $sql = "SELECT t.*, b.name AS bereich_name, b.farbe AS bereich_farbe 
+                FROM {$this->prefix}taetigkeiten t 
+                LEFT JOIN {$this->prefix}bereiche b ON t.bereich_id = b.id";
+        if ($aktiv_only) {
+            $sql .= " WHERE t.aktiv = 1";
+        }
+        $sql .= " ORDER BY b.sortierung ASC, b.name ASC, t.sortierung ASC, t.name ASC";
+        return $this->wpdb->get_results($sql);
     }
     
     public function get_taetigkeit($id) {
