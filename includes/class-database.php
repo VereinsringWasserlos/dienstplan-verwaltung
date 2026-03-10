@@ -50,10 +50,12 @@ class Dienstplan_Database {
             kontakt_name varchar(255),
             kontakt_email varchar(255),
             kontakt_telefon varchar(50),
+            seite_id bigint(20) UNSIGNED DEFAULT NULL,
             aktiv tinyint(1) DEFAULT 1,
             erstellt_am datetime DEFAULT CURRENT_TIMESTAMP,
             PRIMARY KEY (id),
-            UNIQUE KEY kuerzel (kuerzel)
+            UNIQUE KEY kuerzel (kuerzel),
+            KEY seite_id (seite_id)
         ) $charset;";
         
         dbDelta($sql);
@@ -82,6 +84,19 @@ class Dienstplan_Database {
                 ADD COLUMN logo_id bigint(20) UNSIGNED DEFAULT NULL AFTER beschreibung"
             );
         }
+
+        // Prüfe ob seite_id Spalte existiert, falls nicht hinzufügen (für Updates)
+        $seite_exists = $this->wpdb->get_results(
+            "SHOW COLUMNS FROM {$this->prefix}vereine LIKE 'seite_id'"
+        );
+
+        if (empty($seite_exists)) {
+            $this->wpdb->query(
+                "ALTER TABLE {$this->prefix}vereine 
+                ADD COLUMN seite_id bigint(20) UNSIGNED DEFAULT NULL AFTER kontakt_telefon,
+                ADD KEY seite_id (seite_id)"
+            );
+        }
         
         // Veranstaltungen-Tabelle
         $sql = "CREATE TABLE IF NOT EXISTS {$this->prefix}veranstaltungen (
@@ -89,7 +104,7 @@ class Dienstplan_Database {
             name varchar(255) NOT NULL,
             beschreibung text,
             typ varchar(50) DEFAULT 'eintaegig',
-            status varchar(50) DEFAULT 'geplant',
+            status varchar(50) DEFAULT 'in_planung',
             start_datum date NOT NULL,
             end_datum date,
             seite_id bigint(20) UNSIGNED DEFAULT NULL,
@@ -172,6 +187,22 @@ class Dienstplan_Database {
             KEY user_id (user_id)
         ) $charset;";
         
+        dbDelta($sql);
+
+        // User-Verein Zuordnung (direkte Zuordnung für Crew/Portal-User)
+        $sql = "CREATE TABLE IF NOT EXISTS {$this->prefix}user_vereine (
+            id mediumint(9) NOT NULL AUTO_INCREMENT,
+            user_id bigint(20) NOT NULL,
+            verein_id mediumint(9) NOT NULL,
+            mitarbeiter_id mediumint(9) DEFAULT NULL,
+            erstellt_am datetime DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (id),
+            UNIQUE KEY user_verein (user_id, verein_id),
+            KEY user_id (user_id),
+            KEY verein_id (verein_id),
+            KEY mitarbeiter_id (mitarbeiter_id)
+        ) $charset;";
+
         dbDelta($sql);
         
         // Veranstaltung-Verantwortliche Zuordnung (m:n)
@@ -295,13 +326,28 @@ class Dienstplan_Database {
             nachname varchar(100) NOT NULL,
             email varchar(100),
             telefon varchar(50),
+            user_id bigint(20) DEFAULT NULL,
             datenschutz_akzeptiert tinyint(1) DEFAULT 0,
             PRIMARY KEY (id),
             KEY idx_name (nachname, vorname),
-            KEY idx_email (email)
+            KEY idx_email (email),
+            KEY idx_user_id (user_id)
         ) $charset;";
         
         dbDelta($sql);
+        
+        // Prüfe ob user_id Spalte existiert, falls nicht hinzufügen (für Updates)
+        $user_id_exists = $this->wpdb->get_results(
+            "SHOW COLUMNS FROM {$this->prefix}mitarbeiter LIKE 'user_id'"
+        );
+        
+        if (empty($user_id_exists)) {
+            $this->wpdb->query(
+                "ALTER TABLE {$this->prefix}mitarbeiter 
+                ADD COLUMN user_id bigint(20) DEFAULT NULL AFTER telefon,
+                ADD KEY idx_user_id (user_id)"
+            );
+        }
         
         // Dienst-Zuweisungen-Tabelle (Frontend-Eintragungen)
         $sql = "CREATE TABLE IF NOT EXISTS {$this->prefix}dienst_zuweisungen (
@@ -339,9 +385,27 @@ class Dienstplan_Database {
             );
         }
         
+        // Portal-Zugriffs-Log-Tabelle
+        $sql = "CREATE TABLE IF NOT EXISTS {$this->prefix}portal_access_log (
+            id bigint(20) NOT NULL AUTO_INCREMENT,
+            user_id bigint(20) NOT NULL,
+            mitarbeiter_id mediumint(9) DEFAULT NULL,
+            action varchar(50) NOT NULL,
+            ip_address varchar(45),
+            user_agent text,
+            access_time datetime DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (id),
+            KEY idx_user_id (user_id),
+            KEY idx_mitarbeiter_id (mitarbeiter_id),
+            KEY idx_access_time (access_time)
+        ) $charset;";
+        
+        dbDelta($sql);
+        
         // Migrationen
         $this->migrate_taetigkeiten_add_bereich();
         $this->migrate_veranstaltungen_add_seite_id();
+        $this->migrate_vereine_add_seite_id();
     }
     
     /**
@@ -363,6 +427,28 @@ class Dienstplan_Database {
             );
             
             error_log('Dienstplan Migration: seite_id Spalte erfolgreich hinzugefügt');
+        }
+    }
+
+    /**
+     * Migration: Fügt seite_id zur Vereine-Tabelle hinzu
+     */
+    public function migrate_vereine_add_seite_id() {
+        // Prüfe ob seite_id Spalte bereits existiert
+        $column_exists = $this->wpdb->get_results(
+            "SHOW COLUMNS FROM {$this->prefix}vereine LIKE 'seite_id'"
+        );
+
+        if (empty($column_exists)) {
+            error_log('Dienstplan Migration: Füge seite_id zur Vereine-Tabelle hinzu');
+
+            $this->wpdb->query(
+                "ALTER TABLE {$this->prefix}vereine 
+                ADD COLUMN seite_id bigint(20) UNSIGNED DEFAULT NULL AFTER kontakt_telefon,
+                ADD KEY seite_id (seite_id)"
+            );
+
+            error_log('Dienstplan Migration: seite_id Spalte für Vereine erfolgreich hinzugefügt');
         }
     }
     
@@ -749,6 +835,16 @@ class Dienstplan_Database {
             array('%d')
         );
     }
+
+    public function update_verein_page_id($verein_id, $seite_id) {
+        return $this->wpdb->update(
+            $this->prefix . 'vereine',
+            array('seite_id' => $seite_id),
+            array('id' => $verein_id),
+            array('%d'),
+            array('%d')
+        );
+    }
     
     // === VERANSTALTUNGS-TAGE METHODEN ===
     
@@ -868,6 +964,46 @@ class Dienstplan_Database {
         return $this->wpdb->delete(
             $this->prefix . 'verein_verantwortliche',
             array('verein_id' => $verein_id),
+            array('%d')
+        );
+    }
+
+    // === USER-VEREIN ZUORDNUNG (DIREKT) ===
+
+    public function assign_user_to_verein($user_id, $verein_id, $mitarbeiter_id = null) {
+        $data = array(
+            'user_id' => intval($user_id),
+            'verein_id' => intval($verein_id),
+        );
+        $format = array('%d', '%d');
+
+        if (!empty($mitarbeiter_id)) {
+            $data['mitarbeiter_id'] = intval($mitarbeiter_id);
+            $format[] = '%d';
+        }
+
+        return $this->wpdb->replace(
+            $this->prefix . 'user_vereine',
+            $data,
+            $format
+        );
+    }
+
+    public function get_user_vereine($user_id) {
+        return $this->wpdb->get_results($this->wpdb->prepare(
+            "SELECT uv.*, v.name as verein_name, v.kuerzel as verein_kuerzel
+             FROM {$this->prefix}user_vereine uv
+             INNER JOIN {$this->prefix}vereine v ON uv.verein_id = v.id
+             WHERE uv.user_id = %d
+             ORDER BY v.name ASC",
+            $user_id
+        ));
+    }
+
+    public function delete_user_verein_assignments($user_id) {
+        return $this->wpdb->delete(
+            $this->prefix . 'user_vereine',
+            array('user_id' => intval($user_id)),
             array('%d')
         );
     }

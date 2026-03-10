@@ -19,6 +19,9 @@
         $('#mitarbeiter_id').val('');
         $('#mitarbeiter-modal-title').text('Neuer Mitarbeiter');
         
+        // Portal-Zugriff-Zeile verstecken bei neuem Mitarbeiter
+        $('#portal-access-row').hide();
+        
         // Modal anzeigen - mehrere Methoden für Kompatibilität
         const modal = document.getElementById('mitarbeiter-modal');
         if (modal) {
@@ -67,6 +70,25 @@
                     $('#ma_telefon').val(ma.telefon || '');
                     $('#ma_notizen').val(ma.notizen || '');
                     
+                    // Portal-Zugriff anzeigen
+                    if (ma.email) {
+                        $('#portal-access-row').show();
+                        
+                        if (ma.user_id) {
+                            // Hat bereits Portal-Zugriff
+                            $('#portal-status-display').show();
+                            $('#portal-activate-display').hide();
+                        } else {
+                            // Kein Portal-Zugriff
+                            $('#portal-status-display').hide();
+                            $('#portal-activate-display').show();
+                            $('#ma_portal_access').prop('checked', false);
+                        }
+                    } else {
+                        // Keine E-Mail = kein Portal-Zugriff möglich
+                        $('#portal-access-row').hide();
+                    }
+                    
                     $('#mitarbeiter-modal-title').text('Mitarbeiter bearbeiten');
                     $('#mitarbeiter-modal').css('display', 'flex');
                 } else {
@@ -97,7 +119,8 @@
             nachname: $('#ma_nachname').val(),
             email: $('#ma_email').val(),
             telefon: $('#ma_telefon').val(),
-            notizen: $('#ma_notizen').val()
+            notizen: $('#ma_notizen').val(),
+            portal_access: $('#ma_portal_access').is(':checked') ? '1' : '0'
         };
         
         console.log('Sende Save Request:', formData);
@@ -109,6 +132,11 @@
             success: function(response) {
                 console.log('Save Response:', response);
                 if (response.success) {
+                    // Zeige Erfolgsmeldung
+                    if (response.data && response.data.message) {
+                        alert(response.data.message);
+                    }
+                    
                     // Prüfe ob Veranstaltungs-Modal offen ist
                     if (window.veranstaltungModalIsOpen && typeof reloadVerantwortlicheList === 'function') {
                         closeMitarbeiterModal();

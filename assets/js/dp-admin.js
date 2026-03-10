@@ -272,3 +272,104 @@ document.addEventListener('click', function(event) {
         });
     }
 });
+
+/**
+ * ===== PORTAL PAGE MANAGEMENT (DASHBOARD) =====
+ * Funktionen zum Erstellen/Löschen der Portal-Seite vom Dashboard aus
+ * @since 0.6.6
+ */
+
+/**
+ * Portal-Seite erstellen (vom Dashboard)
+ */
+window.createPortalPageFromDashboard = function(buttonElement) {
+    if (!confirm('Möchtest du jetzt die Portal-Seite erstellen?\n\nDie Seite wird mit dem Titel "Dienstplan-Portal" und dem Shortcode [dienstplan_hub] veröffentlicht.')) {
+        return;
+    }
+    
+    console.log('Erstelle Portal-Seite vom Dashboard...');
+    
+    // Zeige Loading-Status - nutze entweder übergebenen Button oder suche ihn
+    var button = buttonElement || document.querySelector('#portal-page-card button') || document.getElementById('portal-create-button');
+    if (!button) {
+        console.error('Button nicht gefunden');
+        alert('Fehler: Button konnte nicht gefunden werden.');
+        return;
+    }
+    var originalText = button.innerHTML;
+    button.disabled = true;
+    button.innerHTML = '<span class="dashicons dashicons-update" style="margin-top: 4px; animation: rotation 1s infinite linear;"></span> Wird erstellt...';
+    
+    jQuery.ajax({
+        url: dpAjax.ajaxurl,
+        type: 'POST',
+        data: {
+            action: 'dp_create_portal_page',
+            nonce: dpAjax.nonce_create_portal
+        },
+        success: function(response) {
+            console.log('Portal-Seite erstellt:', response);
+            
+            if (response.success) {
+                alert('✓ Portal-Seite erfolgreich erstellt!\n\nDie Seite ist jetzt verfügbar und kann bearbeitet werden.');
+                // Seite neu laden um aktuelle Card-Ansicht zu zeigen
+                window.location.reload();
+            } else {
+                alert('✗ Fehler: ' + (response.data.message || 'Unbekannter Fehler'));
+                button.disabled = false;
+                button.innerHTML = originalText;
+            }
+        },
+        error: function(xhr, status, error) {
+            console.error('AJAX-Fehler beim Erstellen:', error);
+            alert('✗ AJAX-Fehler beim Erstellen der Portal-Seite.\n\nBitte versuche es erneut oder kontaktiere den Support.');
+            button.disabled = false;
+            button.innerHTML = originalText;
+        }
+    });
+};
+
+/**
+ * Portal-Seite löschen (vom Dashboard)
+ */
+window.deletePortalPage = function() {
+    if (!confirm('⚠️ ACHTUNG: Möchtest du die Portal-Seite wirklich permanent löschen?\n\nDiese Aktion kann nicht rückgängig gemacht werden!')) {
+        return;
+    }
+    
+    console.log('Lösche Portal-Seite vom Dashboard...');
+    
+    // Zeige Loading-Status
+    var button = document.querySelector('#portal-page-card button[onclick*="deletePortalPage"]');
+    var originalText = button.innerHTML;
+    button.disabled = true;
+    button.innerHTML = '<span class="dashicons dashicons-update" style="margin-top: 4px; animation: rotation 1s infinite linear;"></span> Wird gelöscht...';
+    
+    jQuery.ajax({
+        url: dpAjax.ajaxurl,
+        type: 'POST',
+        data: {
+            action: 'dp_delete_portal_page',
+            nonce: dpAjax.nonce_delete_portal
+        },
+        success: function(response) {
+            console.log('Portal-Seite gelöscht:', response);
+            
+            if (response.success) {
+                alert('✓ Portal-Seite erfolgreich gelöscht!');
+                // Seite neu laden um "Erstellen"-Ansicht zu zeigen
+                window.location.reload();
+            } else {
+                alert('✗ Fehler: ' + (response.data.message || 'Unbekannter Fehler'));
+                button.disabled = false;
+                button.innerHTML = originalText;
+            }
+        },
+        error: function(xhr, status, error) {
+            console.error('AJAX-Fehler beim Löschen:', error);
+            alert('✗ AJAX-Fehler beim Löschen der Portal-Seite.\n\nBitte versuche es erneut oder kontaktiere den Support.');
+            button.disabled = false;
+            button.innerHTML = originalText;
+        }
+    });
+};

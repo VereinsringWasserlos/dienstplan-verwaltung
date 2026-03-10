@@ -70,6 +70,33 @@ if (isset($_POST['clear_all_tables']) && check_admin_referer('dp_debug_clear_all
     echo '<div class="notice notice-success"><p><strong>' . $cleared_count . ' Tabellen wurden geleert!</strong></p></div>';
 }
 
+// Handle Portal-Zugriffe Reset
+if (isset($_POST['reset_portal_data']) && check_admin_referer('dp_debug_reset_portal', 'dp_debug_nonce_portal')) {
+    // Lösche user_id Verknüpfungen
+    $wpdb->query("UPDATE {$wpdb->prefix}dp_mitarbeiter SET user_id = NULL WHERE user_id IS NOT NULL");
+    $affected = $wpdb->rows_affected;
+    
+    // Lösche Crew-User wenn gewünscht
+    if (isset($_POST['delete_users'])) {
+        require_once DIENSTPLAN_PLUGIN_PATH . 'includes/class-dienstplan-roles.php';
+        $crew_users = get_users(array('role' => Dienstplan_Roles::ROLE_CREW));
+        $deleted_users = 0;
+        foreach ($crew_users as $user) {
+            wp_delete_user($user->ID);
+            $deleted_users++;
+        }
+        echo '<div class="notice notice-success"><p><strong>Portal-Daten zurückgesetzt!</strong><br>' . $affected . ' Verknüpfungen entfernt, ' . $deleted_users . ' Benutzer gelöscht.</p></div>';
+    } else {
+        echo '<div class="notice notice-success"><p><strong>Portal-Verknüpfungen zurückgesetzt!</strong><br>' . $affected . ' Verknüpfungen entfernt (Benutzer bleiben erhalten).</p></div>';
+    }
+}
+
+// Handle Portal-Log Leeren
+if (isset($_POST['clear_portal_log']) && check_admin_referer('dp_debug_clear_portal_log', 'dp_debug_nonce_portal_log')) {
+    $wpdb->query("TRUNCATE TABLE {$wpdb->prefix}dp_portal_access_log");
+    echo '<div class="notice notice-success"><p><strong>Portal-Zugriffs-Log wurde geleert!</strong></p></div>';
+}
+
 // Statistiken sammeln
 
 $all_possible_tables = array(
@@ -81,7 +108,8 @@ $all_possible_tables = array(
     'taetigkeiten',
     'veranstaltungen',
     'veranstaltung_tage',
-    'vereine'
+    'vereine',
+    'portal_access_log'
     // Nicht implementierte Tabellen (entfernt):
     // 'vereinsmitglieder' - wird nicht verwendet
     // 'zeitslots' - wird nicht verwendet  
@@ -305,6 +333,115 @@ foreach ($stats as $count) {
         </ul>
     </div>
 
+    <!-- Portal-Verwaltung -->
+    <div class="card" style="margin-top: 2rem; border-left: 4px solid #667eea;">
+        <h2 style="color: #667eea;">
+            <span class="dashicons dashicons-admin-network"></span>
+            Portal-Verwaltung & Logging
+        </h2>
+        
+        <!-- Portal-Statistiken -->
+        <div style="background: #f9fafb; padding: 1rem; border-radius: 6px; margin-bottom: 1.5rem;">
+            <h3 style="margin-top: 0;">📊 Portal-Statistiken</h3>
+            <?php
+            $portal_count = $wpdb->get_var("SELECT COUNT(*) FROM {$wpdb->prefix}dp_mitarbeiter WHERE user_id IS NOT NULL");
+            $total_mitarbeiter = $wpdb->get_var("SELECT COUNT(*) FROM {$wpdb->prefix}dp_mitarbeiter");
+            require_once DIENSTPLAN_PLUGIN_PATH . 'includes/class-dienstplan-roles.php';
+            $crew_users = count(get_users(array('role' => Dienstplan_Roles::ROLE_CREW)));
+            ?>
+            <table class="widefat">
+                <tr>
+                    <td width="50%"><strong>Mitarbeiter mit Portal-Zugriff:</strong></td>
+                    <td><span style="font-size: 1.2rem; font-weight: 600; color: #667eea;"><?php echo $portal_count; ?></span> von <?php echo $total_mitarbeiter; ?></td>
+                </tr>
+                <tr>
+                    <td><strong>Crew-Benutzer (WordPress):</strong></td>
+                    <td><span style="font-size: 1.2rem; font-weight: 600;"><?php echo $crew_users; ?></span></td>
+                </tr>
+            </table>
+        </div>
+        
+        <!-- Letzte Portal-Zugriffe -->
+        <div style="background: #f9fafb; padding: 1rem; border-radius: 6px; margin-bottom: 1.5rem;">
+            <h3 style="margin-top: 0;">🔐 Letzte Portal-Zugriffe</h3>
+            <?php
+            $access_logs = $wpdb->get_results(
+                "SELECT l.*, m.vorname, m.nachname, u.user_login 
+                FROM {$wpdb->prefix}dp_portal_access_log l
+                LEFT JOIN {$wpdb->prefix}dp_mitarbeiter m ON l.mitarbeiter_id = m.id
+                LEFT JOIN {$wpdb->users} u ON l.user_id = u.ID
+                ORDER BY l.access_time DESC
+                LIMIT 10"
+            );
+            
+            if (!empty($access_logs)): ?>
+                <table class="wp-list-table widefat striped">
+                    <thead>
+                        <tr>
+                            <th>Zeit</th>
+                            <th>Mitarbeiter</th>
+                            <th>Benutzer</th>
+                            <th>Aktion</th>
+                            <th>IP-Adresse</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($access_logs as $log): ?>
+                        <tr>
+                            <td><?php echo date_i18n('d.m.Y H:i:s', strtotime($log->access_time)); ?></td>
+                            <td><?php echo esc_html($log->vorname . ' ' . $log->nachname); ?></td>
+                            <td><?php echo esc_html($log->user_login); ?></td>
+                            <td>
+                                <?php 
+                                $action_labels = array(
+                                    'login' => '✅ Login',
+                                    'logout' => '👋 Logout',
+                                    'view_dienste' => '📋 Dienste angezeigt',
+                                    'assign_dienst' => '➕ Dienst angenommen'
+                                );
+                                echo isset($action_labels[$log->action]) ? $action_labels[$log->action] : esc_html($log->action);
+                                ?>
+                            </td>
+                            <td><small><?php echo esc_html($log->ip_address); ?></small></td>
+                        </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+                
+                <form method="post" style="margin-top: 1rem;" onsubmit="return confirm('Möchten Sie wirklich alle Portal-Zugriffs-Logs löschen?');">
+                    <?php wp_nonce_field('dp_debug_clear_portal_log', 'dp_debug_nonce_portal_log'); ?>
+                    <button type="submit" name="clear_portal_log" class="button">
+                        <span class="dashicons dashicons-trash"></span>
+                        Zugriffs-Log leeren
+                    </button>
+                </form>
+            <?php else: ?>
+                <p style="color: #666;">Noch keine Portal-Zugriffe geloggt.</p>
+            <?php endif; ?>
+        </div>
+        
+        <!-- Portal-Reset -->
+        <div style="background: #fef3c7; border: 1px solid #f59e0b; padding: 1rem; border-radius: 6px;">
+            <h3 style="margin-top: 0; color: #d97706;">
+                <span class="dashicons dashicons-warning"></span>
+                Portal-Daten zurücksetzen
+            </h3>
+            <p>Entfernt alle Portal-Verknüpfungen von Mitarbeitern. Optional können auch die WordPress-Benutzer gelöscht werden.</p>
+            
+            <form method="post" onsubmit="return confirm('⚠️ Möchten Sie wirklich alle Portal-Daten zurücksetzen?\n\nDies entfernt die Verknüpfungen von ' + <?php echo $portal_count; ?> + ' Mitarbeitern.');">
+                <?php wp_nonce_field('dp_debug_reset_portal', 'dp_debug_nonce_portal'); ?>
+                <label style="display: block; margin-bottom: 1rem;">
+                    <input type="checkbox" name="delete_users" value="1">
+                    <strong>Auch WordPress-Benutzer löschen</strong> (<?php echo $crew_users; ?> Crew-Benutzer)
+                </label>
+                <button type="submit" name="reset_portal_data" class="button" style="background: #f59e0b; color: white; border-color: #d97706;">
+                    <span class="dashicons dashicons-update"></span>
+                    Portal-Daten zurücksetzen
+                </button>
+            </form>
+        </div>
+    </div>
+    
     <!-- Quick Actions -->
     <div class="card" style="margin-top: 2rem;">
         <h2>⚡ Quick Actions</h2>

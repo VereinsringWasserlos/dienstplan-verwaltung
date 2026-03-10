@@ -247,8 +247,115 @@ jQuery(document).ready(function($) {
         }
     });
 });
+// ===================================
+// Verein-spezifisches Anmelde-Modal
+// ===================================
+window.openAnmeldeModal = function(slotId, dienstId) {
+    jQuery('#dp-slot-id').val(slotId);
+    jQuery('#dp-dienst-id').val(dienstId);
+    if (typeof window.dpToggleCreateUserConsent === 'function') {
+        window.dpToggleCreateUserConsent();
+    }
+    jQuery('#dp-anmelde-modal').fadeIn(300);
+    jQuery('body').css('overflow', 'hidden');
+};
 
+window.closeAnmeldeModal = function() {
+    jQuery('#dp-anmelde-modal').fadeOut(300);
+    jQuery('body').css('overflow', 'auto');
+    jQuery('#dp-anmelde-form')[0].reset();
+};
+
+// Anmelde-Formular Handler
+window.dpPublicSubmitBound = true;
+jQuery(document).on('submit', '#dp-anmelde-form', function(e) {
+    e.preventDefault();
+    
+    const form = jQuery(this);
+    const submitBtn = form.find('button[type="submit"]');
+    const originalSubmitText = submitBtn.text();
+    const dpConfig = window.dpPublic || window.dpAjax || null;
+
+    if (!dpConfig || !dpConfig.ajaxurl || !dpConfig.nonce) {
+        alert('Konfiguration fehlt. Bitte Seite neu laden.');
+        return;
+    }
+    
+    // Form-Daten sammeln
+    const formData = {
+        action: 'dp_anmeldung_verein',
+        nonce: dpConfig.nonce,
+        slot_id: jQuery('#dp-slot-id').val(),
+        dienst_id: jQuery('#dp-dienst-id').val(),
+        vorname: jQuery('#dp-vorname').val(),
+        nachname: jQuery('#dp-nachname').val(),
+        email: jQuery('#dp-email').val(),
+        telefon: jQuery('#dp-telefon').val(),
+        besonderheiten: jQuery('#dp-besonderheiten').val(),
+        create_user_account: jQuery('input[name="create_user_account"]:checked').val() || '0',
+        create_user_datenschutz: jQuery('#dp-create-user-datenschutz').is(':checked') ? '1' : '0'
+    };
+    
+    // Validierung
+    if (!formData.vorname || !formData.nachname || !formData.email) {
+        alert('Bitte alle Pflichtfelder ausfüllen.');
+        return;
+    }
+
+    if (formData.create_user_account === '1' && formData.create_user_datenschutz !== '1') {
+        alert('Bitte bestätige die Datenschutzerklärung für die Kontoerstellung.');
+        return;
+    }
+    
+    // Button deaktivieren
+    submitBtn.prop('disabled', true).text('Wird gesendet...');
+    
+    // AJAX-Request
+    let requestSucceeded = false;
+    jQuery.ajax({
+        url: dpConfig.ajaxurl,
+        type: 'POST',
+        data: formData,
+        success: function(response) {
+            if (response.success) {
+                requestSucceeded = true;
+                alert('Vielen Dank für Ihre Anmeldung! Sie erhalten in Kürze eine Bestätigungs-E-Mail.');
+                closeAnmeldeModal();
+                // Seite neu laden, um aktualisierten Status zu zeigen
+                location.reload();
+            } else {
+                alert('Fehler: ' + (response.data?.message || 'Anmeldung fehlgeschlagen.'));
+                submitBtn.prop('disabled', false).text(originalSubmitText);
+            }
+        },
+        error: function(xhr, status, error) {
+            alert('Serverfehler: ' + error);
+            submitBtn.prop('disabled', false).text(originalSubmitText);
+        },
+        complete: function() {
+            if (!requestSucceeded) {
+                submitBtn.prop('disabled', false).text(originalSubmitText);
+            }
+        }
+    });
+});
+
+// Modal-Close bei ESC oder Außenklick
+jQuery(document).on('keydown', function(e) {
+    if (e.key === 'Escape' && jQuery('#dp-anmelde-modal').is(':visible')) {
+        closeAnmeldeModal();
+    }
+});
+
+jQuery(document).on('click', '#dp-anmelde-modal', function(e) {
+    if (e.target === this) {
+        closeAnmeldeModal();
+    }
+});
+
+// ===================================
 // Globale Funktionen
+// ===================================
 window.DienstplanPublic = {
     assignDienst: function(dienstId, name) {
         const button = jQuery('.dienst-uebernehmen-btn[data-dienst-id="' + dienstId + '"]');

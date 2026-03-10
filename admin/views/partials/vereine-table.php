@@ -20,6 +20,10 @@ if (!defined('ABSPATH')) exit;
                 <?php echo count($vereine); ?> <?php echo count($vereine) != 1 ? 'Vereine' : 'Verein'; ?>
             </span>
             <div style="flex: 1;"></div>
+            <button type="button" onclick="event.stopPropagation(); createAllVereinOverviewPages(this);" class="button" style="background: rgba(255,255,255,0.9); color: #2563eb; border: none; padding: 0.5rem 1rem; font-weight: 600;">
+                <span class="dashicons dashicons-admin-page" style="font-size: 16px;"></span>
+                <?php _e('Alle Seiten erstellen', 'dienstplan-verwaltung'); ?>
+            </button>
             <button type="button" onclick="event.stopPropagation(); openVereinModal();" class="button button-primary" style="background: rgba(255,255,255,0.9); color: #3b82f6; border: none; padding: 0.5rem 1rem; font-weight: 600;">
                 <span class="dashicons dashicons-plus-alt" style="font-size: 16px;"></span>
                 <?php _e('Neuer Verein', 'dienstplan-verwaltung'); ?>
@@ -68,6 +72,40 @@ if (!defined('ABSPATH')) exit;
                 </thead>
                 <tbody>
                     <?php foreach ($vereine as $verein): ?>
+                        <?php
+                        $verein_page = null;
+                        if (!empty($verein->seite_id)) {
+                            $candidate_page = get_post(intval($verein->seite_id));
+                            if ($candidate_page && $candidate_page->post_type === 'page' && $candidate_page->post_status !== 'trash') {
+                                $verein_page = $candidate_page;
+                            }
+                        }
+
+                        if (!$verein_page) {
+                            $verein_pages = get_posts(array(
+                                'post_type' => 'page',
+                                'post_status' => 'any',
+                                'meta_query' => array(
+                                    array(
+                                        'key' => '_dp_verein_id',
+                                        'value' => $verein->id,
+                                    ),
+                                    array(
+                                        'key' => '_dp_veranstaltung_id',
+                                        'compare' => 'NOT EXISTS',
+                                    ),
+                                ),
+                                'numberposts' => 1,
+                            ));
+
+                            if (!empty($verein_pages)) {
+                                $verein_page = $verein_pages[0];
+                                if (empty($verein->seite_id)) {
+                                    $db->update_verein_page_id($verein->id, intval($verein_page->ID));
+                                }
+                            }
+                        }
+                        ?>
                         <tr data-verein-id="<?php echo esc_attr($verein->id); ?>">
                             <td style="padding-left: 1rem;">
                                 <input type="checkbox" class="verein-checkbox" value="<?php echo esc_attr($verein->id); ?>" style="margin: 0;">
@@ -87,6 +125,18 @@ if (!defined('ABSPATH')) exit;
                                 <?php if ($verein->beschreibung): ?>
                                     <br><small style="margin-left: 3rem;"><?php echo esc_html($verein->beschreibung); ?></small>
                                 <?php endif; ?>
+                                <br><small style="margin-left: 3rem; display: inline-flex; gap: 0.5rem; align-items: center;">
+                                    <span style="color: #6b7280;"><?php _e('Seite:', 'dienstplan-verwaltung'); ?></span>
+                                    <?php if ($verein_page): ?>
+                                        <a href="<?php echo esc_url(get_permalink($verein_page->ID)); ?>" target="_blank" rel="noopener noreferrer"><?php _e('Öffnen', 'dienstplan-verwaltung'); ?></a>
+                                        <span style="color: #9ca3af;">|</span>
+                                        <button type="button" class="button-link" style="padding: 0; min-height: auto; line-height: 1.4;" onclick="shareVereinPageLink('<?php echo esc_js(wp_get_shortlink($verein_page->ID) ?: add_query_arg('p', intval($verein_page->ID), home_url('/'))); ?>', '<?php echo esc_js($verein->name); ?>');"><?php _e('Teilen', 'dienstplan-verwaltung'); ?></button>
+                                    <?php else: ?>
+                                        <span style="color: #9ca3af;"><?php _e('Keine Seite', 'dienstplan-verwaltung'); ?></span>
+                                        <span style="color: #9ca3af;">|</span>
+                                        <button type="button" class="button-link" style="padding: 0; min-height: auto; line-height: 1.4;" onclick="createSingleVereinOverviewPage(<?php echo intval($verein->id); ?>, this);"><?php _e('Seite erstellen', 'dienstplan-verwaltung'); ?></button>
+                                    <?php endif; ?>
+                                </small>
                             </td>
                             <td>
                                 <code><?php echo esc_html($verein->kuerzel); ?></code>
@@ -156,6 +206,21 @@ if (!defined('ABSPATH')) exit;
                                             <span class="dashicons dashicons-edit"></span>
                                             <?php _e('Bearbeiten', 'dienstplan-verwaltung'); ?>
                                         </a>
+                                        <?php if ($verein_page): ?>
+                                            <a href="<?php echo esc_url(get_permalink($verein_page->ID)); ?>" target="_blank" rel="noopener noreferrer">
+                                                <span class="dashicons dashicons-external"></span>
+                                                <?php _e('Seite öffnen', 'dienstplan-verwaltung'); ?>
+                                            </a>
+                                            <a href="#" onclick="shareVereinPageLink('<?php echo esc_js(wp_get_shortlink($verein_page->ID) ?: add_query_arg('p', intval($verein_page->ID), home_url('/'))); ?>', '<?php echo esc_js($verein->name); ?>'); return false;">
+                                                <span class="dashicons dashicons-share"></span>
+                                                <?php _e('Teilen', 'dienstplan-verwaltung'); ?>
+                                            </a>
+                                        <?php else: ?>
+                                            <a href="#" onclick="createSingleVereinOverviewPage(<?php echo intval($verein->id); ?>, this); return false;">
+                                                <span class="dashicons dashicons-plus-alt"></span>
+                                                <?php _e('Seite erstellen', 'dienstplan-verwaltung'); ?>
+                                            </a>
+                                        <?php endif; ?>
                                         <a href="#" onclick="deleteVerein(<?php echo $verein->id; ?>); return false;">
                                             <span class="dashicons dashicons-trash"></span>
                                             <?php _e('Löschen', 'dienstplan-verwaltung'); ?>
@@ -230,4 +295,115 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
+
+function createSingleVereinOverviewPage(vereinId, triggerElement) {
+    if (!vereinId) {
+        alert('Ungültige Vereins-ID.');
+        return;
+    }
+
+    var originalText = null;
+    if (triggerElement && typeof triggerElement.textContent === 'string') {
+        originalText = triggerElement.textContent;
+        triggerElement.textContent = 'Erstelle...';
+    }
+
+    var data = new URLSearchParams();
+    data.append('action', 'dp_create_single_verein_overview_page');
+    data.append('nonce', (typeof dpAjax !== 'undefined' && dpAjax.nonce) ? dpAjax.nonce : '');
+    data.append('verein_id', String(vereinId));
+
+    fetch((typeof dpAjax !== 'undefined' && dpAjax.ajaxurl) ? dpAjax.ajaxurl : ajaxurl, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
+        },
+        body: data.toString()
+    })
+    .then(function(response) { return response.json(); })
+    .then(function(response) {
+        if (response && response.success) {
+            location.reload();
+            return;
+        }
+
+        alert(response && response.data && response.data.message ? response.data.message : 'Fehler beim Erstellen der Vereinsseite.');
+        if (triggerElement && originalText !== null) {
+            triggerElement.textContent = originalText;
+        }
+    })
+    .catch(function() {
+        alert('Serverfehler beim Erstellen der Vereinsseite.');
+        if (triggerElement && originalText !== null) {
+            triggerElement.textContent = originalText;
+        }
+    });
+}
+
+function createAllVereinOverviewPages(triggerElement) {
+    var originalText = null;
+    if (triggerElement && typeof triggerElement.textContent === 'string') {
+        originalText = triggerElement.textContent;
+        triggerElement.textContent = 'Erstelle...';
+    }
+
+    var data = new URLSearchParams();
+    data.append('action', 'dp_create_all_verein_overview_pages');
+    data.append('nonce', (typeof dpAjax !== 'undefined' && dpAjax.nonce) ? dpAjax.nonce : '');
+
+    fetch((typeof dpAjax !== 'undefined' && dpAjax.ajaxurl) ? dpAjax.ajaxurl : ajaxurl, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
+        },
+        body: data.toString()
+    })
+    .then(function(response) { return response.json(); })
+    .then(function(response) {
+        if (response && response.success) {
+            alert(response.data && response.data.message ? response.data.message : 'Seiten wurden erstellt.');
+            location.reload();
+            return;
+        }
+
+        alert(response && response.data && response.data.message ? response.data.message : 'Fehler beim Erstellen der Vereinsseiten.');
+        if (triggerElement && originalText !== null) {
+            triggerElement.textContent = originalText;
+        }
+    })
+    .catch(function() {
+        alert('Serverfehler beim Erstellen der Vereinsseiten.');
+        if (triggerElement && originalText !== null) {
+            triggerElement.textContent = originalText;
+        }
+    });
+}
+
+function shareVereinPageLink(url, title) {
+    if (!url) {
+        alert('Kein Link verfügbar.');
+        return;
+    }
+
+    if (navigator.share) {
+        navigator.share({
+            title: title ? ('Dienstplan: ' + title) : 'Dienstplan',
+            url: url
+        }).catch(function() {});
+        return;
+    }
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(url)
+            .then(function() {
+                alert('Link kopiert: ' + url);
+            })
+            .catch(function() {
+                window.prompt('Link zum Teilen kopieren:', url);
+            });
+        return;
+    }
+
+    window.prompt('Link zum Teilen kopieren:', url);
+}
 </script>

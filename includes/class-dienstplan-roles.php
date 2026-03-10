@@ -18,6 +18,7 @@ class Dienstplan_Roles {
     const ROLE_GENERAL_ADMIN = 'dp_general_admin';
     const ROLE_EVENT_ADMIN = 'dp_event_admin';
     const ROLE_CLUB_ADMIN = 'dp_club_admin';
+    const ROLE_CREW = 'dienstplan_crew';
     
     /**
      * Capabilities
@@ -70,6 +71,15 @@ class Dienstplan_Roles {
             )
         );
         
+        // Crew-Mitglied - Nur Frontend-Portal-Zugriff (kein Backend)
+        add_role(
+            self::ROLE_CREW,
+            __('Dienstplan - Crew-Mitglied', 'dienstplan-verwaltung'),
+            array(
+                'read' => true, // Nur lesender Zugriff auf Frontend
+            )
+        );
+        
         // WordPress-Admin erhält alle Capabilities
         $admin_role = get_role('administrator');
         if ($admin_role) {
@@ -89,6 +99,7 @@ class Dienstplan_Roles {
         remove_role(self::ROLE_GENERAL_ADMIN);
         remove_role(self::ROLE_EVENT_ADMIN);
         remove_role(self::ROLE_CLUB_ADMIN);
+        remove_role(self::ROLE_CREW);
         
         // Capabilities vom Administrator entfernen
         $admin_role = get_role('administrator');

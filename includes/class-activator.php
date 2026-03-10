@@ -24,8 +24,14 @@ class Dienstplan_Activator {
         // Datenbank-Tabellen erstellen
         self::create_tables();
         
+        // Rollen registrieren
+        self::install_roles();
+        
         // Standard-Optionen setzen
         self::set_default_options();
+        
+        // Markiere dass Portal-Seite vorgeschlagen werden soll
+        set_transient('dienstplan_show_portal_setup', true, 60 * 60 * 24); // 24 Stunden
         
         // Rewrite-Rules flushen
         flush_rewrite_rules();
@@ -43,6 +49,16 @@ class Dienstplan_Activator {
         require_once DIENSTPLAN_PLUGIN_PATH . 'includes/class-database.php';
         $database = new Dienstplan_Database(DIENSTPLAN_DB_PREFIX);
         $database->install();
+    }
+    
+    /**
+     * Rollen und Capabilities installieren
+     *
+     * @since    0.7.0
+     */
+    private static function install_roles() {
+        require_once DIENSTPLAN_PLUGIN_PATH . 'includes/class-dienstplan-roles.php';
+        Dienstplan_Roles::install_roles();
     }
     
     /**

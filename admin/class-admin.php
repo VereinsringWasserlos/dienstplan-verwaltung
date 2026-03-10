@@ -27,9 +27,98 @@ class Dienstplan_Admin {
         // Hook für Export (vor WordPress-Headers)
         add_action('admin_init', array($this, 'handle_export'));
         
+        // Admin-Notices
+        add_action('admin_notices', array($this, 'show_admin_notices'));
+        
         // WordPress-Footer-Banner ausblenden
         add_filter('admin_footer_text', '__return_empty_string');
         add_filter('update_footer', '__return_empty_string');
+    }
+    
+    /**
+     * Admin-Notices anzeigen
+     *
+     * @since 0.6.6
+     */
+    public function show_admin_notices() {
+        // Portal-Setup-Notice nach Aktivierung
+        if (get_transient('dienstplan_show_portal_setup')) {
+            // Prüfe ob Portal-Seite bereits existiert
+            $existing_pages = get_posts(array(
+                'post_type' => 'page',
+                'posts_per_page' => 1,
+                'post_status' => 'any',
+                's' => '[dienstplan_hub]'
+            ));
+            
+            if (empty($existing_pages)) {
+                ?>
+                <div class="notice notice-success is-dismissible" id="dienstplan-portal-notice">
+                    <h3 style="margin-top: 1em;">🎉 Dienstplan-Verwaltung erfolgreich aktiviert!</h3>
+                    <p style="font-size: 14px;">
+                        Möchten Sie jetzt eine <strong>Frontend-Portal-Seite</strong> erstellen? 
+                        Diese bietet Ihren Benutzern eine moderne Einstiegsseite mit Login und Veranstaltungsübersicht.
+                    </p>
+                    <p>
+                        <button type="button" class="button button-primary" id="dienstplan-create-portal-page">
+                            <span class="dashicons dashicons-admin-page" style="margin-top: 3px;"></span>
+                            Jetzt Portal-Seite erstellen
+                        </button>
+                        <button type="button" class="button" id="dienstplan-dismiss-portal-notice">
+                            Später erstellen
+                        </button>
+                    </p>
+                    <script>
+                    jQuery(document).ready(function($) {
+                        $('#dienstplan-create-portal-page').on('click', function() {
+                            var btn = $(this);
+                            btn.prop('disabled', true).text('Erstelle Seite...');
+                            
+                            $.ajax({
+                                url: ajaxurl,
+                                type: 'POST',
+                                data: {
+                                    action: 'dp_create_portal_page',
+                                    nonce: '<?php echo wp_create_nonce('dp_create_portal_page'); ?>'
+                                },
+                                success: function(response) {
+                                    if (response.success) {
+                                        $('#dienstplan-portal-notice').html(
+                                            '<h3>✅ Portal-Seite erfolgreich erstellt!</h3>' +
+                                            '<p>Die Seite wurde erstellt: <strong>' + response.data.page_title + '</strong></p>' +
+                                            '<p>' +
+                                            '<a href="' + response.data.edit_url + '" class="button button-primary">Seite bearbeiten</a> ' +
+                                            '<a href="' + response.data.view_url + '" class="button" target="_blank">Seite ansehen</a>' +
+                                            '</p>'
+                                        ).removeClass('notice-success').addClass('notice-info');
+                                    } else {
+                                        alert('Fehler: ' + (response.data.message || 'Unbekannter Fehler'));
+                                        btn.prop('disabled', false).html('<span class="dashicons dashicons-admin-page" style="margin-top: 3px;"></span> Jetzt Portal-Seite erstellen');
+                                    }
+                                },
+                                error: function() {
+                                    alert('Serverfehler beim Erstellen der Seite.');
+                                    btn.prop('disabled', false).html('<span class="dashicons dashicons-admin-page" style="margin-top: 3px;"></span> Jetzt Portal-Seite erstellen');
+                                }
+                            });
+                        });
+                        
+                        $('#dienstplan-dismiss-portal-notice').on('click', function() {
+                            $.post(ajaxurl, {
+                                action: 'dp_dismiss_portal_notice',
+                                nonce: '<?php echo wp_create_nonce('dp_dismiss_portal_notice'); ?>'
+                            });
+                            $('#dienstplan-portal-notice').fadeOut();
+                        });
+                    });
+                    </script>
+                </div>
+                <?php
+            } else {
+                // Seite existiert bereits, transient löschen
+                delete_transient('dienstplan_show_portal_setup');
+            }
+        }
     }
     
     /**
@@ -187,6 +276,18 @@ class Dienstplan_Admin {
             );
         }
         
+        // Portal-Verwaltung - nur für WordPress-Admins
+        if (current_user_can('manage_options')) {
+            add_submenu_page(
+                '',
+                __('Portal-Verwaltung', 'dienstplan-verwaltung'),
+                __('Portal-Verwaltung', 'dienstplan-verwaltung'),
+                'manage_options',
+                'dienstplan-portal',
+                array($this, 'display_portal_verwaltung')
+            );
+        }
+        
         // Debug & Wartung - nur für WordPress-Admins
         if (current_user_can('manage_options')) {
             add_submenu_page(
@@ -225,6 +326,7 @@ class Dienstplan_Admin {
             'dienstplan-benutzer' => __('Benutzerverwaltung', 'dienstplan-verwaltung'),
             'dienstplan-dokumentation' => __('Dokumentation', 'dienstplan-verwaltung'),
             'dienstplan-updates' => __('Updates', 'dienstplan-verwaltung'),
+            'dienstplan-portal' => __('Portal-Verwaltung', 'dienstplan-verwaltung'),
             'dienstplan-debug' => __('Debug & Wartung', 'dienstplan-verwaltung'),
         );
         
@@ -407,6 +509,8 @@ class Dienstplan_Admin {
         $localize_data = array(
             'ajaxurl' => admin_url('admin-ajax.php'),
             'nonce' => wp_create_nonce('dp_ajax_nonce'),
+            'nonce_create_portal' => wp_create_nonce('dp_create_portal_page'),
+            'nonce_delete_portal' => wp_create_nonce('dp_delete_portal_page'),
             'i18n' => array(
                 'confirm_delete' => __('Wirklich löschen?', 'dienstplan-verwaltung'),
                 'error' => __('Ein Fehler ist aufgetreten', 'dienstplan-verwaltung'),
@@ -550,6 +654,10 @@ class Dienstplan_Admin {
         include_once DIENSTPLAN_PLUGIN_PATH . 'admin/views/updates.php';
     }
     
+    public function display_portal_verwaltung() {
+        include_once DIENSTPLAN_PLUGIN_PATH . 'admin/views/portal-verwaltung.php';
+    }
+    
     // === AJAX HANDLERS ===
     
     public function ajax_save_verein() {
@@ -570,6 +678,21 @@ class Dienstplan_Admin {
             
             require_once DIENSTPLAN_PLUGIN_PATH . 'includes/class-database.php';
             $db = new Dienstplan_Database($this->db_prefix);
+
+            $seite_id = !empty($_POST['seite_id']) ? intval($_POST['seite_id']) : null;
+            if (!empty($seite_id)) {
+                $seite = get_post($seite_id);
+                if (!$seite || $seite->post_type !== 'page' || $seite->post_status === 'trash') {
+                    wp_send_json_error(array('message' => 'Ungültige Vereinsseite ausgewählt'));
+                    return;
+                }
+
+                $event_binding = get_post_meta($seite_id, '_dp_veranstaltung_id', true);
+                if (!empty($event_binding)) {
+                    wp_send_json_error(array('message' => 'Diese Seite ist bereits einer Veranstaltung zugeordnet und kann nicht als reine Vereinsseite verwendet werden'));
+                    return;
+                }
+            }
             
             $data = array(
                 'name' => sanitize_text_field($_POST['name']),
@@ -579,6 +702,7 @@ class Dienstplan_Admin {
                 'kontakt_name' => sanitize_text_field($_POST['kontakt_name'] ?? ''),
                 'kontakt_email' => sanitize_email($_POST['kontakt_email'] ?? ''),
                 'kontakt_telefon' => sanitize_text_field($_POST['kontakt_telefon'] ?? ''),
+                'seite_id' => $seite_id,
                 'aktiv' => isset($_POST['aktiv']) ? 1 : 0
             );
             
@@ -597,6 +721,10 @@ class Dienstplan_Admin {
                     ? array_map('intval', $_POST['verantwortliche']) 
                     : array();
                 $db->save_verein_verantwortliche($verein_id, $verantwortliche);
+
+                if (!empty($seite_id)) {
+                    update_post_meta($seite_id, '_dp_verein_id', $verein_id);
+                }
                 
                 $message = 'Verein aktualisiert';
             } else {
@@ -616,6 +744,10 @@ class Dienstplan_Admin {
                     ? array_map('intval', $_POST['verantwortliche']) 
                     : array();
                 $db->save_verein_verantwortliche($verein_id, $verantwortliche);
+
+                if (!empty($seite_id)) {
+                    update_post_meta($seite_id, '_dp_verein_id', $verein_id);
+                }
                 
                 $message = 'Verein angelegt';
                 
@@ -716,8 +848,10 @@ class Dienstplan_Admin {
     public function ajax_get_users_by_ids() {
         check_ajax_referer('dp_ajax_nonce', 'nonce');
         
-        if (!current_user_can('manage_options')) {
+        // Erlaube Zugriff für alle die Vereine oder Veranstaltungen verwalten dürfen
+        if (!Dienstplan_Roles::can_manage_clubs() && !Dienstplan_Roles::can_manage_events()) {
             wp_send_json_error(array('message' => 'Keine Berechtigung'));
+            return;
         }
         
         $user_ids = isset($_POST['user_ids']) ? array_map('intval', (array)$_POST['user_ids']) : array();
@@ -745,7 +879,8 @@ class Dienstplan_Admin {
     public function ajax_get_all_users() {
         check_ajax_referer('dp_ajax_nonce', 'nonce');
         
-        if (!current_user_can('manage_options')) {
+        // Erlaube Zugriff für alle die Vereine oder Veranstaltungen verwalten dürfen
+        if (!Dienstplan_Roles::can_manage_clubs() && !Dienstplan_Roles::can_manage_events()) {
             wp_send_json_error(array('message' => 'Keine Berechtigung'));
             return;
         }
@@ -1166,18 +1301,46 @@ class Dienstplan_Admin {
     public function ajax_delete_verein() {
         check_ajax_referer('dp_ajax_nonce', 'nonce');
         
-        if (!current_user_can('manage_options')) {
+        if (!Dienstplan_Roles::can_manage_clubs()) {
             wp_send_json_error(array('message' => 'Keine Berechtigung'));
+            return;
         }
         
         require_once DIENSTPLAN_PLUGIN_PATH . 'includes/class-database.php';
         $db = new Dienstplan_Database($this->db_prefix);
         
         $verein_id = intval($_POST['verein_id']);
+        
+        // Lösche WordPress-Seiten die zu diesem Verein gehören
+        $pages = get_posts(array(
+            'post_type' => 'page',
+            'posts_per_page' => -1,
+            'meta_query' => array(
+                array(
+                    'key' => '_dp_verein_id',
+                    'value' => $verein_id,
+                    'compare' => '='
+                )
+            ),
+            'fields' => 'ids'
+        ));
+        
+        $pages_deleted = 0;
+        foreach ($pages as $page_id) {
+            if (wp_delete_post($page_id, true)) {
+                $pages_deleted++;
+            }
+        }
+        
+        // Lösche Verein aus Datenbank
         $result = $db->delete_verein($verein_id);
         
         if ($result) {
-            wp_send_json_success(array('message' => 'Verein gelöscht'));
+            $message = 'Verein gelöscht';
+            if ($pages_deleted > 0) {
+                $message .= sprintf(' (%d Seite(n) ebenfalls gelöscht)', $pages_deleted);
+            }
+            wp_send_json_success(array('message' => $message, 'pages_deleted' => $pages_deleted));
         } else {
             wp_send_json_error(array('message' => 'Fehler beim Löschen'));
         }
@@ -1186,8 +1349,9 @@ class Dienstplan_Admin {
     public function ajax_get_verein() {
         check_ajax_referer('dp_ajax_nonce', 'nonce');
         
-        if (!current_user_can('manage_options')) {
+        if (!Dienstplan_Roles::can_manage_clubs()) {
             wp_send_json_error(array('message' => 'Keine Berechtigung'));
+            return;
         }
         
         require_once DIENSTPLAN_PLUGIN_PATH . 'includes/class-database.php';
@@ -2018,9 +2182,79 @@ class Dienstplan_Admin {
             $return_id = $result;
         }
         
+        // Portal-Zugriff aktivieren, falls angefordert (nur bei neuen ohne Zugang)
+        $portal_access_requested = isset($_POST['portal_access']) && $_POST['portal_access'] == '1';
+        $portal_message = '';
+        
+        if ($result !== false && $portal_access_requested && !empty($email)) {
+            // Lade Mitarbeiter-Daten erneut
+            $mitarbeiter = $db->get_mitarbeiter($return_id);
+            
+            // Prüfe ob bereits Portal-Zugriff besteht
+            if ($mitarbeiter && !$mitarbeiter->user_id) {
+                // Prüfe ob E-Mail bereits verwendet wird
+                if (!email_exists($email)) {
+                    // Generiere Username
+                    $username_base = sanitize_user(strtolower($vorname . '_' . $nachname), true);
+                    $username = $username_base;
+                    $counter = 1;
+                    
+                    // Stelle sicher dass Username einzigartig ist
+                    while (username_exists($username)) {
+                        $username = $username_base . '_' . $counter;
+                        $counter++;
+                    }
+                    
+                    // Generiere temporäres Passwort
+                    $password = wp_generate_password(12, true, true);
+                    
+                    // Erstelle WordPress-User
+                    $user_id = wp_create_user($username, $password, $email);
+                    
+                    if (!is_wp_error($user_id)) {
+                        // Setze Crew-Rolle
+                        $user = new WP_User($user_id);
+                        $user->set_role(Dienstplan_Roles::ROLE_CREW);
+                        
+                        // Update User-Meta
+                        update_user_meta($user_id, 'first_name', $vorname);
+                        update_user_meta($user_id, 'last_name', $nachname);
+                        update_user_meta($user_id, 'show_admin_bar_front', false);
+                        
+                        // Verlinke Mitarbeiter mit User
+                        $db->update_mitarbeiter($return_id, array('user_id' => $user_id));
+                        $this->sync_user_verein_assignments($db, $return_id, $user_id);
+                        
+                        // Sende E-Mail mit Login-Daten
+                        $portal_page_id = get_option('dienstplan_portal_page_id', 0);
+                        $login_url = $portal_page_id ? get_permalink($portal_page_id) : wp_login_url();
+                        
+                        $email_subject = sprintf(__('[%s] Zugang zum Dienstplan-Portal', 'dienstplan-verwaltung'), get_bloginfo('name'));
+                        
+                        $email_body = sprintf(
+                            __("Hallo %s,\n\nfür dich wurde ein Zugang zum Dienstplan-Portal erstellt.\n\nHier sind deine Login-Daten:\n\nBenutzername: %s\nPasswort: %s\n\nPortal-Link: %s\n\nBitte ändere dein Passwort nach dem ersten Login.\n\nViele Grüße\n%s", 'dienstplan-verwaltung'),
+                            $vorname,
+                            $username,
+                            $password,
+                            $login_url,
+                            get_bloginfo('name')
+                        );
+                        
+                        $email_sent = wp_mail($email, $email_subject, $email_body);
+                        
+                        if ($email_sent) {
+                            $portal_message = ' Portal-Zugriff aktiviert und Login-Daten versendet.';
+                        } else {
+                            $portal_message = ' Portal-Zugriff aktiviert, aber E-Mail konnte nicht versendet werden.';
+                        }
+                    }
+                }
+            }
+        }
+        
         if ($result !== false) {
             wp_send_json_success(array(
-                'message' => $message,
+                'message' => $message . $portal_message,
                 'mitarbeiter_id' => $return_id
             ));
         } else {
@@ -3601,6 +3835,1496 @@ class Dienstplan_Admin {
         </div>
         <?php
     }
+    
+    /**
+     * AJAX: Verein-spezifische Seiten für Veranstaltung erstellen
+     * Erstellt für jeden beteiligten Verein eine eigene WordPress-Seite
+     *
+     * @since 0.6.6
+     */
+    public function ajax_create_verein_seiten() {
+        // Nonce-Prüfung
+        if (!isset($_POST['nonce']) || !wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['nonce'])), 'dp_ajax_nonce')) {
+            wp_send_json_error(array('message' => 'Sicherheitsprüfung fehlgeschlagen.'));
+            return;
+        }
+        
+        // Berechtigungsprüfung
+        if (!Dienstplan_Roles::can_manage_events()) {
+            wp_send_json_error(array('message' => 'Keine Berechtigung.'));
+            return;
+        }
+        
+        $veranstaltung_id = isset($_POST['veranstaltung_id']) ? intval($_POST['veranstaltung_id']) : 0;
+        
+        if (!$veranstaltung_id) {
+            wp_send_json_error(array('message' => 'Ungültige Veranstaltungs-ID.'));
+            return;
+        }
+        
+        global $wpdb;
+        $prefix = $wpdb->prefix . $this->db_prefix;
+        
+        // Veranstaltung laden
+        $veranstaltung = $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM {$prefix}veranstaltungen WHERE id = %d",
+            $veranstaltung_id
+        ));
+        
+        if (!$veranstaltung) {
+            wp_send_json_error(array('message' => 'Veranstaltung nicht gefunden.'));
+            return;
+        }
+        
+        // Status-Prüfung: Seiten können nur erstellt werden, wenn Status nicht 'in_planung' ist
+        if ($veranstaltung->status === 'in_planung') {
+            wp_send_json_error(array('message' => 'Anmeldeseiten können noch nicht erstellt werden. Die Veranstaltung befindet sich noch in Planung. Bitte ändern Sie den Status auf "Geplant".'));
+            return;
+        }
+        
+        // Beteiligte Vereine laden
+        $vereine = $wpdb->get_results($wpdb->prepare(
+            "SELECT DISTINCT v.* 
+             FROM {$prefix}vereine v
+             INNER JOIN {$prefix}veranstaltung_vereine vv ON v.id = vv.verein_id
+             WHERE vv.veranstaltung_id = %d
+             ORDER BY v.name",
+            $veranstaltung_id
+        ));
+        
+        if (empty($vereine)) {
+            wp_send_json_error(array('message' => 'Keine beteiligten Vereine gefunden.'));
+            return;
+        }
+        
+        $created_pages = 0;
+        $created_page_ids = array();
+        
+        foreach ($vereine as $verein) {
+            // Prüfen, ob bereits eine Seite existiert
+            $existing_page = get_posts(array(
+                'post_type' => 'page',
+                'post_status' => 'any',
+                'meta_query' => array(
+                    array(
+                        'key' => '_dp_veranstaltung_id',
+                        'value' => $veranstaltung_id
+                    ),
+                    array(
+                        'key' => '_dp_verein_id',
+                        'value' => $verein->id
+                    )
+                ),
+                'numberposts' => 1
+            ));
+            
+            if (!empty($existing_page)) {
+                // Seite existiert bereits, überspringen
+                continue;
+            }
+            
+            // Page-Titel und Slug generieren
+            $page_title = sanitize_text_field($veranstaltung->name) . ' - ' . sanitize_text_field($verein->name);
+            $page_slug = sanitize_title($veranstaltung->name . '-' . $verein->name);
+            
+            // Shortcode für Page-Content
+            $page_content = '[dienstplan_veranstaltung veranstaltung_id="' . $veranstaltung_id . '" verein_id="' . $verein->id . '"]';
+            
+            // WordPress-Seite erstellen
+            $page_id = wp_insert_post(array(
+                'post_title' => $page_title,
+                'post_name' => $page_slug,
+                'post_content' => $page_content,
+                'post_status' => 'publish',
+                'post_type' => 'page',
+                'post_author' => get_current_user_id(),
+                'comment_status' => 'closed',
+                'ping_status' => 'closed'
+            ));
+            
+            if (!is_wp_error($page_id) && $page_id > 0) {
+                // Meta-Daten hinzufügen für spätere Referenz
+                update_post_meta($page_id, '_dp_veranstaltung_id', $veranstaltung_id);
+                update_post_meta($page_id, '_dp_verein_id', $verein->id);
+                update_post_meta($page_id, '_dp_autogenerated', true);
+                
+                $created_pages++;
+                $created_page_ids[] = array(
+                    'page_id' => $page_id,
+                    'verein_id' => $verein->id,
+                    'verein_name' => $verein->name,
+                    'url' => get_permalink($page_id)
+                );
+            }
+        }
+        
+        if ($created_pages === 0) {
+            wp_send_json_error(array(
+                'message' => 'Keine neuen Seiten erstellt. Möglicherweise existieren bereits Seiten für alle Vereine.'
+            ));
+            return;
+        }
+        
+        wp_send_json_success(array(
+            'message' => sprintf(
+                'Es wurden %d Seite(n) für %d Verein(e) erstellt.',
+                $created_pages,
+                count($vereine)
+            ),
+            'created' => $created_pages,
+            'total_vereine' => count($vereine),
+            'pages' => $created_page_ids
+        ));
+    }
+    
+    /**
+     * AJAX: Einzelne Verein-Seite für Veranstaltung erstellen
+     *
+     * @since 0.6.6
+     */
+    public function ajax_create_single_verein_seite() {
+        // Nonce-Prüfung
+        if (!isset($_POST['nonce']) || !wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['nonce'])), 'dp_ajax_nonce')) {
+            wp_send_json_error(array('message' => 'Sicherheitsprüfung fehlgeschlagen.'));
+            return;
+        }
+        
+        // Berechtigungsprüfung
+        if (!Dienstplan_Roles::can_manage_events()) {
+            wp_send_json_error(array('message' => 'Keine Berechtigung.'));
+            return;
+        }
+        
+        $veranstaltung_id = isset($_POST['veranstaltung_id']) ? intval($_POST['veranstaltung_id']) : 0;
+        $verein_id = isset($_POST['verein_id']) ? intval($_POST['verein_id']) : 0;
+        
+        if (!$veranstaltung_id || !$verein_id) {
+            wp_send_json_error(array('message' => 'Ungültige Parameter.'));
+            return;
+        }
+        
+        global $wpdb;
+        $prefix = $wpdb->prefix . $this->db_prefix;
+        
+        // Veranstaltung laden
+        $veranstaltung = $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM {$prefix}veranstaltungen WHERE id = %d",
+            $veranstaltung_id
+        ));
+        
+        if (!$veranstaltung) {
+            wp_send_json_error(array('message' => 'Veranstaltung nicht gefunden.'));
+            return;
+        }
+        
+        // Status-Prüfung: Seiten können nur erstellt werden, wenn Status nicht 'in_planung' ist
+        if ($veranstaltung->status === 'in_planung') {
+            wp_send_json_error(array('message' => 'Anmeldeseiten können noch nicht erstellt werden. Die Veranstaltung befindet sich noch in Planung. Bitte ändern Sie den Status auf "Geplant".'));
+            return;
+        }
+        
+        // Verein laden
+        $verein = $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM {$prefix}vereine WHERE id = %d",
+            $verein_id
+        ));
+        
+        if (!$verein) {
+            wp_send_json_error(array('message' => 'Verein nicht gefunden.'));
+            return;
+        }
+        
+        // Prüfen, ob bereits eine Seite existiert
+        $existing_page = get_posts(array(
+            'post_type' => 'page',
+            'post_status' => 'any',
+            'meta_query' => array(
+                array(
+                    'key' => '_dp_veranstaltung_id',
+                    'value' => $veranstaltung_id
+                ),
+                array(
+                    'key' => '_dp_verein_id',
+                    'value' => $verein_id
+                )
+            ),
+            'numberposts' => 1
+        ));
+        
+        if (!empty($existing_page)) {
+            wp_send_json_error(array('message' => 'Seite existiert bereits.'));
+            return;
+        }
+        
+        // Page-Titel und Slug generieren
+        $page_title = sanitize_text_field($veranstaltung->name) . ' - ' . sanitize_text_field($verein->name);
+        $page_slug = sanitize_title($veranstaltung->name . '-' . $verein->name);
+        
+        // Shortcode für Page-Content
+        $page_content = '[dienstplan_veranstaltung veranstaltung_id="' . $veranstaltung_id . '" verein_id="' . $verein_id . '"]';
+        
+        // WordPress-Seite erstellen
+        $page_id = wp_insert_post(array(
+            'post_title' => $page_title,
+            'post_name' => $page_slug,
+            'post_content' => $page_content,
+            'post_status' => 'publish',
+            'post_type' => 'page',
+            'post_author' => get_current_user_id(),
+            'comment_status' => 'closed',
+            'ping_status' => 'closed'
+        ));
+        
+        if (is_wp_error($page_id) || $page_id === 0) {
+            wp_send_json_error(array('message' => 'Fehler beim Erstellen der Seite.'));
+            return;
+        }
+        
+        // Meta-Daten hinzufügen
+        update_post_meta($page_id, '_dp_veranstaltung_id', $veranstaltung_id);
+        update_post_meta($page_id, '_dp_verein_id', $verein_id);
+        update_post_meta($page_id, '_dp_autogenerated', true);
+        
+        wp_send_json_success(array(
+            'message' => 'Seite erfolgreich erstellt: ' . $page_title,
+            'page_id' => $page_id,
+            'url' => get_permalink($page_id),
+            'edit_url' => admin_url('post.php?post=' . $page_id . '&action=edit')
+        ));
+    }
+
+    /**
+     * AJAX: Einzelne Vereins-Übersichtsseite erstellen
+     */
+    public function ajax_create_single_verein_overview_page() {
+        if (!isset($_POST['nonce']) || !wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['nonce'])), 'dp_ajax_nonce')) {
+            wp_send_json_error(array('message' => 'Sicherheitsprüfung fehlgeschlagen.'));
+            return;
+        }
+
+        if (!Dienstplan_Roles::can_manage_events() && !Dienstplan_Roles::can_manage_clubs()) {
+            wp_send_json_error(array('message' => 'Keine Berechtigung.'));
+            return;
+        }
+
+        $verein_id = isset($_POST['verein_id']) ? intval($_POST['verein_id']) : 0;
+        if ($verein_id <= 0) {
+            wp_send_json_error(array('message' => 'Ungültige Vereins-ID.'));
+            return;
+        }
+
+        require_once DIENSTPLAN_PLUGIN_PATH . 'includes/class-database.php';
+        $db = new Dienstplan_Database($this->db_prefix);
+        $verein = $db->get_verein($verein_id);
+
+        if (!$verein) {
+            wp_send_json_error(array('message' => 'Verein nicht gefunden.'));
+            return;
+        }
+
+        if (!empty($verein->seite_id)) {
+            $existing_page = get_post(intval($verein->seite_id));
+            if ($existing_page && $existing_page->post_type === 'page' && $existing_page->post_status !== 'trash') {
+                wp_send_json_success(array(
+                    'message' => 'Vereinsseite existiert bereits.',
+                    'page_id' => intval($existing_page->ID),
+                    'url' => get_permalink($existing_page->ID),
+                    'edit_url' => admin_url('post.php?post=' . intval($existing_page->ID) . '&action=edit')
+                ));
+                return;
+            }
+        }
+
+        $fallback_page = get_posts(array(
+            'post_type' => 'page',
+            'post_status' => 'any',
+            'meta_query' => array(
+                array(
+                    'key' => '_dp_verein_id',
+                    'value' => $verein_id,
+                ),
+                array(
+                    'key' => '_dp_veranstaltung_id',
+                    'compare' => 'NOT EXISTS',
+                ),
+            ),
+            'numberposts' => 1,
+        ));
+
+        if (!empty($fallback_page)) {
+            $page_id = intval($fallback_page[0]->ID);
+            $db->update_verein_page_id($verein_id, $page_id);
+
+            wp_send_json_success(array(
+                'message' => 'Vorhandene Vereinsseite wurde zugeordnet.',
+                'page_id' => $page_id,
+                'url' => get_permalink($page_id),
+                'edit_url' => admin_url('post.php?post=' . $page_id . '&action=edit')
+            ));
+            return;
+        }
+
+        $page_title = 'Verein: ' . sanitize_text_field($verein->name);
+        $page_slug = sanitize_title('verein-' . $verein->name);
+        $page_content = '[dienstplan_vereine verein_id="' . $verein_id . '"]';
+
+        $page_id = wp_insert_post(array(
+            'post_title' => $page_title,
+            'post_name' => $page_slug,
+            'post_content' => $page_content,
+            'post_status' => 'publish',
+            'post_type' => 'page',
+            'post_author' => get_current_user_id(),
+            'comment_status' => 'closed',
+            'ping_status' => 'closed'
+        ));
+
+        if (is_wp_error($page_id) || $page_id === 0) {
+            wp_send_json_error(array('message' => 'Fehler beim Erstellen der Vereinsseite.'));
+            return;
+        }
+
+        update_post_meta($page_id, '_dp_verein_id', $verein_id);
+        update_post_meta($page_id, '_dp_verein_overview', 1);
+        update_post_meta($page_id, '_dp_autogenerated', true);
+        $db->update_verein_page_id($verein_id, $page_id);
+
+        wp_send_json_success(array(
+            'message' => 'Vereinsseite erfolgreich erstellt.',
+            'page_id' => $page_id,
+            'url' => get_permalink($page_id),
+            'edit_url' => admin_url('post.php?post=' . $page_id . '&action=edit')
+        ));
+    }
+
+    /**
+     * AJAX: Alle fehlenden Vereins-Übersichtsseiten erstellen
+     */
+    public function ajax_create_all_verein_overview_pages() {
+        if (!isset($_POST['nonce']) || !wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['nonce'])), 'dp_ajax_nonce')) {
+            wp_send_json_error(array('message' => 'Sicherheitsprüfung fehlgeschlagen.'));
+            return;
+        }
+
+        if (!Dienstplan_Roles::can_manage_events() && !Dienstplan_Roles::can_manage_clubs()) {
+            wp_send_json_error(array('message' => 'Keine Berechtigung.'));
+            return;
+        }
+
+        require_once DIENSTPLAN_PLUGIN_PATH . 'includes/class-database.php';
+        $db = new Dienstplan_Database($this->db_prefix);
+        $vereine = $db->get_vereine(false);
+
+        if (empty($vereine)) {
+            wp_send_json_error(array('message' => 'Keine Vereine gefunden.'));
+            return;
+        }
+
+        $created = 0;
+        $updated = 0;
+
+        foreach ($vereine as $verein) {
+            $verein_id = intval($verein->id);
+            $has_valid_page = false;
+
+            if (!empty($verein->seite_id)) {
+                $existing_page = get_post(intval($verein->seite_id));
+                if ($existing_page && $existing_page->post_type === 'page' && $existing_page->post_status !== 'trash') {
+                    $has_valid_page = true;
+                }
+            }
+
+            if ($has_valid_page) {
+                continue;
+            }
+
+            $fallback_page = get_posts(array(
+                'post_type' => 'page',
+                'post_status' => 'any',
+                'meta_query' => array(
+                    array(
+                        'key' => '_dp_verein_id',
+                        'value' => $verein_id,
+                    ),
+                    array(
+                        'key' => '_dp_veranstaltung_id',
+                        'compare' => 'NOT EXISTS',
+                    ),
+                ),
+                'numberposts' => 1,
+            ));
+
+            if (!empty($fallback_page)) {
+                $db->update_verein_page_id($verein_id, intval($fallback_page[0]->ID));
+                $updated++;
+                continue;
+            }
+
+            $page_id = wp_insert_post(array(
+                'post_title' => 'Verein: ' . sanitize_text_field($verein->name),
+                'post_name' => sanitize_title('verein-' . $verein->name),
+                'post_content' => '[dienstplan_vereine verein_id="' . $verein_id . '"]',
+                'post_status' => 'publish',
+                'post_type' => 'page',
+                'post_author' => get_current_user_id(),
+                'comment_status' => 'closed',
+                'ping_status' => 'closed'
+            ));
+
+            if (!is_wp_error($page_id) && $page_id > 0) {
+                update_post_meta($page_id, '_dp_verein_id', $verein_id);
+                update_post_meta($page_id, '_dp_verein_overview', 1);
+                update_post_meta($page_id, '_dp_autogenerated', true);
+                $db->update_verein_page_id($verein_id, $page_id);
+                $created++;
+            }
+        }
+
+        wp_send_json_success(array(
+            'message' => sprintf('Vereinsseiten erstellt: %d, bestehende Zuordnungen ergänzt: %d.', $created, $updated),
+            'created' => $created,
+            'updated' => $updated
+        ));
+    }
+    
+    /**
+     * AJAX: Seite löschen
+     *
+     * @since 0.6.6
+     */
+    public function ajax_delete_page() {
+        // Nonce-Prüfung
+        if (!isset($_POST['nonce']) || !wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['nonce'])), 'dp_ajax_nonce')) {
+            wp_send_json_error(array('message' => 'Sicherheitsprüfung fehlgeschlagen.'));
+            return;
+        }
+        
+        // Berechtigungsprüfung
+        if (!current_user_can('manage_options') && !Dienstplan_Roles::can_manage_events()) {
+            wp_send_json_error(array('message' => 'Keine Berechtigung.'));
+            return;
+        }
+        
+        $page_id = isset($_POST['page_id']) ? intval($_POST['page_id']) : 0;
+        
+        if ($page_id === 0) {
+            wp_send_json_error(array('message' => 'Ungültige Seiten-ID.'));
+            return;
+        }
+        
+        // Prüfen ob Seite existiert und von diesem Plugin erstellt wurde
+        $page = get_post($page_id);
+        if (!$page || $page->post_type !== 'page') {
+            wp_send_json_error(array('message' => 'Seite nicht gefunden.'));
+            return;
+        }
+        
+        // Prüfen ob Seite von diesem Plugin erstellt wurde (Sicherheitscheck)
+        $is_autogenerated = get_post_meta($page_id, '_dp_autogenerated', true);
+        if (!$is_autogenerated) {
+            wp_send_json_error(array('message' => 'Diese Seite wurde nicht automatisch generiert und kann hier nicht gelöscht werden.'));
+            return;
+        }
+        
+        // Seite löschen (true = permanent, nicht in den Papierkorb)
+        $result = wp_delete_post($page_id, true);
+        
+        if ($result) {
+            wp_send_json_success(array('message' => 'Seite erfolgreich gelöscht.'));
+        } else {
+            wp_send_json_error(array('message' => 'Fehler beim Löschen der Seite.'));
+        }
+    }
+    
+    /**
+     * AJAX: Alle Verein-Seiten einer Veranstaltung löschen
+     *
+     * @since 0.6.6
+     */
+    public function ajax_delete_all_verein_seiten() {
+        // Nonce-Prüfung
+        if (!isset($_POST['nonce']) || !wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['nonce'])), 'dp_ajax_nonce')) {
+            wp_send_json_error(array('message' => 'Sicherheitsprüfung fehlgeschlagen.'));
+            return;
+        }
+        
+        // Berechtigungsprüfung
+        if (!current_user_can('manage_options') && !Dienstplan_Roles::can_manage_events()) {
+            wp_send_json_error(array('message' => 'Keine Berechtigung.'));
+            return;
+        }
+        
+        $veranstaltung_id = isset($_POST['veranstaltung_id']) ? intval($_POST['veranstaltung_id']) : 0;
+        
+        if ($veranstaltung_id === 0) {
+            wp_send_json_error(array('message' => 'Ungültige Veranstaltungs-ID.'));
+            return;
+        }
+        
+        // Alle Seiten finden, die zu dieser Veranstaltung gehören
+        $pages = get_posts(array(
+            'post_type' => 'page',
+            'posts_per_page' => -1,
+            'meta_query' => array(
+                array(
+                    'key' => '_dp_veranstaltung_id',
+                    'value' => $veranstaltung_id,
+                    'compare' => '='
+                ),
+                array(
+                    'key' => '_dp_autogenerated',
+                    'value' => '1',
+                    'compare' => '='
+                )
+            ),
+            'fields' => 'ids'
+        ));
+        
+        if (empty($pages)) {
+            wp_send_json_error(array('message' => 'Keine Seiten gefunden.'));
+            return;
+        }
+        
+        $deleted = 0;
+        foreach ($pages as $page_id) {
+            if (wp_delete_post($page_id, true)) {
+                $deleted++;
+            }
+        }
+        
+        if ($deleted > 0) {
+            wp_send_json_success(array(
+                'message' => sprintf('%d Seite(n) erfolgreich gelöscht.', $deleted),
+                'deleted' => $deleted,
+                'total' => count($pages)
+            ));
+        } else {
+            wp_send_json_error(array('message' => 'Fehler beim Löschen der Seiten.'));
+        }
+    }
+    
+    /**
+     * AJAX: Quick Change Status (einzelne Veranstaltung)
+     *
+     * @since 0.6.6
+     */
+    public function ajax_quick_change_status() {
+        // Nonce-Prüfung
+        if (!isset($_POST['nonce']) || !wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['nonce'])), 'dp_ajax_nonce')) {
+            wp_send_json_error(array('message' => 'Sicherheitsprüfung fehlgeschlagen.'));
+            return;
+        }
+        
+        // Berechtigungsprüfung
+        if (!Dienstplan_Roles::can_manage_events()) {
+            wp_send_json_error(array('message' => 'Keine Berechtigung.'));
+            return;
+        }
+        
+        $veranstaltung_id = isset($_POST['veranstaltung_id']) ? intval($_POST['veranstaltung_id']) : 0;
+        $status = isset($_POST['status']) ? sanitize_text_field($_POST['status']) : '';
+        
+        if ($veranstaltung_id === 0) {
+            wp_send_json_error(array('message' => 'Ungültige Veranstaltungs-ID.'));
+            return;
+        }
+        
+        if (empty($status)) {
+            wp_send_json_error(array('message' => 'Kein Status angegeben.'));
+            return;
+        }
+        
+        // Valide Status-Werte
+        $valid_statuses = array('in_planung', 'geplant', 'aktiv', 'abgeschlossen');
+        if (!in_array($status, $valid_statuses)) {
+            wp_send_json_error(array('message' => 'Ungültiger Status.'));
+            return;
+        }
+        
+        global $wpdb;
+        $prefix = $wpdb->prefix . $this->db_prefix;
+        
+        // Status aktualisieren
+        $result = $wpdb->update(
+            $prefix . 'veranstaltungen',
+            array('status' => $status),
+            array('id' => $veranstaltung_id),
+            array('%s'),
+            array('%d')
+        );
+        
+        if ($result !== false) {
+            wp_send_json_success(array(
+                'message' => 'Status erfolgreich geändert.',
+                'veranstaltung_id' => $veranstaltung_id,
+                'new_status' => $status
+            ));
+        } else {
+            wp_send_json_error(array('message' => 'Fehler beim Aktualisieren des Status.'));
+        }
+    }
+    
+    /**
+     * AJAX: Bulk Update Veranstaltungs-Status
+     *
+     * @since 0.6.6
+     */
+    public function ajax_bulk_update_veranstaltung_status() {
+        // Nonce-Prüfung
+        if (!isset($_POST['nonce']) || !wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['nonce'])), 'dp_ajax_nonce')) {
+            wp_send_json_error(array('message' => 'Sicherheitsprüfung fehlgeschlagen.'));
+            return;
+        }
+        
+        // Berechtigungsprüfung
+        if (!Dienstplan_Roles::can_manage_events()) {
+            wp_send_json_error(array('message' => 'Keine Berechtigung.'));
+            return;
+        }
+        
+        $veranstaltung_ids = isset($_POST['veranstaltung_ids']) ? array_map('intval', $_POST['veranstaltung_ids']) : array();
+        $status = isset($_POST['status']) ? sanitize_text_field($_POST['status']) : '';
+        
+        if (empty($veranstaltung_ids)) {
+            wp_send_json_error(array('message' => 'Keine Veranstaltungen ausgewählt.'));
+            return;
+        }
+        
+        if (empty($status)) {
+            wp_send_json_error(array('message' => 'Kein Status angegeben.'));
+            return;
+        }
+        
+        // Valide Status-Werte
+        $valid_statuses = array('in_planung', 'geplant', 'aktiv', 'abgeschlossen');
+        if (!in_array($status, $valid_statuses)) {
+            wp_send_json_error(array('message' => 'Ungültiger Status.'));
+            return;
+        }
+        
+        global $wpdb;
+        $prefix = $wpdb->prefix . $this->db_prefix;
+        
+        $updated = 0;
+        foreach ($veranstaltung_ids as $veranstaltung_id) {
+            $result = $wpdb->update(
+                $prefix . 'veranstaltungen',
+                array('status' => $status),
+                array('id' => $veranstaltung_id),
+                array('%s'),
+                array('%d')
+            );
+            
+            if ($result !== false) {
+                $updated++;
+            }
+        }
+        
+        wp_send_json_success(array(
+            'message' => sprintf('Status von %d Veranstaltung(en) erfolgreich geändert.', $updated),
+            'updated' => $updated,
+            'total' => count($veranstaltung_ids)
+        ));
+    }
+    
+    /**
+     * AJAX: Bulk Delete Veranstaltungen
+     *
+     * @since 0.6.6
+     */
+    public function ajax_bulk_delete_veranstaltungen() {
+        // Nonce-Prüfung
+        if (!isset($_POST['nonce']) || !wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['nonce'])), 'dp_ajax_nonce')) {
+            wp_send_json_error(array('message' => 'Sicherheitsprüfung fehlgeschlagen.'));
+            return;
+        }
+        
+        // Berechtigungsprüfung
+        if (!Dienstplan_Roles::can_manage_events()) {
+            wp_send_json_error(array('message' => 'Keine Berechtigung.'));
+            return;
+        }
+        
+        $veranstaltung_ids = isset($_POST['veranstaltung_ids']) ? array_map('intval', $_POST['veranstaltung_ids']) : array();
+        
+        if (empty($veranstaltung_ids)) {
+            wp_send_json_error(array('message' => 'Keine Veranstaltungen ausgewählt.'));
+            return;
+        }
+        
+        global $wpdb;
+        $prefix = $wpdb->prefix . $this->db_prefix;
+        $db = new Dienstplan_Database($this->db_prefix);
+        
+        $deleted = 0;
+        $pages_deleted = 0;
+        
+        foreach ($veranstaltung_ids as $veranstaltung_id) {
+            // Lösche zugehörige Daten
+            $wpdb->delete($prefix . 'veranstaltung_tage', array('veranstaltung_id' => $veranstaltung_id), array('%d'));
+            $wpdb->delete($prefix . 'veranstaltung_vereine', array('veranstaltung_id' => $veranstaltung_id), array('%d'));
+            $wpdb->delete($prefix . 'veranstaltung_verantwortliche', array('veranstaltung_id' => $veranstaltung_id), array('%d'));
+            
+            // Lösche Dienste und Slots
+            $dienste = $db->get_dienste($veranstaltung_id);
+            foreach ($dienste as $dienst) {
+                $wpdb->delete($prefix . 'dienst_slots', array('dienst_id' => $dienst->id), array('%d'));
+                $wpdb->delete($prefix . 'dienste', array('id' => $dienst->id), array('%d'));
+            }
+            
+            // Lösche WordPress-Seiten die zu dieser Veranstaltung gehören
+            $pages = get_posts(array(
+                'post_type' => 'page',
+                'posts_per_page' => -1,
+                'meta_query' => array(
+                    array(
+                        'key' => '_dp_veranstaltung_id',
+                        'value' => $veranstaltung_id,
+                        'compare' => '='
+                    )
+                ),
+                'fields' => 'ids'
+            ));
+            
+            foreach ($pages as $page_id) {
+                if (wp_delete_post($page_id, true)) {
+                    $pages_deleted++;
+                }
+            }
+            
+            // Lösche Veranstaltung
+            $result = $wpdb->delete($prefix . 'veranstaltungen', array('id' => $veranstaltung_id), array('%d'));
+            
+            if ($result !== false) {
+                $deleted++;
+            }
+        }
+        
+        $message = sprintf('%d Veranstaltung(en) erfolgreich gelöscht.', $deleted);
+        if ($pages_deleted > 0) {
+            $message .= sprintf(' %d zugehörige Seite(n) wurden ebenfalls gelöscht.', $pages_deleted);
+        }
+        
+        wp_send_json_success(array(
+            'message' => $message,
+            'deleted' => $deleted,
+            'pages_deleted' => $pages_deleted,
+            'total' => count($veranstaltung_ids)
+        ));
+    }
+    
+    /**
+     * AJAX: Portal-Seite erstellen (nach Aktivierung)
+     *
+     * @since 0.6.6
+     */
+    public function ajax_create_portal_page() {
+        // Nonce-Prüfung
+        if (!isset($_POST['nonce']) || !wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['nonce'])), 'dp_create_portal_page')) {
+            wp_send_json_error(array('message' => 'Sicherheitsprüfung fehlgeschlagen.'));
+            return;
+        }
+        
+        // Berechtigungsprüfung
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(array('message' => 'Keine Berechtigung.'));
+            return;
+        }
+        
+        // Prüfe ob Seite bereits existiert (via gespeicherte Option)
+        $saved_page_id = get_option('dienstplan_portal_page_id', 0);
+        if ($saved_page_id && get_post($saved_page_id)) {
+            wp_send_json_error(array('message' => 'Eine Portal-Seite existiert bereits.'));
+            return;
+        }
+        
+        // Fallback: Suche nach Seiten mit Shortcode (für Alt-Installationen)
+        $existing_pages = get_posts(array(
+            'post_type' => 'page',
+            'posts_per_page' => 1,
+            'post_status' => 'any',
+            's' => '[dienstplan_hub]'
+        ));
+        
+        if (!empty($existing_pages)) {
+            // Speichere die gefundene Page-ID nachträglich
+            update_option('dienstplan_portal_page_id', $existing_pages[0]->ID);
+            wp_send_json_error(array('message' => 'Eine Portal-Seite existiert bereits.'));
+            return;
+        }
+        
+        // Erstelle die Seite
+        $page_data = array(
+            'post_title' => __('Dienstplan-Portal', 'dienstplan-verwaltung'),
+            'post_content' => '[dienstplan_hub]',
+            'post_status' => 'publish',
+            'post_type' => 'page',
+            'post_author' => get_current_user_id(),
+            'comment_status' => 'closed',
+            'ping_status' => 'closed'
+        );
+        
+        $page_id = wp_insert_post($page_data);
+        
+        if (is_wp_error($page_id)) {
+            wp_send_json_error(array('message' => 'Fehler beim Erstellen der Seite: ' . $page_id->get_error_message()));
+            return;
+        }
+        
+        if ($page_id === 0) {
+            wp_send_json_error(array('message' => 'Fehler beim Erstellen der Seite.'));
+            return;
+        }
+        
+        // Speichere die Page-ID für spätere Verwaltung
+        update_option('dienstplan_portal_page_id', $page_id);
+        
+        // Transient löschen
+        delete_transient('dienstplan_show_portal_setup');
+        
+        wp_send_json_success(array(
+            'message' => 'Portal-Seite erfolgreich erstellt!',
+            'page_id' => $page_id,
+            'page_title' => get_the_title($page_id),
+            'edit_url' => admin_url('post.php?post=' . $page_id . '&action=edit'),
+            'view_url' => get_permalink($page_id)
+        ));
+    }
+    
+    /**
+     * AJAX: Portal-Setup-Notice schließen
+     *
+     * @since 0.6.6
+     */
+    public function ajax_dismiss_portal_notice() {
+        // Nonce-Prüfung
+        if (!isset($_POST['nonce']) || !wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['nonce'])), 'dp_dismiss_portal_notice')) {
+            wp_send_json_error(array('message' => 'Sicherheitsprüfung fehlgeschlagen.'));
+            return;
+        }
+        
+        // Transient löschen
+        delete_transient('dienstplan_show_portal_setup');
+        
+        wp_send_json_success();
+    }
+    
+    /**
+     * AJAX: Portal-Seite löschen (vom Dashboard)
+     *
+     * @since 0.6.6
+     */
+    public function ajax_delete_portal_page() {
+        // Nonce-Prüfung
+        if (!isset($_POST['nonce']) || !wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['nonce'])), 'dp_delete_portal_page')) {
+            wp_send_json_error(array('message' => 'Sicherheitsprüfung fehlgeschlagen.'));
+            return;
+        }
+        
+        // Berechtigungsprüfung
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(array('message' => 'Keine Berechtigung.'));
+            return;
+        }
+        
+        // Hole gespeicherte Page-ID
+        $page_id = get_option('dienstplan_portal_page_id', 0);
+        
+        if (!$page_id) {
+            wp_send_json_error(array('message' => 'Keine Portal-Seite gefunden.'));
+            return;
+        }
+        
+        // Prüfe ob Seite existiert
+        $page = get_post($page_id);
+        if (!$page) {
+            // Option aufräumen wenn Seite nicht mehr existiert
+            delete_option('dienstplan_portal_page_id');
+            wp_send_json_error(array('message' => 'Seite existiert nicht mehr.'));
+            return;
+        }
+        
+        // Lösche die Seite
+        $result = wp_delete_post($page_id, true); // true = permanent löschen
+        
+        if (!$result) {
+            wp_send_json_error(array('message' => 'Fehler beim Löschen der Seite.'));
+            return;
+        }
+        
+        // Option löschen
+        delete_option('dienstplan_portal_page_id');
+        
+        wp_send_json_success(array(
+            'message' => 'Portal-Seite erfolgreich gelöscht!'
+        ));
+    }
+    
+    /**
+     * AJAX: Portal-Zugriff für Mitarbeiter aktivieren
+     *
+     * @since 0.7.0
+     */
+    public function ajax_activate_portal_access() {
+        check_ajax_referer('dp_ajax_nonce', 'nonce');
+        
+        if (!Dienstplan_Roles::can_manage_events() && !current_user_can('manage_options')) {
+            wp_send_json_error(array('message' => 'Keine Berechtigung.'));
+            return;
+        }
+        
+        $mitarbeiter_id = isset($_POST['mitarbeiter_id']) ? intval($_POST['mitarbeiter_id']) : 0;
+        
+        if (!$mitarbeiter_id) {
+            wp_send_json_error(array('message' => 'Keine Mitarbeiter-ID angegeben.'));
+            return;
+        }
+        
+        // Lade Mitarbeiter-Daten
+        require_once DIENSTPLAN_PLUGIN_PATH . 'includes/class-database.php';
+        $db = new Dienstplan_Database($this->db_prefix);
+        $mitarbeiter = $db->get_mitarbeiter($mitarbeiter_id);
+        
+        if (!$mitarbeiter) {
+            wp_send_json_error(array('message' => 'Mitarbeiter nicht gefunden.'));
+            return;
+        }
+        
+        // Prüfe ob bereits User existiert
+        if ($mitarbeiter->user_id) {
+            wp_send_json_error(array('message' => 'Mitarbeiter hat bereits Portal-Zugriff.'));
+            return;
+        }
+        
+        // Prüfe ob E-Mail vorhanden
+        if (empty($mitarbeiter->email)) {
+            wp_send_json_error(array('message' => 'Mitarbeiter benötigt eine E-Mail-Adresse für Portal-Zugriff.'));
+            return;
+        }
+        
+        // Prüfe ob E-Mail bereits verwendet wird
+        if (email_exists($mitarbeiter->email)) {
+            wp_send_json_error(array('message' => 'Diese E-Mail-Adresse wird bereits von einem anderen Benutzer verwendet.'));
+            return;
+        }
+        
+        // Generiere Username
+        $username_base = sanitize_user(strtolower($mitarbeiter->vorname . '_' . $mitarbeiter->nachname), true);
+        $username = $username_base;
+        $counter = 1;
+        
+        // Stelle sicher dass Username einzigartig ist
+        while (username_exists($username)) {
+            $username = $username_base . '_' . $counter;
+            $counter++;
+        }
+        
+        // Generiere temporäres Passwort
+        $password = wp_generate_password(12, true, true);
+        
+        // Erstelle WordPress-User
+        $user_id = wp_create_user($username, $password, $mitarbeiter->email);
+        
+        if (is_wp_error($user_id)) {
+            wp_send_json_error(array('message' => 'Fehler beim Erstellen des Benutzers: ' . $user_id->get_error_message()));
+            return;
+        }
+        
+        // Setze Crew-Rolle
+        $user = new WP_User($user_id);
+        $user->set_role(Dienstplan_Roles::ROLE_CREW);
+        
+        // Update User-Meta
+        update_user_meta($user_id, 'first_name', $mitarbeiter->vorname);
+        update_user_meta($user_id, 'last_name', $mitarbeiter->nachname);
+        update_user_meta($user_id, 'show_admin_bar_front', false);
+        
+        // Verlinke Mitarbeiter mit User
+        $db->update_mitarbeiter($mitarbeiter_id, array('user_id' => $user_id));
+        $this->sync_user_verein_assignments($db, $mitarbeiter_id, $user_id);
+        
+        // Sende E-Mail mit Login-Daten
+        $portal_page_id = get_option('dienstplan_portal_page_id', 0);
+        $login_url = $portal_page_id ? get_permalink($portal_page_id) : wp_login_url();
+        
+        $email_subject = sprintf(__('[%s] Zugang zum Dienstplan-Portal', 'dienstplan-verwaltung'), get_bloginfo('name'));
+        
+        $email_body = sprintf(
+            __("Hallo %s,\n\nfür dich wurde ein Zugang zum Dienstplan-Portal erstellt.\n\nHier sind deine Login-Daten:\n\nBenutzername: %s\nPasswort: %s\n\nPortal-Link: %s\n\nBitte ändere dein Passwort nach dem ersten Login.\n\nViele Grüße\n%s", 'dienstplan-verwaltung'),
+            $mitarbeiter->vorname,
+            $username,
+            $password,
+            $login_url,
+            get_bloginfo('name')
+        );
+        
+        $email_sent = wp_mail($mitarbeiter->email, $email_subject, $email_body);
+        
+        wp_send_json_success(array(
+            'message' => 'Portal-Zugriff erfolgreich aktiviert!' . ($email_sent ? ' Login-Daten wurden per E-Mail versendet.' : ' Hinweis: E-Mail konnte nicht versendet werden.'),
+            'user_id' => $user_id,
+            'username' => $username
+        ));
+    }
+    
+    /**
+     * AJAX: Portal-Zugriff für Mitarbeiter deaktivieren
+     *
+     * @since 0.7.0
+     */
+    public function ajax_deactivate_portal_access() {
+        check_ajax_referer('dp_ajax_nonce', 'nonce');
+        
+        if (!Dienstplan_Roles::can_manage_events() && !current_user_can('manage_options')) {
+            wp_send_json_error(array('message' => 'Keine Berechtigung.'));
+            return;
+        }
+        
+        $mitarbeiter_id = isset($_POST['mitarbeiter_id']) ? intval($_POST['mitarbeiter_id']) : 0;
+        
+        if (!$mitarbeiter_id) {
+            wp_send_json_error(array('message' => 'Keine Mitarbeiter-ID angegeben.'));
+            return;
+        }
+        
+        // Lade Mitarbeiter-Daten
+        require_once DIENSTPLAN_PLUGIN_PATH . 'includes/class-database.php';
+        $db = new Dienstplan_Database($this->db_prefix);
+        $mitarbeiter = $db->get_mitarbeiter($mitarbeiter_id);
+        
+        if (!$mitarbeiter || !$mitarbeiter->user_id) {
+            wp_send_json_error(array('message' => 'Mitarbeiter hat keinen Portal-Zugriff.'));
+            return;
+        }
+        
+        // Deaktiviere User (nicht löschen, nur Rolle entziehen)
+        $user = new WP_User($mitarbeiter->user_id);
+        
+        // Entferne alle Rollen
+        $user->set_role(''); // Leere Rolle = kein Zugriff
+        
+        // Entferne Verlinkung (optional: kann auch bestehen bleiben für Audit)
+        $db->update_mitarbeiter($mitarbeiter_id, array('user_id' => null));
+        $db->delete_user_verein_assignments($mitarbeiter->user_id);
+        
+        wp_send_json_success(array(
+            'message' => 'Portal-Zugriff erfolgreich deaktiviert.'
+        ));
+    }
+    
+    /**
+     * AJAX: Login-Daten erneut senden
+     *
+     * @since 0.7.0
+     */
+    public function ajax_resend_login_credentials() {
+        check_ajax_referer('dp_ajax_nonce', 'nonce');
+        
+        if (!Dienstplan_Roles::can_manage_events() && !current_user_can('manage_options')) {
+            wp_send_json_error(array('message' => 'Keine Berechtigung.'));
+            return;
+        }
+        
+        $mitarbeiter_id = isset($_POST['mitarbeiter_id']) ? intval($_POST['mitarbeiter_id']) : 0;
+        
+        if (!$mitarbeiter_id) {
+            wp_send_json_error(array('message' => 'Keine Mitarbeiter-ID angegeben.'));
+            return;
+        }
+        
+        // Lade Mitarbeiter-Daten
+        require_once DIENSTPLAN_PLUGIN_PATH . 'includes/class-database.php';
+        $db = new Dienstplan_Database($this->db_prefix);
+        $mitarbeiter = $db->get_mitarbeiter($mitarbeiter_id);
+        
+        if (!$mitarbeiter || !$mitarbeiter->user_id) {
+            wp_send_json_error(array('message' => 'Mitarbeiter hat keinen Portal-Zugriff.'));
+            return;
+        }
+        
+        // Lade User-Daten
+        $user = get_userdata($mitarbeiter->user_id);
+        if (!$user) {
+            wp_send_json_error(array('message' => 'Benutzer nicht gefunden.'));
+            return;
+        }
+        
+        // Generiere neues temporäres Passwort
+        $new_password = wp_generate_password(12, true, true);
+        wp_set_password($new_password, $user->ID);
+        
+        // Sende E-Mail mit neuen Login-Daten
+        $portal_page_id = get_option('dienstplan_portal_page_id', 0);
+        $login_url = $portal_page_id ? get_permalink($portal_page_id) : wp_login_url();
+        
+        $email_subject = sprintf(__('[%s] Neue Login-Daten für das Dienstplan-Portal', 'dienstplan-verwaltung'), get_bloginfo('name'));
+        
+        $email_body = sprintf(
+            __("Hallo %s,\n\nwie gewünscht erhältst du hier neue Login-Daten für das Dienstplan-Portal:\n\nBenutzername: %s\nNeues Passwort: %s\n\nPortal-Link: %s\n\nBitte ändere dein Passwort nach dem Login.\n\nViele Grüße\n%s", 'dienstplan-verwaltung'),
+            $mitarbeiter->vorname,
+            $user->user_login,
+            $new_password,
+            $login_url,
+            get_bloginfo('name')
+        );
+        
+        $email_sent = wp_mail($mitarbeiter->email, $email_subject, $email_body);
+        
+        if ($email_sent) {
+            wp_send_json_success(array(
+                'message' => 'Login-Daten wurden erfolgreich per E-Mail versendet.'
+            ));
+        } else {
+            wp_send_json_error(array(
+                'message' => 'Fehler beim Versenden der E-Mail. Das Passwort wurde zurückgesetzt, konnte aber nicht versendet werden.'
+            ));
+        }
+    }
+
+    /**
+     * Synchronisiert direkte User↔Verein-Zuordnungen
+     * anhand der bisherigen Dienste eines Mitarbeiters.
+     *
+     * @param Dienstplan_Database $db
+     * @param int $mitarbeiter_id
+     * @param int $user_id
+     * @return void
+     */
+    private function sync_user_verein_assignments($db, $mitarbeiter_id, $user_id) {
+        $mitarbeiter_id = intval($mitarbeiter_id);
+        $user_id = intval($user_id);
+
+        if ($mitarbeiter_id <= 0 || $user_id <= 0) {
+            return;
+        }
+
+        $wpdb = $db->get_wpdb();
+        $prefix = $db->get_prefix();
+
+        $verein_ids = $wpdb->get_col($wpdb->prepare(
+            "SELECT DISTINCT d.verein_id
+             FROM {$prefix}dienst_slots s
+             INNER JOIN {$prefix}dienste d ON s.dienst_id = d.id
+             WHERE s.mitarbeiter_id = %d
+               AND d.verein_id IS NOT NULL
+               AND d.verein_id > 0",
+            $mitarbeiter_id
+        ));
+
+        if (empty($verein_ids)) {
+            return;
+        }
+
+        foreach ($verein_ids as $verein_id) {
+            $db->assign_user_to_verein($user_id, intval($verein_id), $mitarbeiter_id);
+        }
+    }
+    
+    /**
+     * AJAX: Bulk-Portal-Zugriff aktivieren
+     *
+     * @since 0.7.0
+     */
+    public function ajax_bulk_activate_portal_access() {
+        check_ajax_referer('dp_ajax_nonce', 'nonce');
+        
+        if (!Dienstplan_Roles::can_manage_events() && !current_user_can('manage_options')) {
+            wp_send_json_error(array('message' => 'Keine Berechtigung.'));
+            return;
+        }
+        
+        $mitarbeiter_ids = isset($_POST['mitarbeiter_ids']) ? array_map('intval', $_POST['mitarbeiter_ids']) : array();
+        
+        if (empty($mitarbeiter_ids)) {
+            wp_send_json_error(array('message' => 'Keine Mitarbeiter-IDs angegeben.'));
+            return;
+        }
+        
+        require_once DIENSTPLAN_PLUGIN_PATH . 'includes/class-database.php';
+        $db = new Dienstplan_Database($this->db_prefix);
+        
+        $success_count = 0;
+        $error_count = 0;
+        $errors = array();
+        
+        foreach ($mitarbeiter_ids as $mitarbeiter_id) {
+            $mitarbeiter = $db->get_mitarbeiter($mitarbeiter_id);
+            
+            if (!$mitarbeiter) {
+                $errors[] = "Mitarbeiter #$mitarbeiter_id nicht gefunden";
+                $error_count++;
+                continue;
+            }
+            
+            // Bereits Portal-Zugriff?
+            if ($mitarbeiter->user_id) {
+                $errors[] = "{$mitarbeiter->vorname} {$mitarbeiter->nachname} hat bereits Portal-Zugriff";
+                $error_count++;
+                continue;
+            }
+            
+            // E-Mail vorhanden?
+            if (empty($mitarbeiter->email)) {
+                $errors[] = "{$mitarbeiter->vorname} {$mitarbeiter->nachname}: Keine E-Mail-Adresse";
+                $error_count++;
+                continue;
+            }
+            
+            // E-Mail bereits verwendet?
+            if (email_exists($mitarbeiter->email)) {
+                $errors[] = "{$mitarbeiter->vorname} {$mitarbeiter->nachname}: E-Mail wird bereits verwendet";
+                $error_count++;
+                continue;
+            }
+            
+            // Generiere Username
+            $username_base = sanitize_user(strtolower($mitarbeiter->vorname . '_' . $mitarbeiter->nachname), true);
+            $username = $username_base;
+            $counter = 1;
+            
+            while (username_exists($username)) {
+                $username = $username_base . '_' . $counter;
+                $counter++;
+            }
+            
+            // Generiere Passwort
+            $password = wp_generate_password(12, true, true);
+            
+            // Erstelle User
+            $user_id = wp_create_user($username, $password, $mitarbeiter->email);
+            
+            if (is_wp_error($user_id)) {
+                $errors[] = "{$mitarbeiter->vorname} {$mitarbeiter->nachname}: " . $user_id->get_error_message();
+                $error_count++;
+                continue;
+            }
+            
+            // Setze Rolle
+            $user = new WP_User($user_id);
+            $user->set_role(Dienstplan_Roles::ROLE_CREW);
+            
+            // Update Meta
+            update_user_meta($user_id, 'first_name', $mitarbeiter->vorname);
+            update_user_meta($user_id, 'last_name', $mitarbeiter->nachname);
+            update_user_meta($user_id, 'show_admin_bar_front', false);
+            
+            // Verlinke mit Mitarbeiter
+            $db->update_mitarbeiter($mitarbeiter_id, array('user_id' => $user_id));
+            $this->sync_user_verein_assignments($db, $mitarbeiter_id, $user_id);
+            
+            // Sende E-Mail
+            $portal_page_id = get_option('dienstplan_portal_page_id', 0);
+            $login_url = $portal_page_id ? get_permalink($portal_page_id) : wp_login_url();
+            
+            $email_subject = sprintf(__('[%s] Zugang zum Dienstplan-Portal', 'dienstplan-verwaltung'), get_bloginfo('name'));
+            $email_body = sprintf(
+                __("Hallo %s,\n\nfür dich wurde ein Zugang zum Dienstplan-Portal erstellt.\n\nHier sind deine Login-Daten:\n\nBenutzername: %s\nPasswort: %s\n\nPortal-Link: %s\n\nBitte ändere dein Passwort nach dem ersten Login.\n\nViele Grüße\n%s", 'dienstplan-verwaltung'),
+                $mitarbeiter->vorname,
+                $username,
+                $password,
+                $login_url,
+                get_bloginfo('name')
+            );
+            
+            wp_mail($mitarbeiter->email, $email_subject, $email_body);
+            $success_count++;
+        }
+        
+        $message = "Portal-Zugriff aktiviert: $success_count erfolgreich";
+        if ($error_count > 0) {
+            $message .= ", $error_count Fehler";
+            if (!empty($errors)) {
+                $message .= ":\n- " . implode("\n- ", array_slice($errors, 0, 5));
+                if (count($errors) > 5) {
+                    $message .= "\n... und " . (count($errors) - 5) . " weitere";
+                }
+            }
+        }
+        
+        wp_send_json_success(array(
+            'message' => $message,
+            'success_count' => $success_count,
+            'error_count' => $error_count,
+            'errors' => $errors
+        ));
+    }
+    
+    /**
+     * AJAX: Bulk-Portal-Zugriff deaktivieren
+     *
+     * @since 0.7.0
+     */
+    public function ajax_bulk_deactivate_portal_access() {
+        check_ajax_referer('dp_ajax_nonce', 'nonce');
+        
+        if (!Dienstplan_Roles::can_manage_events() && !current_user_can('manage_options')) {
+            wp_send_json_error(array('message' => 'Keine Berechtigung.'));
+            return;
+        }
+        
+        $mitarbeiter_ids = isset($_POST['mitarbeiter_ids']) ? array_map('intval', $_POST['mitarbeiter_ids']) : array();
+        
+        if (empty($mitarbeiter_ids)) {
+            wp_send_json_error(array('message' => 'Keine Mitarbeiter-IDs angegeben.'));
+            return;
+        }
+        
+        require_once DIENSTPLAN_PLUGIN_PATH . 'includes/class-database.php';
+        $db = new Dienstplan_Database($this->db_prefix);
+        
+        $success_count = 0;
+        $error_count = 0;
+        
+        foreach ($mitarbeiter_ids as $mitarbeiter_id) {
+            $mitarbeiter = $db->get_mitarbeiter($mitarbeiter_id);
+            
+            if (!$mitarbeiter || !$mitarbeiter->user_id) {
+                $error_count++;
+                continue;
+            }
+            
+            // Entferne Rolle
+            $user = new WP_User($mitarbeiter->user_id);
+            $user->set_role('');
+            
+            // Entferne Verlinkung
+            $db->update_mitarbeiter($mitarbeiter_id, array('user_id' => null));
+            $db->delete_user_verein_assignments($mitarbeiter->user_id);
+            
+            $success_count++;
+        }
+        
+        wp_send_json_success(array(
+            'message' => "Portal-Zugriff deaktiviert: $success_count erfolgreich" . ($error_count > 0 ? ", $error_count übersprungen" : ""),
+            'success_count' => $success_count,
+            'error_count' => $error_count
+        ));
+    }
+    
+    /**
+     * Export: Mitarbeiter als CSV
+     *
+     * @since 0.7.0
+     */
+    public function ajax_export_mitarbeiter() {
+        check_ajax_referer('dp_ajax_nonce', 'nonce');
+        
+        if (!Dienstplan_Roles::can_manage_events() && !current_user_can('manage_options')) {
+            wp_die('Keine Berechtigung.');
+        }
+        
+        $ids = isset($_GET['ids']) ? array_map('intval', explode(',', $_GET['ids'])) : array();
+        
+        require_once DIENSTPLAN_PLUGIN_PATH . 'includes/class-database.php';
+        $db = new Dienstplan_Database($this->db_prefix);
+        
+        $mitarbeiter = array();
+        if (!empty($ids)) {
+            foreach ($ids as $id) {
+                $ma = $db->get_mitarbeiter($id);
+                if ($ma) {
+                    $mitarbeiter[] = $ma;
+                }
+            }
+        } else {
+            $mitarbeiter = $db->get_mitarbeiter_with_stats();
+        }
+        
+        // CSV Headers
+        header('Content-Type: text/csv; charset=utf-8');
+        header('Content-Disposition: attachment; filename="mitarbeiter_export_' . date('Y-m-d') . '.csv"');
+        
+        $output = fopen('php://output', 'w');
+        
+        // BOM für Excel UTF-8
+        fprintf($output, chr(0xEF).chr(0xBB).chr(0xBF));
+        
+        // Header-Zeile
+        fputcsv($output, array('ID', 'Vorname', 'Nachname', 'E-Mail', 'Telefon', 'Portal-Zugriff', 'Anzahl Dienste'), ';');
+        
+        // Daten
+        foreach ($mitarbeiter as $ma) {
+            fputcsv($output, array(
+                $ma->id,
+                $ma->vorname,
+                $ma->nachname,
+                $ma->email ?? '',
+                $ma->telefon ?? '',
+                $ma->user_id ? 'Ja' : 'Nein',
+                $ma->dienst_count ?? 0
+            ), ';');
+        }
+        
+        fclose($output);
+        exit;
+    }
+    
+    /**
+     * Export: Portal-Zugänge als CSV
+     *
+     * @since 0.7.0
+     */
+    public function ajax_export_portal_credentials() {
+        check_ajax_referer('dp_ajax_nonce', 'nonce');
+        
+        if (!Dienstplan_Roles::can_manage_events() && !current_user_can('manage_options')) {
+            wp_die('Keine Berechtigung.');
+        }
+        
+        $ids = isset($_GET['ids']) ? array_map('intval', explode(',', $_GET['ids'])) : array();
+        
+        require_once DIENSTPLAN_PLUGIN_PATH . 'includes/class-database.php';
+        $db = new Dienstplan_Database($this->db_prefix);
+        
+        $mitarbeiter = array();
+        if (!empty($ids)) {
+            foreach ($ids as $id) {
+                $ma = $db->get_mitarbeiter($id);
+                if ($ma && $ma->user_id) {
+                    $mitarbeiter[] = $ma;
+                }
+            }
+        } else {
+            // Alle Mitarbeiter mit Portal-Zugriff
+            global $wpdb;
+            $table = $wpdb->prefix . 'dp_mitarbeiter';
+            $results = $wpdb->get_results("SELECT * FROM $table WHERE user_id IS NOT NULL ORDER BY nachname, vorname");
+            $mitarbeiter = $results;
+        }
+        
+        // CSV Headers
+        header('Content-Type: text/csv; charset=utf-8');
+        header('Content-Disposition: attachment; filename="portal_zugaenge_' . date('Y-m-d') . '.csv"');
+        
+        $output = fopen('php://output', 'w');
+        
+        // BOM für Excel UTF-8
+        fprintf($output, chr(0xEF).chr(0xBB).chr(0xBF));
+        
+        // Header-Zeile
+        fputcsv($output, array('ID', 'Vorname', 'Nachname', 'E-Mail', 'Benutzername', 'Portal-Link'), ';');
+        
+        $portal_page_id = get_option('dienstplan_portal_page_id', 0);
+        $login_url = $portal_page_id ? get_permalink($portal_page_id) : wp_login_url();
+        
+        // Daten
+        foreach ($mitarbeiter as $ma) {
+            if (!$ma->user_id) continue;
+            
+            $user = get_userdata($ma->user_id);
+            if (!$user) continue;
+            
+            fputcsv($output, array(
+                $ma->id,
+                $ma->vorname,
+                $ma->nachname,
+                $ma->email ?? '',
+                $user->user_login,
+                $login_url
+            ), ';');
+        }
+        
+        fclose($output);
+        exit;
+    }
 }
-
-

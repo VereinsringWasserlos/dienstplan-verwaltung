@@ -19,6 +19,7 @@ if (!defined('ABSPATH')) exit;
         <div class="dp-modal-body">
             <form id="verein-form">
                 <input type="hidden" id="verein_id" name="verein_id" value="">
+                <input type="hidden" id="seite_id" name="seite_id" value="">
                 
                 <table class="form-table">
                     <tr>

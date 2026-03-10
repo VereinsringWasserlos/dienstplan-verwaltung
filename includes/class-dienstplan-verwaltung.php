@@ -65,6 +65,7 @@ class Dienstplan_Verwaltung {
 
         $this->load_dependencies();
         $this->set_locale();
+        $this->define_security_hooks();
         $this->define_admin_hooks();
         $this->define_public_hooks();
         $this->check_database_updates();
@@ -111,6 +112,20 @@ class Dienstplan_Verwaltung {
     }
 
     /**
+     * Security-Hooks registrieren (Backend-Redirect für Crew)
+     *
+     * @since    0.7.0
+     * @access   private
+     */
+    private function define_security_hooks() {
+        // Crew-Mitglieder vom Backend zum Frontend-Portal umleiten
+        $this->loader->add_action('admin_init', $this, 'redirect_crew_to_frontend');
+        
+        // Admin-Bar für Crew-Mitglieder ausblenden
+        $this->loader->add_filter('show_admin_bar', $this, 'hide_admin_bar_for_crew');
+    }
+
+    /**
      * Admin-Hooks registrieren
      *
      * @since    1.0.0
@@ -146,6 +161,18 @@ class Dienstplan_Verwaltung {
         $this->loader->add_action('wp_ajax_dp_delete_veranstaltung', $plugin_admin, 'ajax_delete_veranstaltung');
         $this->loader->add_action('wp_ajax_dp_create_event_page', $plugin_admin, 'ajax_create_event_page');
         $this->loader->add_action('wp_ajax_dp_update_event_page', $plugin_admin, 'ajax_update_event_page');
+        $this->loader->add_action('wp_ajax_dp_create_verein_seiten', $plugin_admin, 'ajax_create_verein_seiten');
+        $this->loader->add_action('wp_ajax_dp_create_single_verein_seite', $plugin_admin, 'ajax_create_single_verein_seite');
+        $this->loader->add_action('wp_ajax_dp_create_single_verein_overview_page', $plugin_admin, 'ajax_create_single_verein_overview_page');
+        $this->loader->add_action('wp_ajax_dp_create_all_verein_overview_pages', $plugin_admin, 'ajax_create_all_verein_overview_pages');
+        $this->loader->add_action('wp_ajax_dp_delete_page', $plugin_admin, 'ajax_delete_page');
+        $this->loader->add_action('wp_ajax_dp_delete_all_verein_seiten', $plugin_admin, 'ajax_delete_all_verein_seiten');
+        $this->loader->add_action('wp_ajax_dp_quick_change_status', $plugin_admin, 'ajax_quick_change_status');
+        $this->loader->add_action('wp_ajax_dp_bulk_update_veranstaltung_status', $plugin_admin, 'ajax_bulk_update_veranstaltung_status');
+        $this->loader->add_action('wp_ajax_dp_bulk_delete_veranstaltungen', $plugin_admin, 'ajax_bulk_delete_veranstaltungen');
+        $this->loader->add_action('wp_ajax_dp_create_portal_page', $plugin_admin, 'ajax_create_portal_page');
+        $this->loader->add_action('wp_ajax_dp_dismiss_portal_notice', $plugin_admin, 'ajax_dismiss_portal_notice');
+        $this->loader->add_action('wp_ajax_dp_delete_portal_page', $plugin_admin, 'ajax_delete_portal_page');
         
         // AJAX-Actions für Benutzer
         $this->loader->add_action('wp_ajax_dp_check_email', $plugin_admin, 'ajax_check_email');
@@ -193,6 +220,17 @@ class Dienstplan_Verwaltung {
         $this->loader->add_action('wp_ajax_dp_delete_mitarbeiter_bulk', $plugin_admin, 'ajax_delete_mitarbeiter_bulk');
         $this->loader->add_action('wp_ajax_dp_get_mitarbeiter_dienste', $plugin_admin, 'ajax_get_mitarbeiter_dienste');
         
+        // AJAX-Actions für Portal-Zugriff
+        $this->loader->add_action('wp_ajax_dp_activate_portal_access', $plugin_admin, 'ajax_activate_portal_access');
+        $this->loader->add_action('wp_ajax_dp_deactivate_portal_access', $plugin_admin, 'ajax_deactivate_portal_access');
+        $this->loader->add_action('wp_ajax_dp_resend_login_credentials', $plugin_admin, 'ajax_resend_login_credentials');
+        $this->loader->add_action('wp_ajax_dp_bulk_activate_portal_access', $plugin_admin, 'ajax_bulk_activate_portal_access');
+        $this->loader->add_action('wp_ajax_dp_bulk_deactivate_portal_access', $plugin_admin, 'ajax_bulk_deactivate_portal_access');
+        
+        // AJAX-Actions für Mitarbeiter-Export
+        $this->loader->add_action('wp_ajax_dp_export_mitarbeiter', $plugin_admin, 'ajax_export_mitarbeiter');
+        $this->loader->add_action('wp_ajax_dp_export_portal_credentials', $plugin_admin, 'ajax_export_portal_credentials');
+        
         // Import/Export AJAX Actions
         // Export wird über admin_init in class-admin.php handle_export() behandelt
         $this->loader->add_action('wp_ajax_dp_import_csv', $plugin_admin, 'ajax_import_csv');
@@ -228,10 +266,16 @@ class Dienstplan_Verwaltung {
         $this->loader->add_action('wp_ajax_nopriv_dp_assign_slot', $plugin_public, 'ajax_assign_slot');
         $this->loader->add_action('wp_ajax_dp_remove_assignment', $plugin_public, 'ajax_remove_assignment');
         $this->loader->add_action('wp_ajax_nopriv_dp_remove_assignment', $plugin_public, 'ajax_remove_assignment');
+        $this->loader->add_action('wp_ajax_dp_frontend_admin_remove_slot', $plugin_public, 'ajax_frontend_admin_remove_slot');
+        $this->loader->add_action('wp_ajax_dp_frontend_admin_split_dienst', $plugin_public, 'ajax_frontend_admin_split_dienst');
         
         // AJAX für Dienst-Anmeldung (Frontend-Formular)
         $this->loader->add_action('wp_ajax_dp_register_service', $plugin_public, 'ajax_register_service');
         $this->loader->add_action('wp_ajax_nopriv_dp_register_service', $plugin_public, 'ajax_register_service');
+        
+        // AJAX für Verein-spezifische Anmeldung
+        $this->loader->add_action('wp_ajax_dp_anmeldung_verein', $plugin_public, 'ajax_anmeldung_verein');
+        $this->loader->add_action('wp_ajax_nopriv_dp_anmeldung_verein', $plugin_public, 'ajax_anmeldung_verein');
     }
 
     /**
@@ -261,6 +305,7 @@ class Dienstplan_Verwaltung {
         
         // Führe Migrationen immer aus (sie prüfen selbst ob nötig)
         $database->migrate_veranstaltungen_add_seite_id();
+        $database->migrate_vereine_add_seite_id();
         
         // Blockiere Reparatur auf Import/Export-Seite zur Performance
         $current_page = isset($_GET['page']) ? sanitize_text_field($_GET['page']) : '';
@@ -349,6 +394,74 @@ class Dienstplan_Verwaltung {
                 $updated++;
             }
         }
+    }
+
+    /**
+     * Crew-Mitglieder vom Backend zum Frontend-Portal umleiten
+     * 
+     * @since 0.7.0
+     */
+    public function redirect_crew_to_frontend() {
+        // Nur wenn User eingeloggt ist
+        if (!is_user_logged_in()) {
+            return;
+        }
+        
+        // User-Objekt holen
+        $user = wp_get_current_user();
+        
+        // Prüfe ob User die Crew-Rolle hat
+        if (!in_array(Dienstplan_Roles::ROLE_CREW, (array) $user->roles)) {
+            return;
+        }
+        
+        // Erlaube AJAX-Requests
+        if (defined('DOING_AJAX') && DOING_AJAX) {
+            return;
+        }
+        
+        // Erlaube Admin-Bar-AJAX
+        if (isset($_GET['action']) && $_GET['action'] === 'heartbeat') {
+            return;
+        }
+        
+        // Hole Portal-Seite
+        $portal_page_id = get_option('dienstplan_portal_page_id', 0);
+        
+        if ($portal_page_id) {
+            $portal_url = get_permalink($portal_page_id);
+        } else {
+            // Fallback: zur Startseite
+            $portal_url = home_url('/');
+        }
+        
+        // Redirect zum Portal
+        wp_safe_redirect($portal_url);
+        exit;
+    }
+    
+    /**
+     * Admin-Bar für Crew-Mitglieder ausblenden
+     * 
+     * @since 0.7.0
+     * @param bool $show_admin_bar
+     * @return bool
+     */
+    public function hide_admin_bar_for_crew($show_admin_bar) {
+        // Nur wenn User eingeloggt ist
+        if (!is_user_logged_in()) {
+            return $show_admin_bar;
+        }
+        
+        // User-Objekt holen
+        $user = wp_get_current_user();
+        
+        // Prüfe ob User die Crew-Rolle hat
+        if (in_array(Dienstplan_Roles::ROLE_CREW, (array) $user->roles)) {
+            return false;
+        }
+        
+        return $show_admin_bar;
     }
 
     /**

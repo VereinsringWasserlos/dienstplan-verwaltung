@@ -565,6 +565,17 @@ body {
     animation: blink 2s infinite;
 }
 
+.status-laufend {
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+    color: #92400e;
+    box-shadow: 0 0 20px rgba(245, 158, 11, 0.3);
+}
+
+.status-laufend::before {
+    content: '●';
+    animation: blink 2s infinite;
+}
+
 @keyframes blink {
     0%, 100% { opacity: 1; }
     50% { opacity: 0.3; }
@@ -573,6 +584,55 @@ body {
 .status-inaktiv {
     background: var(--dp-gray-200);
     color: var(--dp-gray-700);
+}
+
+/* Quick Change Status Dropdown */
+.status-quick-change {
+    padding: 6px 12px;
+    border-radius: 999px;
+    border: 2px solid;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    outline: none;
+    text-align: center;
+    min-width: 150px;
+}
+
+.status-quick-change:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.status-quick-change:focus {
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+}
+
+.status-quick-change:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Dropdown Optionen mit Farben */
+.status-quick-change option[value="in_planung"] {
+    background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+    color: #1e40af;
+}
+
+.status-quick-change option[value="geplant"] {
+    background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+    color: #065f46;
+}
+
+.status-quick-change option[value="aktiv"] {
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+    color: #92400e;
+}
+
+.status-quick-change option[value="abgeschlossen"] {
+    background: #e5e7eb;
+    color: #374151;
 }
 
 /* Action Links mit Icons */
@@ -1647,6 +1707,38 @@ body {
     margin-bottom: var(--dp-spacing-xl);
 }
 
+/* Compact Grid für einheitliche Card-Größe */
+.dashboard-compact-grid {
+    display: grid !important;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+@media (max-width: 1600px) {
+    .dashboard-compact-grid {
+        grid-template-columns: repeat(4, 1fr);
+    }
+}
+
+@media (max-width: 1200px) {
+    .dashboard-compact-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+@media (max-width: 900px) {
+    .dashboard-compact-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 600px) {
+    .dashboard-compact-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
 @media (max-width: 1400px) {
     .dashboard-main-grid {
         grid-template-columns: repeat(3, 1fr);
@@ -1764,6 +1856,54 @@ body {
 }
 
 /* Admin Card Varianten */
+.dashboard-admin-card.card-vereine {
+    border-color: #3b82f6;
+}
+
+.dashboard-admin-card.card-vereine .dashboard-admin-card-icon {
+    color: #3b82f6;
+}
+
+.dashboard-admin-card.card-veranstaltungen {
+    border-color: #f59e0b;
+}
+
+.dashboard-admin-card.card-veranstaltungen .dashboard-admin-card-icon {
+    color: #f59e0b;
+}
+
+.dashboard-admin-card.card-dienste {
+    border-color: #667eea;
+}
+
+.dashboard-admin-card.card-dienste .dashboard-admin-card-icon {
+    color: #667eea;
+}
+
+.dashboard-admin-card.card-bereiche {
+    border-color: #ec4899;
+}
+
+.dashboard-admin-card.card-bereiche .dashboard-admin-card-icon {
+    color: #ec4899;
+}
+
+.dashboard-admin-card.card-mitarbeiter {
+    border-color: #10b981;
+}
+
+.dashboard-admin-card.card-mitarbeiter .dashboard-admin-card-icon {
+    color: #10b981;
+}
+
+.dashboard-admin-card.card-timeline {
+    border-color: #06b6d4;
+}
+
+.dashboard-admin-card.card-timeline .dashboard-admin-card-icon {
+    color: #06b6d4;
+}
+
 .dashboard-admin-card.card-import {
     border-color: #38bdf8;
 }
@@ -1778,6 +1918,93 @@ body {
 
 .dashboard-admin-card.card-debug .dashboard-admin-card-icon {
     color: #f87171;
+}
+
+.dashboard-admin-card.card-portal {
+    border-color: #8b5cf6;
+}
+
+.dashboard-admin-card.card-portal .dashboard-admin-card-icon {
+    color: #8b5cf6;
+}
+
+.dashboard-admin-card.card-documentation {
+    border-color: #64748b;
+}
+
+.dashboard-admin-card.card-documentation .dashboard-admin-card-icon {
+    color: #64748b;
+}
+
+.dashboard-admin-card.card-updates {
+    border-color: #0ea5e9;
+}
+
+.dashboard-admin-card.card-updates .dashboard-admin-card-icon {
+    color: #0ea5e9;
+}
+
+/* Portal Status Badge */
+.portal-status-badge {
+    display: inline-block;
+    padding: 0.125rem 0.5rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    margin-left: 0.5rem;
+}
+
+.portal-status-badge.status-publish {
+    background-color: #dcfce7;
+    color: #166534;
+}
+
+.portal-status-badge.status-draft {
+    background-color: #fef3c7;
+    color: #92400e;
+}
+
+.portal-status-badge.status-pending {
+    background-color: #dbeafe;
+    color: #1e40af;
+}
+
+/* Portal Actions */
+.portal-actions {
+    position: relative;
+    z-index: 1;
+}
+
+.portal-actions .button {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.875rem;
+    min-height: 32px;
+}
+
+.portal-actions .button .dashicons {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+}
+
+.portal-actions .button-link-delete {
+    color: #dc2626;
+}
+
+.portal-actions .button-link-delete:hover {
+    color: #b91c1c;
+}
+
+/* Loading Animation für Portal-Buttons */
+@keyframes rotation {
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(360deg);
+    }
 }
 
 /* Dashboard Section Heading */
@@ -1807,5 +2034,103 @@ body {
     flex-shrink: 0;
 }
 
+/* Portal Access Badges */
+.portal-status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    line-height: 1.2;
+    white-space: nowrap;
+}
 
+.portal-status-badge.status-active,
+.status-badge.status-active {
+    background: #dcfce7;
+    color: #166534;
+    border: 1px solid #86efac;
+}
 
+.portal-status-badge.status-inactive,
+.status-badge.status-inactive {
+    background: #f3f4f6;
+    color: #6b7280;
+    border: 1px solid #d1d5db;
+}
+
+/* Portal Access Row */
+#portal-access-row {
+    background: #f9fafb;
+    border-top: 1px solid #e5e7eb;
+}
+
+#portal-access-row th {
+    padding-top: 1.5rem;
+    padding-bottom: 1.5rem;
+    font-weight: 600;
+}
+
+#portal-access-row td {
+    padding-top: 1.5rem;
+    padding-bottom: 1.5rem;
+}
+
+#portal-status-display,
+#portal-activate-display {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+#portal-status-display .button-group {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+#portal-activate-display label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    font-weight: 500;
+}
+
+#portal-activate-display .description {
+    color: #6b7280;
+    font-size: 0.875rem;
+    line-height: 1.4;
+    margin: 0;
+    padding: 0.5rem;
+    background: white;
+    border-radius: 6px;
+    border-left: 3px solid #667eea;
+}
+
+/* Bulk Actions Toolbar */
+.bulk-actions-toolbar {
+    display: none;
+    background: #f0f9ff;
+    border-bottom: 2px solid #0ea5e9;
+}
+
+.bulk-actions-toolbar.active {
+    display: flex !important;
+}
+
+.bulk-action-select {
+    min-width: 200px;
+}
+
+/* Rotation Animation für Loading */
+@keyframes rotation {
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(360deg);
+    }
+}

@@ -13,6 +13,7 @@ Moderne Dienstplan-Verwaltung für Events und Veranstaltungen mit Slot-System, F
 ## 🚀 Features
 
 ### Kern-Funktionalität
+- **Frontend Portal** - Moderne Einstiegsseite mit Login und Veranstaltungsübersicht (NEU v0.6.6)
 - **Slot-basiertes Dienst-System** - Flexible Besetzung mit mehreren Personen pro Dienst
 - **Split-Dienste** - Dienste in zwei Zeitfenster aufteilen
 - **Frontend Crew-Portal** - Self-Service für Helfer-Anmeldung
@@ -74,9 +75,28 @@ Verfügbare Dokumente:
 - Quick-Start Guide (15 Minuten Einstieg)
 - Backend-Bedienungsanleitung (650+ Zeilen)
 - Frontend-Bedienungsanleitung (500+ Zeilen)
+- Frontend Portal Setup (NEU v0.6.6)
 - Datenbank-Struktur
 - Technische Dokumentation
 - Test-Plan
+- Changelog
+- Roadmap bis Version 2.0
+
+### Frontend Portal Schnellstart
+
+**Neue WordPress-Seite erstellen und Shortcode einfügen:**
+
+```
+[dienstplan_hub]
+```
+
+Zeigt eine komplette Einstiegsseite mit:
+- Login/Registrierung für neue Benutzer
+- Personalisierte Begrüßung für angemeldete Benutzer
+- Übersicht aktueller Veranstaltungen
+- Quick-Links zu "Meine Dienste" und Profil
+
+**Weitere Details:** `documentation/FRONTEND_PORTAL.md`
 - Changelog
 - Roadmap bis Version 2.0
 

@@ -56,7 +56,6 @@ if (!defined('ABSPATH')) exit;
                         <th width="15%"><?php _e('Name', 'dienstplan-verwaltung'); ?></th>
                         <th width="12%"><?php _e('Datum', 'dienstplan-verwaltung'); ?></th>
                         <th width="10%"><?php _e('Typ', 'dienstplan-verwaltung'); ?></th>
-                        <th width="15%"><?php _e('Beteiligte Vereine', 'dienstplan-verwaltung'); ?></th>
                         <th width="15%"><?php _e('Verantwortliche', 'dienstplan-verwaltung'); ?></th>
                         <th width="10%"><?php _e('Status', 'dienstplan-verwaltung'); ?></th>
                         <th width="13%"><?php _e('Aktionen', 'dienstplan-verwaltung'); ?></th>
@@ -77,6 +76,16 @@ if (!defined('ABSPATH')) exit;
                                 <?php if ($v->beschreibung): ?>
                                     <br><small><?php echo esc_html(wp_trim_words($v->beschreibung, 10)); ?></small>
                                 <?php endif; ?>
+                                <?php if (count($event_vereine) > 0): ?>
+                                    <br>
+                                    <button type="button" 
+                                            class="button button-small toggle-verein-details" 
+                                            onclick="toggleVereinDetails(<?php echo $v->id; ?>)"
+                                            style="margin-top: 0.5rem; font-size: 0.85rem; padding: 2px 8px;">
+                                        <span class="dashicons dashicons-arrow-down" style="font-size: 14px; vertical-align: middle;"></span>
+                                        <?php echo count($event_vereine); ?> Verein(e)
+                                    </button>
+                                <?php endif; ?>
                             </td>
                             <td>
                                 <?php 
@@ -95,17 +104,6 @@ if (!defined('ABSPATH')) exit;
                                 <?php else: ?>
                                     <span class="dashicons dashicons-calendar-alt" title="<?php _e('Eintägig', 'dienstplan-verwaltung'); ?>"></span>
                                     <?php _e('Eintägig', 'dienstplan-verwaltung'); ?>
-                                <?php endif; ?>
-                            </td>
-                            <td>
-                                <?php if (!empty($event_vereine)): ?>
-                                    <?php foreach ($event_vereine as $verein): ?>
-                                        <span class="status-badge status-aktiv" style="margin: 2px;">
-                                            <?php echo esc_html($verein->verein_kuerzel ?? $verein->kuerzel); ?>
-                                        </span>
-                                    <?php endforeach; ?>
-                                <?php else: ?>
-                                    <span style="color: #999;">—</span>
                                 <?php endif; ?>
                             </td>
                             <td>
@@ -129,27 +127,15 @@ if (!defined('ABSPATH')) exit;
                                 <?php endif; ?>
                             </td>
                             <td>
-                                <?php
-                                $status_class = '';
-                                $status_text = '';
-                                switch($v->status) {
-                                    case 'geplant':
-                                        $status_class = 'status-aktiv';
-                                        $status_text = __('Geplant', 'dienstplan-verwaltung');
-                                        break;
-                                    case 'aktiv':
-                                        $status_class = 'status-aktiv';
-                                        $status_text = __('Aktiv', 'dienstplan-verwaltung');
-                                        break;
-                                    case 'abgeschlossen':
-                                        $status_class = 'status-inaktiv';
-                                        $status_text = __('Abgeschlossen', 'dienstplan-verwaltung');
-                                        break;
-                                }
-                                ?>
-                                <span class="status-badge <?php echo $status_class; ?>">
-                                    <?php echo $status_text; ?>
-                                </span>
+                                <select class="status-quick-change" 
+                                        data-veranstaltung-id="<?php echo $v->id; ?>" 
+                                        onchange="quickChangeStatus(this)"
+                                        style="padding: 4px 8px; border-radius: 4px; border: 1px solid #ddd; font-size: 13px; cursor: pointer;">
+                                    <option value="in_planung" <?php selected($v->status, 'in_planung'); ?>>🔵 In Planung</option>
+                                    <option value="geplant" <?php selected($v->status, 'geplant'); ?>>🟢 Geplant</option>
+                                    <option value="aktiv" <?php selected($v->status, 'aktiv'); ?>>🟡 Aktiv</option>
+                                    <option value="abgeschlossen" <?php selected($v->status, 'abgeschlossen'); ?>>⚪ Abgeschlossen</option>
+                                </select>
                             </td>
                             <td style="position: relative; overflow: visible;">
                                 <div class="dropdown-actions">
@@ -167,18 +153,18 @@ if (!defined('ABSPATH')) exit;
                                             $page = get_post($v->seite_id);
                                             if ($page && $page->post_status === 'publish'):
                                                 $page_url = get_permalink($v->seite_id);
+                                                $share_url = wp_get_shortlink($v->seite_id);
+                                                if (empty($share_url)) {
+                                                    $share_url = add_query_arg('p', intval($v->seite_id), home_url('/'));
+                                                }
                                             ?>
                                                 <a href="<?php echo esc_url($page_url); ?>" target="_blank">
                                                     <span class="dashicons dashicons-external"></span>
                                                     <span><?php _e('Seite öffnen', 'dienstplan-verwaltung'); ?></span>
                                                 </a>
-                                                <a href="#" onclick="updatePageForEvent(<?php echo $v->id; ?>); return false;">
-                                                    <span class="dashicons dashicons-update"></span>
-                                                    <span><?php _e('Seite aktualisieren', 'dienstplan-verwaltung'); ?></span>
-                                                </a>
-                                                <a href="<?php echo admin_url('post.php?post=' . $v->seite_id . '&action=edit'); ?>">
-                                                    <span class="dashicons dashicons-welcome-write-blog"></span>
-                                                    <span><?php _e('Seite bearbeiten', 'dienstplan-verwaltung'); ?></span>
+                                                <a href="#" onclick="sharePageLink('<?php echo esc_js($share_url); ?>', '<?php echo esc_js($v->name); ?>'); return false;">
+                                                    <span class="dashicons dashicons-share"></span>
+                                                    <span><?php _e('Teilen', 'dienstplan-verwaltung'); ?></span>
                                                 </a>
                                             <?php else: ?>
                                                 <a href="#" onclick="createPageForEvent(<?php echo $v->id; ?>); return false;">
@@ -200,6 +186,186 @@ if (!defined('ABSPATH')) exit;
                                 </div>
                             </td>
                         </tr>
+                        
+                        <!-- Verein-Details (ausgeklappt) -->
+                        <tr class="verein-details-row" id="verein-details-<?php echo $v->id; ?>" style="display: none;">
+                            <td colspan="7" style="background: #f9fafb; padding: 1.5rem; border-left: 4px solid #0ea5e9;">
+                                <div class="verein-details-container">
+                                    <?php 
+                                    // Prüfen ob Seiten erstellt werden können (nicht bei Status "in_planung")
+                                    $kann_seiten_erstellen = ($v->status !== 'in_planung');
+                                    ?>
+                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                                        <h4 style="margin: 0; color: #0f172a;">
+                                            <span class="dashicons dashicons-groups" style="color: #0ea5e9; font-size: 20px; vertical-align: middle;"></span>
+                                            Beteiligte Vereine & Anmeldeseiten
+                                        </h4>
+                                        <?php if (count($event_vereine) > 0): ?>
+                                            <div style="display: flex; gap: 0.5rem;">
+                                                <?php if ($kann_seiten_erstellen): ?>
+                                                    <button type="button" 
+                                                            class="button button-primary" 
+                                                            onclick="createVereinspezifischeSeiten(<?php echo $v->id; ?>)"
+                                                            style="background: #0ea5e9; border-color: #0284c7;">
+                                                        <span class="dashicons dashicons-admin-page" style="font-size: 16px; vertical-align: middle;"></span>
+                                                        Alle Verein-Seiten erstellen
+                                                    </button>
+                                                <?php else: ?>
+                                                    <button type="button" 
+                                                            class="button button-primary" 
+                                                            disabled
+                                                            title="Seiten können erst erstellt werden, wenn die Veranstaltung nicht mehr in Planung ist"
+                                                            style="background: #9ca3af; border-color: #6b7280; cursor: not-allowed;">
+                                                        <span class="dashicons dashicons-lock" style="font-size: 16px; vertical-align: middle;"></span>
+                                                        Seiten noch nicht verfügbar
+                                                    </button>
+                                                <?php endif; ?>
+                                                <?php 
+                                                // Prüfen ob bereits Seiten existieren
+                                                $has_pages = false;
+                                                foreach ($event_vereine as $check_verein) {
+                                                    $check_page = get_posts(array(
+                                                        'post_type' => 'page',
+                                                        'posts_per_page' => 1,
+                                                        'meta_query' => array(
+                                                            array('key' => '_dp_veranstaltung_id', 'value' => $v->id),
+                                                            array('key' => '_dp_verein_id', 'value' => $check_verein->verein_id)
+                                                        )
+                                                    ));
+                                                    if (!empty($check_page)) {
+                                                        $has_pages = true;
+                                                        break;
+                                                    }
+                                                }
+                                                if ($has_pages): ?>
+                                                    <button type="button" 
+                                                            class="button" 
+                                                            onclick="deleteAllVereinSeiten(<?php echo $v->id; ?>)"
+                                                            style="background: #ef4444; border-color: #dc2626; color: white;">
+                                                        <span class="dashicons dashicons-trash" style="font-size: 16px; vertical-align: middle;"></span>
+                                                        Alle Seiten löschen
+                                                    </button>
+                                                <?php endif; ?>
+                                            </div>
+                                        <?php endif; ?>
+                                    </div>
+                                    
+                                    <?php if (!$kann_seiten_erstellen): ?>
+                                        <div style="background: #dbeafe; border: 2px solid #3b82f6; border-radius: 6px; padding: 1rem; margin-bottom: 1rem; color: #1e40af;">
+                                            <p style="margin: 0; display: flex; align-items: center; gap: 0.5rem;">
+                                                <span class="dashicons dashicons-info" style="font-size: 20px;"></span>
+                                                <strong>Hinweis:</strong> Anmeldeseiten können erst erstellt werden, wenn die Veranstaltung den Status "Geplant" hat.
+                                            </p>
+                                        </div>
+                                    <?php endif; ?>
+                                    
+                                    <?php if (count($event_vereine) > 0): ?>
+                                        <div style="display: grid; gap: 1rem;">
+                                            <?php foreach ($event_vereine as $verein): 
+                                                // Prüfen ob Seite existiert
+                                                $verein_page = get_posts(array(
+                                                    'post_type' => 'page',
+                                                    'post_status' => 'any',
+                                                    'meta_query' => array(
+                                                        array(
+                                                            'key' => '_dp_veranstaltung_id',
+                                                            'value' => $v->id
+                                                        ),
+                                                        array(
+                                                            'key' => '_dp_verein_id',
+                                                            'value' => $verein->verein_id
+                                                        )
+                                                    ),
+                                                    'numberposts' => 1
+                                                ));
+                                                
+                                                $page_exists = !empty($verein_page);
+                                                $page = $page_exists ? $verein_page[0] : null;
+                                            ?>
+                                                <div style="display: flex; align-items: center; justify-content: space-between; padding: 1rem; background: white; border: 1px solid #e2e8f0; border-radius: 6px;">
+                                                    <div style="display: flex; align-items: center; gap: 1rem;">
+                                                        <span class="dashicons dashicons-flag" style="color: #64748b; font-size: 24px;"></span>
+                                                        <div>
+                                                            <strong style="color: #1e293b; font-size: 1rem;"><?php echo esc_html($verein->verein_name); ?></strong>
+                                                            <?php if ($verein->verein_kuerzel): ?>
+                                                                <span style="color: #64748b; font-size: 0.9rem;"> (<?php echo esc_html($verein->verein_kuerzel); ?>)</span>
+                                                            <?php endif; ?>
+                                                            <?php if ($page_exists): ?>
+                                                                <br>
+                                                                <span style="color: #16a34a; font-size: 0.85rem;">
+                                                                    <span class="dashicons dashicons-yes-alt" style="font-size: 14px; vertical-align: middle;"></span>
+                                                                    Seite erstellt
+                                                                </span>
+                                                            <?php else: ?>
+                                                                <br>
+                                                                <span style="color: #ea580c; font-size: 0.85rem;">
+                                                                    <span class="dashicons dashicons-warning" style="font-size: 14px; vertical-align: middle;"></span>
+                                                                    Keine Seite vorhanden
+                                                                </span>
+                                                            <?php endif; ?>
+                                                        </div>
+                                                    </div>
+                                                    
+                                                    <div style="display: flex; gap: 0.5rem;">
+                                                        <?php if ($page_exists): ?>
+                                                            <?php
+                                                            $verein_share_url = wp_get_shortlink($page->ID);
+                                                            if (empty($verein_share_url)) {
+                                                                $verein_share_url = add_query_arg('p', intval($page->ID), home_url('/'));
+                                                            }
+                                                            ?>
+                                                            <a href="<?php echo get_permalink($page->ID); ?>" 
+                                                               class="button button-small" 
+                                                               target="_blank"
+                                                               title="Seite im Frontend öffnen">
+                                                                <span class="dashicons dashicons-external" style="font-size: 14px; vertical-align: middle;"></span>
+                                                                Öffnen
+                                                            </a>
+                                                            <button type="button"
+                                                                    class="button button-small"
+                                                                    onclick="sharePageLink('<?php echo esc_js($verein_share_url); ?>', '<?php echo esc_js($verein->verein_name); ?>')"
+                                                                    title="Link teilen">
+                                                                <span class="dashicons dashicons-share" style="font-size: 14px; vertical-align: middle;"></span>
+                                                                Teilen
+                                                            </button>
+                                                            <button type="button" 
+                                                                    class="button button-small" 
+                                                                    onclick="deleteVereinSeite(<?php echo $page->ID; ?>, '<?php echo esc_js($verein->name); ?>')"
+                                                                    style="background: #ef4444; border-color: #dc2626; color: white;"
+                                                                    title="Seite löschen">
+                                                                <span class="dashicons dashicons-trash" style="font-size: 14px; vertical-align: middle;"></span>
+                                                                Löschen
+                                                            </button>
+                                                        <?php else: ?>
+                                                            <?php if ($kann_seiten_erstellen): ?>
+                                                                <button type="button" 
+                                                                        class="button button-small button-primary" 
+                                                                        onclick="createSingleVereinSeite(<?php echo $v->id; ?>, <?php echo $verein->verein_id; ?>)"
+                                                                        style="background: #16a34a; border-color: #15803d;">
+                                                                    <span class="dashicons dashicons-plus-alt" style="font-size: 14px; vertical-align: middle;"></span>
+                                                                    Seite erstellen
+                                                                </button>
+                                                            <?php else: ?>
+                                                                <button type="button" 
+                                                                        class="button button-small" 
+                                                                        disabled
+                                                                        title="Seiten können erst erstellt werden, wenn die Veranstaltung nicht mehr in Planung ist"
+                                                                        style="background: #e5e7eb; color: #9ca3af; border-color: #d1d5db; cursor: not-allowed;">
+                                                                    <span class="dashicons dashicons-lock" style="font-size: 14px; vertical-align: middle;"></span>
+                                                                    Gesperrt
+                                                                </button>
+                                                            <?php endif; ?>
+                                                        <?php endif; ?>
+                                                    </div>
+                                                </div>
+                                            <?php endforeach; ?>
+                                        </div>
+                                    <?php else: ?>
+                                        <p style="color: #64748b; margin: 0;">Keine Vereine für diese Veranstaltung zugewiesen.</p>
+                                    <?php endif; ?>
+                                </div>
+                            </td>
+                        </tr>
                     <?php endforeach; ?>
                 </tbody>
             </table>
@@ -209,6 +375,34 @@ if (!defined('ABSPATH')) exit;
 
 <script>
 // toggleActionDropdown() und toggleVeranstaltungGroup() sind jetzt in dp-admin.js definiert
+
+window.sharePageLink = function(url, title) {
+    if (!url) {
+        alert('Kein Link verfügbar.');
+        return;
+    }
+
+    if (navigator.share) {
+        navigator.share({
+            title: title ? ('Dienstplan: ' + title) : 'Dienstplan',
+            url: url
+        }).catch(function() {});
+        return;
+    }
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(url)
+            .then(function() {
+                alert('Link kopiert: ' + url);
+            })
+            .catch(function() {
+                window.prompt('Link zum Teilen kopieren:', url);
+            });
+        return;
+    }
+
+    window.prompt('Link zum Teilen kopieren:', url);
+};
 
 // Checkbox-Logik
 document.addEventListener('DOMContentLoaded', function() {
@@ -246,12 +440,31 @@ document.addEventListener('DOMContentLoaded', function() {
             const action = document.querySelector('.bulk-action-select').value;
             const checked = Array.from(document.querySelectorAll('.veranstaltung-checkbox:checked')).map(cb => cb.value);
             
-            if (!action || checked.length === 0) {
-                alert('Bitte wählen Sie eine Aktion und mindestens eine Veranstaltung aus.');
+            if (!action) {
+                alert('Bitte wählen Sie eine Aktion aus.');
                 return;
             }
             
-            console.log('Bulk action:', action, 'für Veranstaltungen:', checked);
+            if (checked.length === 0) {
+                alert('Bitte wählen Sie mindestens eine Veranstaltung aus.');
+                return;
+            }
+            
+            // Speichere ausgewählte IDs global
+            window.selectedVeranstaltungIds = checked;
+            
+            switch(action) {
+                case 'delete':
+                    if (confirm('Möchten Sie wirklich ' + checked.length + ' Veranstaltung(en) löschen?')) {
+                        bulkDeleteVeranstaltungen(checked);
+                    }
+                    break;
+                case 'change_status':
+                    openBulkStatusModal();
+                    break;
+                default:
+                    alert('Unbekannte Aktion: ' + action);
+            }
         });
     }
     
@@ -264,5 +477,117 @@ document.addEventListener('DOMContentLoaded', function() {
             updateBulkToolbar();
         });
     }
+    
+    // Bulk Delete Veranstaltungen
+    window.bulkDeleteVeranstaltungen = function(ids) {
+        jQuery.ajax({
+            url: dpAjax.ajaxurl,
+            type: 'POST',
+            data: {
+                action: 'dp_bulk_delete_veranstaltungen',
+                nonce: dpAjax.nonce,
+                veranstaltung_ids: ids
+            },
+            success: function(response) {
+                if (response.success) {
+                    alert('Veranstaltungen erfolgreich gelöscht: ' + response.data.deleted);
+                    location.reload();
+                } else {
+                    alert('Fehler: ' + response.data.message);
+                }
+            },
+            error: function() {
+                alert('Fehler beim Löschen der Veranstaltungen.');
+            }
+        });
+    };
+    
+    // Bulk Status Modal öffnen
+    window.openBulkStatusModal = function() {
+        document.getElementById('bulk-status-modal').style.display = 'flex';
+    };
+    
+    window.closeBulkStatusModal = function() {
+        document.getElementById('bulk-status-modal').style.display = 'none';
+    };
+    
+    // Bulk Status speichern
+    window.saveBulkStatus = function() {
+        const status = document.getElementById('bulk_status_value').value;
+        
+        if (!status) {
+            alert('Bitte wählen Sie einen Status aus.');
+            return;
+        }
+        
+        if (!window.selectedVeranstaltungIds || window.selectedVeranstaltungIds.length === 0) {
+            alert('Keine Veranstaltungen ausgewählt.');
+            return;
+        }
+        
+        jQuery.ajax({
+            url: dpAjax.ajaxurl,
+            type: 'POST',
+            data: {
+                action: 'dp_bulk_update_veranstaltung_status',
+                nonce: dpAjax.nonce,
+                veranstaltung_ids: window.selectedVeranstaltungIds,
+                status: status
+            },
+            success: function(response) {
+                if (response.success) {
+                    alert('Status erfolgreich geändert: ' + response.data.updated + ' Veranstaltung(en)');
+                    location.reload();
+                } else {
+                    alert('Fehler: ' + response.data.message);
+                }
+            },
+            error: function() {
+                alert('Fehler beim Aktualisieren des Status.');
+            },
+            complete: function() {
+                closeBulkStatusModal();
+            }
+        });
+    };
 });
 </script>
+
+<!-- Bulk Status ändern Modal -->
+<div id="bulk-status-modal" class="dp-modal" style="display: none;">
+    <div class="dp-modal-content" style="max-width: 500px;">
+        <div class="dp-modal-header">
+            <h2><?php _e('Status ändern', 'dienstplan-verwaltung'); ?></h2>
+            <button type="button" class="dp-modal-close" onclick="closeBulkStatusModal()">&times;</button>
+        </div>
+        <div class="dp-modal-body">
+            <form id="bulk-status-form">
+                <table class="form-table">
+                    <tr>
+                        <th><label for="bulk_status_value"><?php _e('Neuer Status', 'dienstplan-verwaltung'); ?> *</label></th>
+                        <td>
+                            <select id="bulk_status_value" name="status" class="regular-text" required style="width: 100%;">
+                                <option value=""><?php _e('-- Bitte wählen --', 'dienstplan-verwaltung'); ?></option>
+                                <option value="in_planung">🔵 <?php _e('In Planung', 'dienstplan-verwaltung'); ?></option>
+                                <option value="geplant">🟢 <?php _e('Geplant', 'dienstplan-verwaltung'); ?></option>
+                                <option value="aktiv">🟡 <?php _e('Aktiv', 'dienstplan-verwaltung'); ?></option>
+                                <option value="abgeschlossen">⚪ <?php _e('Abgeschlossen', 'dienstplan-verwaltung'); ?></option>
+                            </select>
+                            <p class="description">
+                                Der Status wird für alle ausgewählten Veranstaltungen geändert.
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+            </form>
+        </div>
+        <div class="dp-modal-footer">
+            <button type="button" class="button" onclick="closeBulkStatusModal()">
+                <?php _e('Abbrechen', 'dienstplan-verwaltung'); ?>
+            </button>
+            <button type="button" class="button button-primary" onclick="saveBulkStatus()">
+                <?php _e('Status ändern', 'dienstplan-verwaltung'); ?>
+            </button>
+        </div>
+    </div>
+</div>

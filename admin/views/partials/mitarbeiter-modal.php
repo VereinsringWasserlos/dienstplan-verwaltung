@@ -46,6 +46,43 @@ if (!defined('ABSPATH')) exit;
                         </td>
                     </tr>
                     
+                    <tr id="portal-access-row" style="display: none;">
+                        <th><label for="ma_portal_access"><?php _e('Portal-Zugriff', 'dienstplan-verwaltung'); ?></label></th>
+                        <td>
+                            <div id="portal-status-display" style="display: none; margin-bottom: 1rem;">
+                                <div class="portal-status-indicator">
+                                    <span class="portal-status-badge status-active">
+                                        <span class="dashicons dashicons-yes"></span>
+                                        <?php _e('Portal-Zugang aktiv', 'dienstplan-verwaltung'); ?>
+                                    </span>
+                                    <p class="description" style="margin-top: 0.5rem;">
+                                        <?php _e('Dieser Mitarbeiter hat Zugriff auf das Frontend-Portal.', 'dienstplan-verwaltung'); ?>
+                                    </p>
+                                </div>
+                                <div style="margin-top: 1rem; display: flex; gap: 0.5rem;">
+                                    <button type="button" class="button" onclick="resendLoginCredentials()">
+                                        <span class="dashicons dashicons-email" style="margin-top: 4px;"></span>
+                                        <?php _e('Login-Daten erneut senden', 'dienstplan-verwaltung'); ?>
+                                    </button>
+                                    <button type="button" class="button button-link-delete" onclick="deactivatePortalAccess()">
+                                        <span class="dashicons dashicons-lock" style="margin-top: 4px;"></span>
+                                        <?php _e('Zugriff deaktivieren', 'dienstplan-verwaltung'); ?>
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <div id="portal-activate-display" style="display: none;">
+                                <label style="display: flex; align-items: center; gap: 0.5rem;">
+                                    <input type="checkbox" id="ma_portal_access" name="portal_access" value="1">
+                                    <span><?php _e('Portal-Zugriff für diesen Mitarbeiter aktivieren', 'dienstplan-verwaltung'); ?></span>
+                                </label>
+                                <p class="description" style="margin-top: 0.5rem;">
+                                    <?php _e('Erstellt einen WordPress-Benutzer und sendet Login-Daten per E-Mail.', 'dienstplan-verwaltung'); ?>
+                                </p>
+                            </div>
+                        </td>
+                    </tr>
+                    
                     <tr>
                         <th><label for="ma_notizen"><?php _e('Notizen', 'dienstplan-verwaltung'); ?></label></th>
                         <td>

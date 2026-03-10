@@ -57,17 +57,27 @@
             }
         });
 
-        // Modal schließen bei Klick außerhalb
+        // Modal schließen bei Klick außerhalb - aber nur das RICHTIGE Modal
         $(document).on('click', '.dp-modal', function(e) {
             if (e.target === this) {
-                closeVereinModal();
+                // Prüfe welches Modal geklickt wurde
+                if ($(this).attr('id') === 'verein-modal') {
+                    closeVereinModal();
+                } else if ($(this).attr('id') === 'new-contact-modal') {
+                    closeNewContactModal();
+                }
             }
         });
 
-        // ESC-Taste
+        // ESC-Taste - schließe das oberste (sichtbare) Modal
         $(document).on('keydown', function(e) {
-            if (e.key === 'Escape' && $('#verein-modal').is(':visible')) {
-                closeVereinModal();
+            if (e.key === 'Escape') {
+                // Prüfe welches Modal sichtbar ist (New-Contact hat Vorrang)
+                if ($('#new-contact-modal').is(':visible')) {
+                    closeNewContactModal();
+                } else if ($('#verein-modal').is(':visible')) {
+                    closeVereinModal();
+                }
             }
         });
 
@@ -220,13 +230,29 @@
     // === VEREIN MODAL FUNKTIONEN ===
 
     /**
-     * Lädt die Verantwortlichen-Checkboxen neu und selektiert optional einen User
-     * @param {number} selectUserId - Optional: User-ID die ausgewählt werden soll
+     * Lädt die Verantwortlichen-Checkboxen neu und selektiert optional einen oder mehrere User
+     * @param {string} containerSelector - CSS-Selector für den Container (z.B. '#verantwortliche-checkboxes')
+     * @param {number|array} selectUserIds - Optional: User-ID(s) die ausgewählt werden sollen
      */
-    window.reloadVerantwortlicheCheckboxes = function(selectUserId = null) {
-        console.log('reloadVerantwortlicheCheckboxes called, selectUserId:', selectUserId);
+    window.reloadVerantwortlicheCheckboxes = function(containerSelector, selectUserIds) {
+        // Backwards compatibility: wenn nur eine Zahl übergeben wird, ist es die UserID für Vereine
+        if (typeof containerSelector === 'number') {
+            selectUserIds = containerSelector;
+            containerSelector = '#verantwortliche-checkboxes';
+        }
+        
+        // Default für Vereine-Modal
+        containerSelector = containerSelector || '#verantwortliche-checkboxes';
+        
+        // Stelle sicher, dass selectUserIds ein Array ist
+        let selectedIds = [];
+        if (selectUserIds) {
+            selectedIds = Array.isArray(selectUserIds) ? selectUserIds : [selectUserIds];
+        }
+        
+        console.log('reloadVerantwortlicheCheckboxes called, container:', containerSelector, 'selectUserIds:', selectedIds);
 
-        $('#verantwortliche-checkboxes').html('<p style="color: #666; margin: 0;">Lädt...</p>');
+        $(containerSelector).html('<p style="color: #666; margin: 0;">Lädt...</p>');
 
         $.ajax({
             url: dpAjax.ajaxurl,
@@ -241,8 +267,8 @@
                     let html = '';
 
                     response.data.forEach(function(user) {
-                        //Checke den neu angelegten User automatisch
-                        const isChecked = selectUserId && (user.id == selectUserId);
+                        // Checke ob dieser User in der Liste der zu selektierenden IDs ist
+                        const isChecked = selectedIds.some(id => id == user.id);
                         
                         html += `
                             <label style="display: block; padding: 0.5rem; cursor: pointer; border-radius: 3px; transition: background 0.2s; ${isChecked ? 'background: #f0f6fc;' : ''}" 
@@ -255,15 +281,15 @@
                         `;
                     });
 
-                    $('#verantwortliche-checkboxes').html(html || '<p style="color: #666; margin: 0;">Keine Benutzer verfügbar</p>');
-                    console.log('Checkboxen neu geladen, ausgewählte User-ID:', selectUserId);
+                    $(containerSelector).html(html || '<p style="color: #666; margin: 0;">Keine Benutzer verfügbar</p>');
+                    console.log('Checkboxen neu geladen in', containerSelector, ', ausgewählte User-IDs:', selectedIds);
                 } else {
-                    $('#verantwortliche-checkboxes').html('<p style="color: #dc2626; margin: 0;">Fehler beim Laden der Benutzer</p>');
+                    $(containerSelector).html('<p style="color: #dc2626; margin: 0;">Fehler beim Laden der Benutzer</p>');
                 }
             },
             error: function(xhr, status, error) {
                 console.error('AJAX Fehler beim Laden der Benutzer:', error);
-                $('#verantwortliche-checkboxes').html('<p style="color: #dc2626; margin: 0;">Fehler beim Laden</p>');
+                $(containerSelector).html('<p style="color: #dc2626; margin: 0;">Fehler beim Laden</p>');
             }
         });
     };
@@ -276,6 +302,7 @@
         try {
             $('#verein-form')[0].reset();
             $('#verein_id').val('');
+            $('#seite_id').val('');
             $('#logo_id').val('');
             $('#logo-preview').html('');
             $('#remove-logo-btn').hide();
@@ -283,7 +310,7 @@
             $('#user-invite-row').hide();
 
             // Lade alle Benutzer für die Checkbox-Auswahl
-            reloadVerantwortlicheCheckboxes();
+            reloadVerantwortlicheCheckboxes('#verantwortliche-checkboxes');
 
             $('#verein-modal').css('display', 'flex');
             console.log('Modal Display nach Öffnen:', $('#verein-modal').css('display'));
@@ -335,6 +362,7 @@
                     // WICHTIG: Formular NICHT resetten beim Bearbeiten!
 
                     $('#verein_id').val(v.id);
+                    $('#seite_id').val(v.seite_id || '');
                     $('#name').val(v.name);
                     $('#kuerzel').val(v.kuerzel);
                     $('#beschreibung').val(v.beschreibung || '');
@@ -445,6 +473,7 @@
             kontakt_name: $('#kontakt_name').val(),
             kontakt_email: $('#kontakt_email').val(),
             kontakt_telefon: $('#kontakt_telefon').val(),
+            seite_id: $('#seite_id').val(),
             aktiv: $('#aktiv').is(':checked') ? 1 : 0,
             create_user: $('#create_user').is(':checked') ? 1 : 0,
             user_role: $('#user_role').val(),
@@ -564,11 +593,14 @@
     };
 
     /**
-     * Schließt das New Contact Modal
+     * Schließt das New Contact Modal und resettet das Formular
      */
     window.closeNewContactModal = function() {
         console.log('closeNewContactModal called');
         $('#new-contact-modal').hide();
+        // Formular zurücksetzen für nächsten Gebrauch
+        $('#new-contact-form')[0].reset();
+        $('#nc-email-check-result').html('');
     };
 
     /**
@@ -620,9 +652,17 @@
                     // Unterschiedliche Behandlung je nach Quelle
                     if (source === 'veranstaltung-checkboxes' || source === 'verein-checkboxes') {
                         console.log('Lade Checkboxen neu für User:', userData.user_id);
+                        
+                        // Bestimme den richtigen Container basierend auf der Source
+                        const containerSelector = source === 'veranstaltung-checkboxes' 
+                            ? '#v_verantwortliche-checkboxes' 
+                            : '#verantwortliche-checkboxes';
+                        
+                        console.log('Container Selector:', containerSelector);
+                        
                         // Checkboxen neu laden und neuen User automatisch auswählen
                         if (typeof window.reloadVerantwortlicheCheckboxes === 'function') {
-                            window.reloadVerantwortlicheCheckboxes(userData.user_id);
+                            window.reloadVerantwortlicheCheckboxes(containerSelector, userData.user_id);
                         } else {
                             console.error('FEHLER: reloadVerantwortlicheCheckboxes ist keine Funktion!');
                             // Fallback: Seite neu laden

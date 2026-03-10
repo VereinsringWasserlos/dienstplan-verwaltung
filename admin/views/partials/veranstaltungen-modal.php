@@ -48,6 +48,7 @@ if (!defined('ABSPATH')) exit;
                         <th><label for="v_status"><?php _e('Status', 'dienstplan-verwaltung'); ?></label></th>
                         <td>
                             <select id="v_status" name="status">
+                                <option value="in_planung"><?php _e('In Planung', 'dienstplan-verwaltung'); ?></option>
                                 <option value="geplant"><?php _e('Geplant', 'dienstplan-verwaltung'); ?></option>
                                 <option value="aktiv"><?php _e('Aktiv', 'dienstplan-verwaltung'); ?></option>
                                 <option value="abgeschlossen"><?php _e('Abgeschlossen', 'dienstplan-verwaltung'); ?></option>

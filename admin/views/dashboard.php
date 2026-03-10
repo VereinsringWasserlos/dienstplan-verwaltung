@@ -20,133 +20,81 @@ $nav_items = [];
     <!-- Moderner Header -->
     <?php include DIENSTPLAN_PLUGIN_PATH . 'admin/views/partials/page-header.php'; ?>
     
+    <!-- Verwaltung -->
     <?php if (Dienstplan_Roles::can_manage_clubs() || Dienstplan_Roles::can_manage_events() || current_user_can('manage_options')): ?>
-    <div class="dashboard-main-grid">
+    <h2 class="dashboard-section-heading">
+        <span class="dashicons dashicons-admin-settings"></span>
+        <?php _e('Verwaltung', 'dienstplan-verwaltung'); ?>
+    </h2>
+    <div class="dashboard-compact-grid">
         
         <!-- Vereine -->
         <?php if (Dienstplan_Roles::can_manage_clubs() || current_user_can('manage_options')): ?>
-        <a href="<?php echo admin_url('admin.php?page=dienstplan-vereine'); ?>" class="dashboard-nav-card card-vereine">
-            <div>
-                <div class="dashboard-card-header">
-                    <div class="dashboard-card-icon">
-                        <span class="dashicons dashicons-flag"></span>
-                    </div>
-                    <h2 class="dashboard-card-title"><?php _e('Vereine', 'dienstplan-verwaltung'); ?></h2>
-                </div>
-                <p class="dashboard-card-description"><?php _e('Vereine verwalten', 'dienstplan-verwaltung'); ?></p>
-                <div class="dashboard-card-cta">
-                    <?php _e('Zur Verwaltung', 'dienstplan-verwaltung'); ?>
-                    <span class="dashicons dashicons-arrow-right-alt"></span>
-                </div>
+        <a href="<?php echo admin_url('admin.php?page=dienstplan-vereine'); ?>" class="dashboard-admin-card card-vereine">
+            <div class="dashboard-admin-card-header">
+                <span class="dashicons dashicons-flag dashboard-admin-card-icon"></span>
+                <h3 class="dashboard-admin-card-title"><?php _e('Vereine', 'dienstplan-verwaltung'); ?></h3>
             </div>
+            <p class="dashboard-admin-card-description"><?php _e('Vereine verwalten', 'dienstplan-verwaltung'); ?></p>
         </a>
         <?php endif; ?>
         
         <!-- Veranstaltungen -->
         <?php if (Dienstplan_Roles::can_manage_events() || current_user_can('manage_options')): ?>
-        <a href="<?php echo admin_url('admin.php?page=dienstplan-veranstaltungen'); ?>" class="dashboard-nav-card card-veranstaltungen">
-            <div>
-                <div class="dashboard-card-header">
-                    <div class="dashboard-card-icon">
-                        <span class="dashicons dashicons-calendar-alt"></span>
-                    </div>
-                    <h2 class="dashboard-card-title"><?php _e('Veranstaltungen', 'dienstplan-verwaltung'); ?></h2>
-                </div>
-                <p class="dashboard-card-description"><?php _e('Events planen und organisieren', 'dienstplan-verwaltung'); ?></p>
-                <div class="dashboard-card-cta">
-                    <?php _e('Zur Verwaltung', 'dienstplan-verwaltung'); ?>
-                    <span class="dashicons dashicons-arrow-right-alt"></span>
-                </div>
+        <a href="<?php echo admin_url('admin.php?page=dienstplan-veranstaltungen'); ?>" class="dashboard-admin-card card-veranstaltungen">
+            <div class="dashboard-admin-card-header">
+                <span class="dashicons dashicons-calendar-alt dashboard-admin-card-icon"></span>
+                <h3 class="dashboard-admin-card-title"><?php _e('Veranstaltungen', 'dienstplan-verwaltung'); ?></h3>
             </div>
+            <p class="dashboard-admin-card-description"><?php _e('Events planen und organisieren', 'dienstplan-verwaltung'); ?></p>
         </a>
         <?php endif; ?>
         
         <!-- Dienste -->
-        <a href="<?php echo admin_url('admin.php?page=dienstplan-dienste'); ?>" class="dashboard-nav-card card-dienste">
-            <div>
-                <div class="dashboard-card-header">
-                    <div class="dashboard-card-icon">
-                        <span class="dashicons dashicons-clipboard"></span>
-                    </div>
-                    <h2 class="dashboard-card-title"><?php _e('Dienste', 'dienstplan-verwaltung'); ?></h2>
-                </div>
-                <p class="dashboard-card-description"><?php _e('Dienste erstellen und zuweisen', 'dienstplan-verwaltung'); ?></p>
-                <div class="dashboard-card-cta">
-                    <?php _e('Zur Verwaltung', 'dienstplan-verwaltung'); ?>
-                    <span class="dashicons dashicons-arrow-right-alt"></span>
-                </div>
+        <a href="<?php echo admin_url('admin.php?page=dienstplan-dienste'); ?>" class="dashboard-admin-card card-dienste">
+            <div class="dashboard-admin-card-header">
+                <span class="dashicons dashicons-clipboard dashboard-admin-card-icon"></span>
+                <h3 class="dashboard-admin-card-title"><?php _e('Dienste', 'dienstplan-verwaltung'); ?></h3>
             </div>
+            <p class="dashboard-admin-card-description"><?php _e('Dienste erstellen und zuweisen', 'dienstplan-verwaltung'); ?></p>
         </a>
 
         <!-- Bereiche & Tätigkeiten -->
-        <a href="<?php echo admin_url('admin.php?page=dienstplan-bereiche'); ?>" class="dashboard-nav-card card-bereiche">
-            <div>
-                <div class="dashboard-card-header">
-                    <div class="dashboard-card-icon">
-                        <span class="dashicons dashicons-category"></span>
-                    </div>
-                    <h2 class="dashboard-card-title"><?php _e('Arbeitsbereiche', 'dienstplan-verwaltung'); ?></h2>
-                </div>
-                <p class="dashboard-card-description"><?php _e('Arbeitsbereiche und Aufgaben verwalten', 'dienstplan-verwaltung'); ?></p>
-                <div class="dashboard-card-cta">
-                    <?php _e('Zur Verwaltung', 'dienstplan-verwaltung'); ?>
-                    <span class="dashicons dashicons-arrow-right-alt"></span>
-                </div>
+        <a href="<?php echo admin_url('admin.php?page=dienstplan-bereiche'); ?>" class="dashboard-admin-card card-bereiche">
+            <div class="dashboard-admin-card-header">
+                <span class="dashicons dashicons-category dashboard-admin-card-icon"></span>
+                <h3 class="dashboard-admin-card-title"><?php _e('Arbeitsbereiche', 'dienstplan-verwaltung'); ?></h3>
             </div>
+            <p class="dashboard-admin-card-description"><?php _e('Arbeitsbereiche und Aufgaben verwalten', 'dienstplan-verwaltung'); ?></p>
         </a>
         
         <!-- Mitarbeiter -->
-        <a href="<?php echo admin_url('admin.php?page=dienstplan-mitarbeiter'); ?>" class="dashboard-nav-card card-mitarbeiter">
-            <div>
-                <div class="dashboard-card-header">
-                    <div class="dashboard-card-icon">
-                        <span class="dashicons dashicons-groups"></span>
-                    </div>
-                    <h2 class="dashboard-card-title"><?php _e('Crew', 'dienstplan-verwaltung'); ?></h2>
-                </div>
-                <p class="dashboard-card-description"><?php _e('Crew-Mitglieder verwalten', 'dienstplan-verwaltung'); ?></p>
-                <div class="dashboard-card-cta">
-                    <?php _e('Zur Verwaltung', 'dienstplan-verwaltung'); ?>
-                    <span class="dashicons dashicons-arrow-right-alt"></span>
-                </div>
+        <a href="<?php echo admin_url('admin.php?page=dienstplan-mitarbeiter'); ?>" class="dashboard-admin-card card-mitarbeiter">
+            <div class="dashboard-admin-card-header">
+                <span class="dashicons dashicons-groups dashboard-admin-card-icon"></span>
+                <h3 class="dashboard-admin-card-title"><?php _e('Crew', 'dienstplan-verwaltung'); ?></h3>
             </div>
+            <p class="dashboard-admin-card-description"><?php _e('Crew-Mitglieder verwalten', 'dienstplan-verwaltung'); ?></p>
         </a>
-        <?php endif; ?>
-        
-    </div>
-    
-    <!-- Views -->
-    <h2 class="dashboard-section-heading">
-        <span class="dashicons dashicons-visibility"></span>
-        <?php _e('Views', 'dienstplan-verwaltung'); ?>
-    </h2>
-    <div class="dashboard-main-grid">
         
         <!-- Timeline / Dienst-Übersicht -->
-        <a href="<?php echo admin_url('admin.php?page=dienstplan-overview'); ?>" class="dashboard-nav-card card-timeline">
-            <div>
-                <div class="dashboard-card-header">
-                    <div class="dashboard-card-icon">
-                        <span class="dashicons dashicons-grid-view"></span>
-                    </div>
-                    <h2 class="dashboard-card-title"><?php _e('Timeline', 'dienstplan-verwaltung'); ?></h2>
-                </div>
-                <p class="dashboard-card-description"><?php _e('Dienst-Übersicht als Timeline', 'dienstplan-verwaltung'); ?></p>
-                <div class="dashboard-card-cta">
-                    <?php _e('Zur Übersicht', 'dienstplan-verwaltung'); ?>
-                    <span class="dashicons dashicons-arrow-right-alt"></span>
-                </div>
+        <a href="<?php echo admin_url('admin.php?page=dienstplan-overview'); ?>" class="dashboard-admin-card card-timeline">
+            <div class="dashboard-admin-card-header">
+                <span class="dashicons dashicons-grid-view dashboard-admin-card-icon"></span>
+                <h3 class="dashboard-admin-card-title"><?php _e('Timeline', 'dienstplan-verwaltung'); ?></h3>
             </div>
+            <p class="dashboard-admin-card-description"><?php _e('Dienst-Übersicht als Timeline', 'dienstplan-verwaltung'); ?></p>
         </a>
         
     </div>
+    <?php endif; ?>
     
-    <!-- Administration (klein) -->
+    <!-- Administration -->
     <h2 class="dashboard-section-heading">
         <span class="dashicons dashicons-admin-generic"></span>
         <?php _e('Administration', 'dienstplan-verwaltung'); ?>
     </h2>
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
+    <div class="dashboard-compact-grid">
         
         <!-- Dokumentation -->
         <a href="<?php echo admin_url('admin.php?page=dienstplan-dokumentation'); ?>" class="dashboard-admin-card card-documentation">
@@ -156,6 +104,17 @@ $nav_items = [];
             </div>
             <p class="dashboard-admin-card-description"><?php _e('Anleitungen, Handbücher & technische Dokumentation', 'dienstplan-verwaltung'); ?></p>
         </a>
+        
+        <!-- Portal-Verwaltung (nur für Admins) -->
+        <?php if (current_user_can('manage_options')): ?>
+        <a href="<?php echo admin_url('admin.php?page=dienstplan-portal'); ?>" class="dashboard-admin-card card-portal">
+            <div class="dashboard-admin-card-header">
+                <span class="dashicons dashicons-admin-home dashboard-admin-card-icon"></span>
+                <h3 class="dashboard-admin-card-title"><?php _e('Frontend Portal', 'dienstplan-verwaltung'); ?></h3>
+            </div>
+            <p class="dashboard-admin-card-description"><?php _e('Portal-Seite verwalten, erstellen und bearbeiten', 'dienstplan-verwaltung'); ?></p>
+        </a>
+        <?php endif; ?>
         
         <!-- Import/Export -->
         <a href="<?php echo admin_url('admin.php?page=dienstplan-import-export'); ?>" class="dashboard-admin-card card-import">

@@ -687,8 +687,8 @@
     left: 0 !important;
     right: 0 !important;
     bottom: 0 !important;
-    background: rgba(0, 0, 0, 0.5) !important;
-    backdrop-filter: blur(4px);
+    background: linear-gradient(180deg, rgba(15, 23, 42, 0.38), rgba(2, 6, 23, 0.55)) !important;
+    backdrop-filter: blur(6px) saturate(120%);
     cursor: pointer !important;
     z-index: 9999998 !important;
 }
@@ -703,13 +703,6 @@
     overflow: auto !important;
     position: relative !important;
     z-index: 9999999 !important;
-    animation: modalSlideIn 0.3s ease !important;
-    padding: var(--dp-spacing-xl) !important;
-}
-    max-height: 90vh !important;
-    overflow: auto !important;
-    position: relative !important;
-    z-index: 1000000 !important;
     animation: modalSlideIn 0.3s ease !important;
     padding: var(--dp-spacing-xl) !important;
 }
@@ -1596,4 +1589,71 @@
 /* Elementor Editor Mode */
 .elementor-editor-active .dp-modal {
     z-index: 99999999 !important; /* Noch höher im Editor */
+}
+
+/* =================================================================
+   Login Form Styles
+   ================================================================= */
+.dp-login-form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--dp-spacing-md);
+    margin-top: var(--dp-spacing-lg);
+}
+
+.dp-form-group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--dp-spacing-xs);
+}
+
+.dp-form-group label {
+    font-weight: 600;
+    color: var(--dp-gray-700);
+    font-size: var(--dp-font-size-sm);
+}
+
+.dp-form-input {
+    padding: var(--dp-spacing-sm) var(--dp-spacing-md);
+    border: 1px solid var(--dp-gray-300);
+    border-radius: var(--dp-radius);
+    font-size: var(--dp-font-size-base);
+    transition: var(--dp-transition);
+}
+
+.dp-form-input:focus {
+    outline: none;
+    border-color: var(--dp-primary);
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.dp-form-remember {
+    flex-direction: row;
+    align-items: center;
+    gap: var(--dp-spacing-xs);
+}
+
+.dp-form-remember label {
+    font-weight: normal;
+    margin: 0;
+}
+
+.dp-btn-block {
+    width: 100%;
+}
+
+.dp-login-links {
+    text-align: center;
+    margin-top: var(--dp-spacing-md);
+}
+
+.dp-link-forgot {
+    color: var(--dp-primary);
+    text-decoration: none;
+    font-size: var(--dp-font-size-sm);
+    transition: var(--dp-transition);
+}
+
+.dp-link-forgot:hover {
+    text-decoration: underline;
 }

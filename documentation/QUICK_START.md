@@ -226,6 +226,16 @@ Einstellungen → Datenschutz
 
 ### Shortcodes verwenden
 
+**Frontend Portal (NEU):**
+```
+[dienstplan_hub]
+```
+Zeigt eine komplette Einstiegsseite mit:
+- Login/Registrierung (für nicht angemeldete Benutzer)
+- Willkommens-Bereich (für angemeldete Benutzer)
+- Übersicht der aktuellen Veranstaltungen
+- Quick-Links zu "Meine Dienste" und Profil
+
 **Veranstaltungs-Liste:**
 ```
 [dienstplan_veranstaltungen]

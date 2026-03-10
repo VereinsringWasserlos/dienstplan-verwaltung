@@ -8,45 +8,16 @@
     });
     
     /**
-     * Lädt Verantwortliche-Checkboxen neu (z.B. nach Anlegen eines neuen Kontakts)
+     * Wrapper für Veranstaltungen - nutzt die generische reloadVerantwortlicheCheckboxen Funktion
+     * @param {number|array} selectUserIds - Optional: User-ID(s) die ausgewählt werden sollen
      */
-    window.reloadVerantwortlicheCheckboxes = function(selectUserId) {
-        console.log('reloadVerantwortlicheCheckboxes', selectUserId);
-        
-        $('#v_verantwortliche-checkboxes').html('<p style="color: #666; margin: 0;">Lädt...</p>');
-        
-        $.ajax({
-            url: dpAjax.ajaxurl,
-            type: 'POST',
-            data: {
-                action: 'dp_get_all_users',
-                nonce: dpAjax.nonce
-            },
-            success: function(response) {
-                if (response.success && response.data) {
-                    let html = '';
-                    response.data.forEach(function(user) {
-                        const name = user.name || 'Unbekannt';
-                        const email = user.email || '';
-                        const checked = selectUserId && user.id == selectUserId ? ' checked' : '';
-                        
-                        html += '<label style="display: block; padding: 0.5rem; cursor: pointer; border-radius: 4px; margin-bottom: 0.25rem;" ' +
-                                'onmouseover="this.style.background=\'#f0f6fc\'" ' +
-                                'onmouseout="this.style.background=\'transparent\'">' +
-                                '<input type="checkbox" name="verantwortliche[]" value="' + user.id + '"' + checked + ' style="margin-right: 0.5rem;"> ' +
-                                '<strong>' + name + '</strong>' +
-                                (email ? ' <span style="color: #666;">(" + email + ")</span>' : '') +
-                                '</label>';
-                    });
-                    $('#v_verantwortliche-checkboxes').html(html || '<p style="color: #999; margin: 0;">Keine Benutzer gefunden</p>');
-                } else {
-                    $('#v_verantwortliche-checkboxes').html('<p style="color: #999; margin: 0;">Keine Benutzer gefunden</p>');
-                }
-            },
-            error: function() {
-                $('#v_verantwortliche-checkboxes').html('<p style="color: #dc2626; margin: 0;">Fehler beim Laden</p>');
-            }
-        });
+    window.reloadVeranstaltungVerantwortlicheCheckboxes = function(selectUserIds) {
+        console.log('reloadVeranstaltungVerantwortlicheCheckboxes', selectUserIds);
+        if (typeof window.reloadVerantwortlicheCheckboxes === 'function') {
+            window.reloadVerantwortlicheCheckboxes('#v_verantwortliche-checkboxes', selectUserIds);
+        } else {
+            console.error('reloadVerantwortlicheCheckboxes ist nicht definiert! Vereine-Modal-Script nicht geladen?');
+        }
     };
     
     window.openVeranstaltungModal = function() {
@@ -56,36 +27,8 @@
         $('#veranstaltung-modal-title').text('Neue Veranstaltung');
         $('.verein-checkbox').prop('checked', false);
         
-        // Lade alle Benutzer für die Auswahl
-        $('#v_verantwortliche-checkboxes').html('<p style="color: #666; margin: 0;">Lädt...</p>');
-        
-        $.ajax({
-            url: dpAjax.ajaxurl,
-            type: 'POST',
-            data: {
-                action: 'dp_get_all_users',
-                nonce: dpAjax.nonce
-            },
-            success: function(response) {
-                if (response.success && response.data) {
-                    let html = '';
-                    response.data.forEach(function(user) {
-                        const name = user.name || 'Unbekannt';
-                        const email = user.email || '';
-                        html += '<label style="display: block; padding: 0.5rem; cursor: pointer; border-radius: 4px; margin-bottom: 0.25rem;" ' +
-                                'onmouseover="this.style.background=\'#f0f6fc\'" ' +
-                                'onmouseout="this.style.background=\'transparent\'">' +
-                                '<input type="checkbox" name="verantwortliche[]" value="' + user.id + '" style="margin-right: 0.5rem;"> ' +
-                                '<strong>' + name + '</strong>' +
-                                (email ? ' <span style="color: #666;">(' + email + ')</span>' : '') +
-                                '</label>';
-                    });
-                    $('#v_verantwortliche-checkboxes').html(html || '<p style="color: #999; margin: 0;">Keine Benutzer gefunden</p>');
-                } else {
-                    $('#v_verantwortliche-checkboxes').html('<p style="color: #999; margin: 0;">Keine Benutzer gefunden</p>');
-                }
-            }
-        });
+        // Lade alle Benutzer für die Auswahl mit der generischen Funktion
+        reloadVeranstaltungVerantwortlicheCheckboxes();
         
         $('#tage-tbody').empty();
         tagCounter = 0;
@@ -497,47 +440,10 @@
                         });
                     }
                     
-                    // Verantwortlichen-Checkboxen dynamisch befüllen
+                    // Verantwortlichen-Checkboxen mit bereits zugewiesenen IDs laden
                     const verantwortlicheIds = v.verantwortliche || [];
                     console.log('Veranstaltung Verantwortliche IDs aus DB:', verantwortlicheIds);
-                    $('#v_verantwortliche-checkboxes').html('<p style="color: #666; margin: 0;">Lädt...</p>');
-                    
-                    // Lade erst alle Benutzer, dann markiere zugewiesene
-                    $.ajax({
-                        url: dpAjax.ajaxurl,
-                        type: 'POST',
-                        data: {
-                            action: 'dp_get_all_users',
-                            nonce: dpAjax.nonce
-                        },
-                        success: function(usersResponse) {
-                            if (usersResponse.success && usersResponse.data) {
-                                let html = '';
-                                
-                                usersResponse.data.forEach(function(user) {
-                                    const isSelected = verantwortlicheIds.includes(String(user.id)) || 
-                                                      verantwortlicheIds.includes(parseInt(user.id)) ||
-                                                      verantwortlicheIds.map(String).includes(String(user.id));
-                                    
-                                    const name = user.name || 'Unbekannt';
-                                    const email = user.email || '';
-                                    html += '<label style="display: block; padding: 0.5rem; cursor: pointer; border-radius: 4px; margin-bottom: 0.25rem;" ' +
-                                            'onmouseover="this.style.background=\'#f0f6fc\'" ' +
-                                            'onmouseout="this.style.background=\'transparent\'">' +
-                                            '<input type="checkbox" name="verantwortliche[]" value="' + user.id + '"' + 
-                                            (isSelected ? ' checked' : '') + 
-                                            ' style="margin-right: 0.5rem;"> ' +
-                                            '<strong>' + name + '</strong>' +
-                                            (email ? ' <span style="color: #666;">(' + email + ')</span>' : '') +
-                                            '</label>';
-                                });
-                                
-                                $('#v_verantwortliche-checkboxes').html(html || '<p style="color: #999; margin: 0;">Keine Benutzer gefunden</p>');
-                            } else {
-                                $('#v_verantwortliche-checkboxes').html('<p style="color: #999; margin: 0;">Keine Benutzer gefunden</p>');
-                            }
-                        }
-                    });
+                    reloadVeranstaltungVerantwortlicheCheckboxes(verantwortlicheIds);
                     
                     // Event Listener für erstes Datumsfeld
                     setTimeout(() => {
@@ -627,41 +533,10 @@
         openMitarbeiterModal();
     };
     
-    // Funktion zum Neuladen der Verantwortlichen-Liste
+    // Funktion zum Neuladen der Verantwortlichen-Liste (nutzt jetzt die generische Funktion)
     window.reloadVerantwortlicheList = function() {
         console.log('Lade Verantwortliche neu...');
-        $('#v_verantwortliche-checkboxes').html('<p style="color: #666; margin: 0;">Lädt...</p>');
-        
-        $.ajax({
-            url: dpAjax.ajaxurl,
-            type: 'POST',
-            data: {
-                action: 'dp_get_all_users',
-                nonce: dpAjax.nonce
-            },
-            success: function(response) {
-                if (response.success && response.data) {
-                    let html = '';
-                    response.data.forEach(function(user) {
-                        const name = user.name || 'Unbekannt';
-                        const email = user.email || '';
-                        html += '<label style="display: block; padding: 0.5rem; cursor: pointer; border-radius: 4px; margin-bottom: 0.25rem;" ' +
-                                'onmouseover="this.style.background=\'#f0f6fc\'" ' +
-                                'onmouseout="this.style.background=\'transparent\'">' +
-                                '<input type="checkbox" name="verantwortliche[]" value="' + user.id + '" style="margin-right: 0.5rem;"> ' +
-                                '<strong>' + name + '</strong>' +
-                                (email ? ' <span style="color: #666;">(' + email + ')</span>' : '') +
-                                '</label>';
-                    });
-                    $('#v_verantwortliche-checkboxes').html(html || '<p style="color: #999; margin: 0;">Keine Benutzer gefunden</p>');
-                } else {
-                    $('#v_verantwortliche-checkboxes').html('<p style="color: #999; margin: 0;">Keine Benutzer gefunden</p>');
-                }
-            },
-            error: function() {
-                $('#v_verantwortliche-checkboxes').html('<p style="color: #dc2626; margin: 0;">Fehler beim Laden</p>');
-            }
-        });
+        reloadVeranstaltungVerantwortlicheCheckboxes();
     };
     
     // Manuelle Seiten-Erstellung für Veranstaltung

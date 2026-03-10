@@ -43,7 +43,8 @@ if ($selected_verein_id) {
     // Filtere nach Status und Datum
     $aktuelle_veranstaltungen = array_filter($veranstaltungen, function($v) use ($heute) {
         $start_date = !empty($v->start_datum) ? $v->start_datum : '2099-12-31';
-        return $v->status === 'geplant' && $start_date >= $heute;
+        // Zeige nur 'geplant' und 'aktiv', nicht 'in_planung' oder 'abgeschlossen'
+        return (($v->status === 'geplant' || $v->status === 'aktiv') && $start_date >= $heute);
     });
     
     // Sortiere nach Datum
@@ -79,8 +80,21 @@ if ($selected_verein_id) {
                 <div class="dp-vereine-grid">
                     <?php foreach ($vereine as $verein): 
                         $logo_url = !empty($verein->logo_id) ? wp_get_attachment_url($verein->logo_id) : null;
+                        $verein_page_url = '';
+                        $verein_share_url = '';
+                        if (!empty($verein->seite_id)) {
+                            $verein_page = get_post(intval($verein->seite_id));
+                            if ($verein_page && $verein_page->post_type === 'page' && $verein_page->post_status !== 'trash') {
+                                $verein_page_url = get_permalink($verein_page->ID);
+                                $verein_share_url = wp_get_shortlink($verein_page->ID);
+                                if (empty($verein_share_url)) {
+                                    $verein_share_url = add_query_arg('p', $verein_page->ID, home_url('/'));
+                                }
+                            }
+                        }
+                        $verein_link_url = !empty($verein_page_url) ? $verein_page_url : add_query_arg('verein_id', $verein->id);
                     ?>
-                        <a href="<?php echo esc_url(add_query_arg('verein_id', $verein->id)); ?>" class="dp-verein-card">
+                        <a href="<?php echo esc_url($verein_link_url); ?>" class="dp-verein-card">
                             <div class="dp-verein-card-header">
                                 <?php if ($logo_url): ?>
                                     <img src="<?php echo esc_url($logo_url); ?>" alt="<?php echo esc_attr($verein->name); ?>" class="dp-verein-logo">
@@ -90,6 +104,9 @@ if ($selected_verein_id) {
                                 <h3 class="dp-verein-name"><?php echo esc_html($verein->name); ?></h3>
                             </div>
                             <div class="dp-verein-arrow">→</div>
+                            <?php if (!empty($verein_share_url)): ?>
+                                <span class="dp-inline-share" onclick="event.preventDefault(); event.stopPropagation(); dpShareLink('<?php echo esc_js($verein_share_url); ?>', '<?php echo esc_js($verein->name); ?>');">Teilen</span>
+                            <?php endif; ?>
                         </a>
                     <?php endforeach; ?>
                 </div>
@@ -141,6 +158,13 @@ if ($selected_verein_id) {
                         $event_url = !empty($veranstaltung->seite_id) 
                             ? get_permalink($veranstaltung->seite_id) 
                             : add_query_arg(array('veranstaltung_id' => $veranstaltung->id, 'verein_id' => $selected_verein_id));
+                        $event_share_url = '';
+                        if (!empty($veranstaltung->seite_id)) {
+                            $event_share_url = wp_get_shortlink($veranstaltung->seite_id);
+                            if (empty($event_share_url)) {
+                                $event_share_url = add_query_arg('p', intval($veranstaltung->seite_id), home_url('/'));
+                            }
+                        }
                         
                         // Formatiere Datum
                         $start_datum = !empty($veranstaltung->start_datum) ? date_i18n('d.m.Y', strtotime($veranstaltung->start_datum)) : '';
@@ -164,6 +188,9 @@ if ($selected_verein_id) {
                                 </div>
                             </div>
                             <div class="dp-veranstaltung-arrow">→</div>
+                            <?php if (!empty($event_share_url)): ?>
+                                <span class="dp-inline-share" onclick="event.preventDefault(); event.stopPropagation(); dpShareLink('<?php echo esc_js($event_share_url); ?>', '<?php echo esc_js($veranstaltung->name); ?>');">Teilen</span>
+                            <?php endif; ?>
                         </a>
                     <?php endforeach; ?>
                 </div>
@@ -286,6 +313,18 @@ if ($selected_verein_id) {
     box-shadow: var(--dp-shadow-lg);
     transform: translateY(-4px);
     background: linear-gradient(135deg, #f8fafc 0%, #eff6ff 100%);
+}
+
+.dp-inline-share {
+    margin-top: 0.6rem;
+    align-self: flex-start;
+    border: 1px solid var(--dp-primary-light);
+    border-radius: 9999px;
+    background: #eff6ff;
+    color: var(--dp-primary-dark);
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 0.2rem 0.55rem;
 }
 
 .dp-veranstaltung-card-header {
@@ -710,3 +749,35 @@ if ($selected_verein_id) {
     }
 }
 </style>
+
+<script>
+function dpShareLink(url, eventName) {
+    if (!url) {
+        alert('Kein Link verfügbar.');
+        return;
+    }
+
+    if (navigator.share) {
+        navigator.share({
+            title: eventName ? ('Dienstplan: ' + eventName) : 'Dienstplan',
+            url: url
+        }).catch(function() {
+            // Ignorieren (z. B. Abbruch durch Nutzer)
+        });
+        return;
+    }
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(url)
+            .then(function() {
+                alert('Link kopiert: ' + url);
+            })
+            .catch(function() {
+                window.prompt('Link zum Teilen kopieren:', url);
+            });
+        return;
+    }
+
+    window.prompt('Link zum Teilen kopieren:', url);
+}
+</script>

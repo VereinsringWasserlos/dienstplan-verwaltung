@@ -9,10 +9,22 @@ if (!defined('ABSPATH')) exit;
 // Filter-Parameter
 $filter_verein = isset($_GET['filter_verein']) ? intval($_GET['filter_verein']) : 0;
 $filter_veranstaltung = isset($_GET['filter_veranstaltung']) ? intval($_GET['filter_veranstaltung']) : 0;
+$filter_portal = isset($_GET['filter_portal']) ? sanitize_text_field($_GET['filter_portal']) : '';
 $search = isset($_GET['search']) ? sanitize_text_field($_GET['search']) : '';
 
 // Mitarbeiter laden
 $mitarbeiter = $db->get_mitarbeiter_with_stats($filter_verein, $filter_veranstaltung, $search);
+
+// Portal-Filter anwenden (da nicht in DB-Funktion)
+if ($filter_portal === 'active') {
+    $mitarbeiter = array_filter($mitarbeiter, function($ma) {
+        return isset($ma->user_id) && $ma->user_id;
+    });
+} elseif ($filter_portal === 'inactive') {
+    $mitarbeiter = array_filter($mitarbeiter, function($ma) {
+        return !isset($ma->user_id) || !$ma->user_id;
+    });
+}
 
 // Gruppiere Mitarbeiter nach Vereinen
 $mitarbeiter_nach_vereinen = array();
@@ -136,6 +148,17 @@ ksort($mitarbeiter_nach_vereinen);
             </div>
             
             <div style="flex: 1; min-width: 250px;">
+                <label for="filter-portal" style="display: block; margin-bottom: 0.5rem; font-weight: 600;">
+                    <?php _e('Portal-Zugriff', 'dienstplan-verwaltung'); ?>
+                </label>
+                <select id="filter-portal" name="filter_portal" class="regular-text" style="width: 100%;">
+                    <option value=""><?php _e('-- Alle --', 'dienstplan-verwaltung'); ?></option>
+                    <option value="active" <?php selected(isset($_GET['filter_portal']) ? $_GET['filter_portal'] : '', 'active'); ?>><?php _e('Mit Portal-Zugriff', 'dienstplan-verwaltung'); ?></option>
+                    <option value="inactive" <?php selected(isset($_GET['filter_portal']) ? $_GET['filter_portal'] : '', 'inactive'); ?>><?php _e('Ohne Portal-Zugriff', 'dienstplan-verwaltung'); ?></option>
+                </select>
+            </div>
+            
+            <div style="flex: 1; min-width: 250px;">
                 <label for="search" style="display: block; margin-bottom: 0.5rem; font-weight: 600;">
                     <?php _e('Suche', 'dienstplan-verwaltung'); ?>
                 </label>
@@ -149,7 +172,7 @@ ksort($mitarbeiter_nach_vereinen);
                     <span class="dashicons dashicons-search"></span>
                     <?php _e('Filtern', 'dienstplan-verwaltung'); ?>
                 </button>
-                <?php if ($filter_verein || $filter_veranstaltung || $search): ?>
+                <?php if ($filter_verein || $filter_veranstaltung || $filter_portal || $search): ?>
                     <a href="?page=dienstplan-mitarbeiter" class="button">
                         <?php _e('Zurücksetzen', 'dienstplan-verwaltung'); ?>
                     </a>
@@ -227,10 +250,13 @@ ksort($mitarbeiter_nach_vereinen);
                                 <span class="selected-count" style="color: #6b7280;">
                                     <span class="count">0</span> <?php _e('ausgewählt', 'dienstplan-verwaltung'); ?>
                                 </span>
-                                <select class="bulk-action-select" style="border: 1px solid #d1d5db; border-radius: 3px; padding: 0.375rem 0.75rem;">
+                                <select class="bulk-action-select" data-verein="<?php echo $verein_id; ?>" style="border: 1px solid #d1d5db; border-radius: 3px; padding: 0.375rem 0.75rem;">
                                     <option value=""><?php _e('-- Aktion wählen --', 'dienstplan-verwaltung'); ?></option>
                                     <option value="delete"><?php _e('Löschen', 'dienstplan-verwaltung'); ?></option>
-                                    <option value="export"><?php _e('Exportieren', 'dienstplan-verwaltung'); ?></option>
+                                    <option value="activate_portal"><?php _e('Portal-Zugriff aktivieren', 'dienstplan-verwaltung'); ?></option>
+                                    <option value="deactivate_portal"><?php _e('Portal-Zugriff deaktivieren', 'dienstplan-verwaltung'); ?></option>
+                                    <option value="export"><?php _e('Exportieren (CSV)', 'dienstplan-verwaltung'); ?></option>
+                                    <option value="export_portal"><?php _e('Portal-Zugänge exportieren', 'dienstplan-verwaltung'); ?></option>
                                 </select>
                                 <button class="button button-primary bulk-action-apply">
                                     <span class="dashicons dashicons-yes" style="margin-top: 3px;"></span>
@@ -254,6 +280,7 @@ ksort($mitarbeiter_nach_vereinen);
                                         <th style="width: 60px;"><?php _e('ID', 'dienstplan-verwaltung'); ?></th>
                                         <th><?php _e('Name', 'dienstplan-verwaltung'); ?></th>
                                         <th><?php _e('Kontakt', 'dienstplan-verwaltung'); ?></th>
+                                        <th style="width: 120px; text-align: center;"><?php _e('Portal', 'dienstplan-verwaltung'); ?></th>
                                         <th style="width: 100px; text-align: center;"><?php _e('Dienste', 'dienstplan-verwaltung'); ?></th>
                                         <th style="width: 150px; text-align: center;"><?php _e('Aktionen', 'dienstplan-verwaltung'); ?></th>
                                     </tr>
@@ -290,6 +317,29 @@ ksort($mitarbeiter_nach_vereinen);
                                                             <?php echo esc_html($ma->telefon); ?>
                                                         </a>
                                                     </div>
+                                                <?php endif; ?>
+                                            </td>
+                                            <td style="text-align: center;">
+                                                <?php if (isset($ma->user_id) && $ma->user_id): ?>
+                                                    <span class="portal-status-badge status-active" title="<?php _e('Portal-Zugriff aktiv', 'dienstplan-verwaltung'); ?>">
+                                                        <span class="dashicons dashicons-yes"></span>
+                                                        <?php _e('Aktiv', 'dienstplan-verwaltung'); ?>
+                                                    </span>
+                                                <?php else: ?>
+                                                    <?php if (isset($ma->email) && !empty($ma->email)): ?>
+                                                        <button class="button button-small" 
+                                                                onclick="activatePortalAccess(<?php echo $ma->id; ?>); event.stopPropagation();"
+                                                                title="<?php _e('Portal-Zugriff aktivieren', 'dienstplan-verwaltung'); ?>"
+                                                                style="padding: 0.25rem 0.5rem; font-size: 0.75rem;">
+                                                            <span class="dashicons dashicons-lock" style="font-size: 14px; line-height: 1;"></span>
+                                                            <?php _e('Aktivieren', 'dienstplan-verwaltung'); ?>
+                                                        </button>
+                                                    <?php else: ?>
+                                                        <span class="portal-status-badge status-inactive" title="<?php _e('Keine E-Mail-Adresse hinterlegt', 'dienstplan-verwaltung'); ?>">
+                                                            <span class="dashicons dashicons-minus"></span>
+                                                            <?php _e('Inaktiv', 'dienstplan-verwaltung'); ?>
+                                                        </span>
+                                                    <?php endif; ?>
                                                 <?php endif; ?>
                                             </td>
                                             <td style="text-align: center;">
