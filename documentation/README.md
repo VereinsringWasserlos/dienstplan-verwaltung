@@ -1,8 +1,8 @@
 # Dokumentation - Dienstplan-Verwaltung V2
 
-**Version:** 0.9.0 (UAT Release)  
-**Stand:** 17. November 2025  
-**Status:** Ready for User Acceptance Testing
+**Version:** 0.9.5.5 (Stable Release)  
+**Stand:** 11. März 2026  
+**Status:** Production Ready - Timeline & Filter Redesign
 
 ---
 
@@ -26,7 +26,8 @@
 | Dokument | Beschreibung | Zielgruppe |
 |----------|--------------|------------|
 | **[QUICK_START.md](QUICK_START.md)** | 15-Minuten-Setup-Guide | Alle |
-| **[VERSION_0.9.0_FEATURES.md](VERSION_0.9.0_FEATURES.md)** | Komplette Feature-Übersicht | Alle |
+| **[VERSION_0.9.0_FEATURES.md](VERSION_0.9.0_FEATURES.md)** | v0.9.0 Feature-Übersicht | Alle |
+| **[VERSION_0.9.5.5_FEATURES.md](VERSION_0.9.5.5_FEATURES.md)** | v0.9.5.5 Timeline & Filter Redesign | Alle |
 | **[ROADMAP.md](ROADMAP.md)** | Zukünftige Entwicklung & Ausblick | Entscheider |
 
 ### 📖 Bedienungsanleitungen

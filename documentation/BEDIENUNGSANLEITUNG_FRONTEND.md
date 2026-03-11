@@ -1,7 +1,7 @@
 # Bedienungsanleitung Frontend - Dienstplan-Verwaltung
 
-**Version:** 0.4.7  
-**Stand:** November 2025  
+**Version:** 0.9.5.5  
+**Stand:** 11. März 2026  
 **Zielgruppe:** Crew-Mitglieder und Helfer
 
 ---
@@ -9,13 +9,15 @@
 ## Inhaltsverzeichnis
 
 1. [Erste Schritte](#erste-schritte)
-2. [Veranstaltungen finden](#veranstaltungen-finden)
-3. [Für Dienste anmelden](#für-dienste-anmelden)
-4. [Split-Dienste](#split-dienste)
-5. [Meine Dienste](#meine-dienste)
-6. [Dienst abmelden](#dienst-abmelden)
-7. [Profil verwalten](#profil-verwalten)
-8. [Tipps & FAQ](#tipps-faq)
+2. [Überblick der Veranstaltungsseite](#überblick-der-veranstaltungsseite)
+3. [Die drei Ansichten](#die-drei-ansichten)
+4. [Filter nutzen](#filter-nutzen)
+5. [Für Dienste anmelden](#für-dienste-anmelden)
+6. [Split-Dienste](#split-dienste)
+7. [Meine Dienste](#meine-dienste)
+8. [Dienst absagen](#dienst-absagen)
+9. [Profil verwalten](#profil-verwalten)
+10. [Tipps & FAQ](#tipps-faq)
 
 ---
 
@@ -44,69 +46,202 @@ Oder du findest das Menü auf der Website unter:
 
 ---
 
-## Veranstaltungen finden
+## Überblick der Veranstaltungsseite
 
-### Ansichten
+Nach dem Öffnen der Veranstaltungsseite siehst du:
 
-Nach dem Öffnen des Links siehst du alle Veranstaltungen. Es gibt drei Ansichten:
+### Header-Bereich (oben)
 
-#### 📋 Listen-Ansicht
+**Links:**
+- Veranstaltungs-Überschrift & Beschreibung
+- Such- und Filter-Funktionen
 
-Klassische Liste mit allen Details:
-- Datum und Uhrzeit
-- Veranstaltungsort
-- Anzahl freier Dienste
-- Button "Details anzeigen"
+**Rechts:**
+- 🗂️ 📋 📊 **View-Toggle:** Drei Ansicht-Optionen
+- Filter-Reset-Button (bei aktiven Filtern)
 
-> 📸 **Screenshot-Hinweis:** Listen-Ansicht mit mehreren Veranstaltungen
+### Filter-Bereich (oben)
 
-#### 📅 Kalender-Ansicht
+**Intelligente 4-stufige Filter:**
 
-Monatsübersicht mit:
-- Farbigen Markierungen für Events
-- Hover zeigt Titel
-- Klick öffnet Details
+1. **Besetzung-Filter:**
+   - ⭕ **Alle:** Alle Dienste anzeigen
+   - 🟢 **Nur freie:** Nur unbesetzte Dienste
+   - 💙 **Meine Dienste:** Nur deine eingetragenen Dienste
 
-> 📸 **Screenshot-Hinweis:** Kalender-Ansicht mit markierten Event-Tagen
+2. **Tag-Filter:**
+   - Zeigt nur Tage, die tatsächlich Dienste haben
+   - Wähle einen Tag → nur Dienste dieses Tages sichtbar
 
-#### 🎴 Compact-Ansicht (Standard)
+3. **Arbeitsbereich-Filter:**
+   - Zeigt nur Bereiche des ausgewählten Tages
+   - Z.B. "Einlass", "Catering", "Dekoration"
 
-Karten-Layout mit:
-- Event-Karte pro Veranstaltung
-- Große "Anmelden"-Buttons
-- Schneller Überblick über freie Plätze
+4. **Dienst-Filter:**
+   - Zeigt nur Tätigkeiten des ausgewählten Bereichs
+   - Z.B. "Ticketkontrolle", "Getränkeausgabe"
 
-> 📸 **Screenshot-Hinweis:** Compact-Ansicht mit Event-Karten
+💡 **Smart-Logik:** Unmögliche Kombinationen sind automatisch deaktiviert!
 
-### Ansicht wechseln
+> 📸 **Screenshot-Hinweis:** Filter-Bereich mit 4 Dropdowns
 
-Buttons oben rechts:
-- **📋** = Listen-Ansicht
-- **📅** = Kalender-Ansicht
-- **🎴** = Compact-Ansicht
+---
 
-### Filter nutzen
+## Die drei Ansichten
 
-#### Verein auswählen
+### 1️⃣ 🗂️ Kachel-Ansicht (Default)
 
-Dropdown oben: **"Alle Vereine"** → Verein wählen
+**Beste für:** Schneller Überblick über alle Tage
 
-Nur Events dieses Vereins werden angezeigt.
+**Layout:**
+- Tage als Karten nebeneinander
+- Pro Tag: Tag, Datum, Art der Tätigkeiten
+- Farben zeigen Besetzungs-Status
 
-#### Zeitraum filtern
+**Farben:**
+- 🟢 **Grün:** Alle Dienste besetzt
+- 🔴 **Rot:** Noch freie Dienste verfügbar
 
-- **Nur kommende:** Zeigt nur zukünftige Events (Standard)
-- **Alle:** Auch vergangene Events
-- **Benutzerdefiniert:** Von/Bis-Datum eingeben
+**Interaktion:**
+- Karte klicken → öffnet Kompakt-Ansicht für diesen Tag
 
-### Suche
+> 📸 **Screenshot-Hinweis:** Kachel-Ansicht mit mehreren Tages-Karten
 
-Suchfeld oben rechts:
-- Nach Titel suchen
-- Nach Ort suchen
-- Nach Datum suchen
+### 2️⃣ 📋 Kompakt-Ansicht
 
-Beispiel: "Sommerfest" findet alle Events mit "Sommerfest" im Titel
+**Beste für:** Detaillierter Überblick mit Tabelle
+
+**Layout:**
+- Tabellarische Darstellung aller Dienste
+- Spalten: Zeitfenster, Bereich, Tätigkeit, Freie Plätze
+- Sortierbar nach Tag
+
+**Status-Badges:**
+- 🟢 **Frei:** Noch Plätze verfügbar
+- 🔴 **Besetzt:** Alle Plätze voll
+
+**Interaktion:**
+- "Anmelden"-Button pro Dienst
+- Zeigt Besetzungs-Details (z.B. "1/3")
+
+> 📸 **Screenshot-Hinweis:** Kompakt-Ansicht mit Tabelle
+
+### 3️⃣ 📊 Timeline-Ansicht (Neu!)
+
+**Beste für:** Visuelle Zeitplanung, Überschneidungen sehen
+
+**Layout:**
+- **Tag-Tabs** oben: Schnelle Navigation zwischen Tagen
+- **Zeit-Grid:** Stundeneinteilung von min. bis max. Dienst-Zeit
+- **Service-Balken:** Farbige Blöcke für jeden Dienst
+  - Position = Uhrzeit
+  - Länge = Dienst-Dauer
+  - Farbe = Status
+
+**Farben & Status:**
+- 🟢 **Grün/Besetzt:** Alle Plätze belegt
+- 🔴 **Rot/Frei:** Noch Plätze verfügbar
+
+**Interaktive Elemente:**
+- Dienst-Balken klicken → Popup mit Details
+- "Dienst absagen"-Button (direkt im Balken, wenn es dein Dienst ist)
+- Besetzungs-Badge zeigt "2/3" (besetzt/Kapazität)
+
+**Beispiel Timeline:**
+```
+Tag: Freitag, 15. März 2026
+
+Uhrzeit    |  Bereich  |  Tätigkeit
+---------------------------------------
+18:00 ---- | Einlass   | [Ticketkontrolle]
+          |          | (grün, 3/3 voll)
+19:30 ---- | Catering  | [Getränke]
+          |          | (rot, 1/3 frei)
+22:00 ---- | Dekoration| [Abbau]
+          |          | (rot, 2/3 frei)
+```
+
+> 📸 **Screenshot-Hinweis:** Timeline-Ansicht mit farbigen Service-Balken
+
+**Vorteile Timeline:**
+- ✅ Schnell Zeitkonflikte erkennen
+- ✅ Überschneidungen auf einen Blick sehen
+- ✅ Visuell leichter zu verstehen
+- ✅ Besser für Planung mehrerer Dienste
+
+---
+
+## Filter nutzen
+
+### Besetzungs-Filter
+
+**Dropdown 1: "Besetzung"**
+
+```
+Alle           ← Standard, alle Dienste
+Nur freie      ← Zeigt nur unbesetzte
+Meine Dienste  ← Nur deine eingetragenen
+```
+
+**Wirkung:**
+- **"Alle":** 100 Dienste sichtbar
+- **"Nur freie":** 23 Dienste sichtbar (Rest voll)
+- **"Meine Dienste":** 3 Dienste sichtbar (deine Eintragungen)
+
+**Filter zurücksetzen:** Grüner Button "🔄 Filter zurücksetzen" bringt alles auf "Alle"
+
+### Tag-Filter
+
+**Dropdown 2: "Tag"**
+
+Zeigt nur Tage mit verfügbaren Diensten (unter aktuellen Filter-Bedingungen).
+
+**Beispiel:**
+- Wenn "Nur freie" ausgewählt: Zeigt nur Tage mit freien Diensten
+- "Montag 10.3." hat 5 freie → sichtbar
+- "Dienstag 11.3." hat 0 freie → ausgeblendet (grayed out)
+
+### Arbeitsbereich-Filter
+
+**Dropdown 3: "Arbeitsbereich"**
+
+Filterung nach Aufgabenbereichen des ausgewählten Tages.
+
+**Beispiel Freitag der Woche:**
+- Einlass (3 Dienste)
+- Catering (5 Dienste)
+- Dekoration (2 Dienste)
+
+Wähle "Catering" → nur Catering-Dienste sichtbar
+
+### Dienst-Filter
+
+**Dropdown 4: "Dienst"**
+
+Spezifische Tätigkeiten im ausgewählten Bereich.
+
+**Beispiel im Bereich "Catering":**
+- Getränkeausgabe
+- Speiseausgabe
+- Spüldienst
+
+Wähle "Getränkeausgabe" → nur diese Tätigkeit sichtbar
+
+### Intelligente Filter-Logik
+
+**Features:**
+
+✅ **Nur gültige Kombinationen:** Unmögliche Optionen sind automatisch deaktiviert
+- Bereich ohne freie Dienste im ausgewählten Tag? → Grayed out
+- Tag ohne Dienste in der Besetzungs-Kategorie? → Grayed out
+
+✅ **Automatischer Fallback:** Wenn deine aktuelle Auswahl unmöglich wird
+- Z.B. "Nur freie" + "Montag" aber Montag ist alles besetzt
+- System schaltet automatisch zurück auf "Alle"
+
+✅ **Filter zurücksetzen:** Button "🔄 Filter zurücksetzen"
+- Setzt alle Filter auf "Alle"
+- Zeigt wieder alle Dienste
 
 ---
 
@@ -114,49 +249,39 @@ Beispiel: "Sommerfest" findet alle Events mit "Sommerfest" im Titel
 
 ### Schritt-für-Schritt
 
-#### 1. Veranstaltung öffnen
+#### 1. Filter setzen (optional)
 
-- In der Liste auf **"Details anzeigen"** klicken
-- Oder in Compact-View auf die Karte klicken
+- "Nur freie" wählen → zeigt nur offene Dienste
+- Oder nach Bereich/Tätigkeit filtern
 
-#### 2. Dienste durchsehen
+#### 2. Ansicht wählen
 
-Die Detail-Seite zeigt:
-
-**Veranstaltungs-Info:**
-- Datum & Uhrzeit
-- Ort & Beschreibung
-- Kontaktperson
-
-**Dienste-Liste:**
-
-Jeder Dienst zeigt:
-- **Bereich:** Z.B. "Einlass", "Catering"
-- **Tätigkeit:** Z.B. "Ticketkontrolle"
-- **Uhrzeit:** Von 18:00 - 23:00 Uhr
-- **Freie Plätze:** Z.B. "2/3" = 2 von 3 frei
-- **Status-Badge:**
-  - 🟢 **Verfügbar** (grün) = Noch Plätze frei
-  - 🔴 **Voll** (rot) = Keine Plätze mehr
-
-> 📸 **Screenshot-Hinweis:** Veranstaltungs-Detailseite mit Diensten
+Wähle eine der drei Ansichten:
+- 🗂️ Kachel (schnell Tage finden)
+- 📋 Kompakt (Tabellen-Übersicht)
+- 📊 Timeline (Zeitliche Visualisierung)
 
 #### 3. Dienst auswählen
 
-Auf **"Anmelden"** bei gewünschtem Dienst klicken.
+**In Kachel/Kompakt-Ansicht:**
+- "Anmelden"-Button bei gewünschtem Dienst klicken
+
+**In Timeline-Ansicht:**
+- Auf den farbigen Service-Balken klicken
+- Oder "Schnell anmelden"-Button unter dem Dienst
 
 #### 4. Anmeldeformular ausfüllen
 
-Modal-Fenster öffnet sich:
+Modal-Fenster öffnet sich mit Feldern:
 
 **Pflichtfelder:**
 - ✉️ **E-Mail:** Deine Kontakt-Email
-- 👤 **Vorname:** Dein Vorname
+- 👤 **Vorname:** Dein Vorname  
 - 👤 **Nachname:** Dein Nachname
 
 **Optional:**
 - 📞 **Telefon:** Für Rückfragen
-- 💬 **Kommentar:** Besondere Hinweise
+- 💬 **Kommentar:** Besondere Hinweise (z.B. Allergie, Behinderung)
 
 **Datenschutz:**
 - ☑️ **Ich akzeptiere die Datenschutzerklärung** (Pflicht)

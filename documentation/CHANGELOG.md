@@ -7,6 +7,85 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ---
 
+## [0.9.5.5] - 2026-03-11 🎨 Timeline & Filter Redesign
+
+### ✨ Neue Features
+
+#### 1️⃣ Verbesserte Timeline-View
+**Optimierte visuelle Darstellung von Diensten:**
+- 📊 Höhere Service-Bars (34px statt vorher klein)
+- 🔤 Lesbarere Schriftgrößen und bessere Typografie
+- 📑 Breitere Tabs zur Tag-Navigation
+- 🎯 Bessere Zeit-Positionierung basierend auf Dienst-Zeiten
+- 🎨 Farbcodierung: Rot (🔴 = frei), Grün (🟢 = besetzt)
+
+#### 2️⃣ Intelligente Filter mit 4-stufiger Abhängigkeit
+**Neue Filterlogik: Besetzung → Tag → Arbeitsbereich → Dienst**
+- 🔗 Abhängige Filter-Optionen: Nur mögliche Optionen sind aktiviert
+- 🚫 Unmögliche Kombinationen werden automatisch deaktiviert
+- ♻️ "Filter zurücksetzen" stellt Standardzustand wieder her
+- 💡 Intelligente Option-Verwaltung: Fallback auf "Alle" wenn aktuelle Option unmöglich
+
+#### 3️⃣ Modern Icon-basierte View-Toggle
+**Neue View-Steuerung mit Emoji-Icons im Header-Right:**
+- 🗂️ = Kachel-Ansicht (Card Grid)
+- 📋 = Kompakt-Ansicht (Compact List)
+- 📊 = Timeline-Ansicht (Gantt-like Timeline)
+- ✨ Gradient-Highlighting für aktive View
+- 🎨 Weißer Hintergrund mit Shadow-Effekt
+
+#### 4️⃣ Verbesserte Benutzerfreundlichkeit
+**Redesign der Frontend-Interaktion:**
+- 📍 "Dienst absagen"-Button jetzt direkt in Timeline-Bar integriert
+- 🎨 Kontrast-Verbesserungen bei Filter-Reset-Button (blaue Border, dunkle Text)
+- 📊 Bessere Besetzungs-Badges mit farblichem Status
+- 🧹 Vereinfachte UI-Struktur ohne redundante Elemente
+
+### 🔧 Technical Changes
+
+**`public/templates/veranstaltung-verein.php` (Hauptdatei, ~2770 Zeilen):**
+
+1. **Filter-Architektur (Zeilen 1074–1365):**
+   - `dpUpdateFilterOptionVisibility()`: Neue Funktion für abhängige Filter-Option Verwaltung
+   - `dpItemMatchesFilterSet()`: Erweiterte Matching-Logik mit Override-Support
+   - `dpGetFilterSelect()`, `dpSetFilterSelectValue()`: Select-Element-Verwaltung
+   - Alle Filter arbeiten via `<select>` Dropdown statt Button-Groups
+
+2. **Timeline-Rendering (Zeilen 410–750):**
+   - Day-Tabs mit Click-Handler für Tag-Filter Update
+   - Zeit-Grid mit dynamischen Hour-Labels basierend auf min/max Service-Zeiten
+   - Service-Bars mit CSS-Positionierung: `left: X%; width: Y%;`
+   - Inline-Besetzungs-Badges mit `.is-open` (rot) / `.is-full` (grün) Styling
+
+3. **View-Toggle (Zeilen 247–275):**
+   - Repositioniert zu `dp-header-view-tools` im header-right
+   - Emoji-Icons (🗂️ 📋 📊) statt Text-Labels
+   - Active-State Gradient: `background: linear-gradient(135deg, #0ea5e9, #0284c7)`
+
+4. **CSS-Updates (Zeilen 1650–2200):**
+   - `.dp-timeline-track-bar`: Erhöht auf 34px, bessere Lesbarkeit
+   - `.dp-track-occupancy`: Farben invertiert
+     - `.is-open`: Rot (#fca5a5 bg, #fee2e2 text)
+     - `.is-full`: Grün (#bbf7d0 bg, #dcfce7 text)
+   - `.dp-filter-group select`: Neue Styling mit `min-width: 180px`, fokus-States
+   - `.dp-filter-reset`: Blauer Border, dunkle Text, pill-shape (999px radius)
+
+### 🎯 Problem gelöst
+- ✅ Timeline-Ansicht war zu klein und schwer lesbar
+- ✅ Filter-Abhängigkeiten wurden nicht beachtet (Chaos bei Kombinationen)
+- ✅ View-Toggle war nicht prominent genug
+- ✅ Farbsemantik war kontraintuitive (frei=grün, besetzt=rot - falsch herum)
+- ✅ "Dienst absagen"-Action war schwer auffindbar
+
+### 📊 Statistiken
+- **Dateien geändert:** 42
+- **Neue Zeilen:** 11,108
+- **Gelöschte Zeilen:** 2,362
+- **Commit:** 6d9a058
+- **Release:** GitHub Release mit WordPress-Plugin ZIP (412,654 bytes)
+
+---
+
 ## [0.6.1] - 2025-11-18 🔐 Rollen: Import/Export-Berechtigungen
 
 ### 🎯 Problem gelöst
