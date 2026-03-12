@@ -7,6 +7,21 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ---
 
+## [0.9.5.14] - 2026-03-12 🔐 Rechte-Fix Vereinsadmin
+
+### 🐛 Bugfixes
+
+- **Vereinsadmin Zugriff repariert:** `dp_club_admin` erhält nun auch `dp_manage_events`,
+  damit die Seiten Veranstaltungen, Dienste, Mitarbeiter und Übersicht erreichbar sind.
+- **Rollen-Update robust gemacht:** Bestehende Rollen werden nun aktiv synchronisiert,
+  da `add_role()` vorhandene Rollen nicht aktualisiert.
+- **Vereinszugriff eingeschränkt:** Für reine Vereinsadmins wird serverseitig erzwungen,
+  dass in der Vereinsverwaltung nur zugewiesene Vereine sichtbar und bearbeitbar sind.
+- **AJAX abgesichert:** `ajax_get_verein`, `ajax_save_verein`, `ajax_delete_verein`
+  prüfen jetzt ebenfalls die Vereinszuordnung.
+
+---
+
 ## [0.9.5.13] - 2026-03-12 🧱 Overflow-Hotfix Vereinsseite
 
 ### 🐛 Bugfixes

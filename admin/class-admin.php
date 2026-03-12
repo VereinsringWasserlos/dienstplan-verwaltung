@@ -34,6 +34,69 @@ class Dienstplan_Admin {
         add_filter('admin_footer_text', '__return_empty_string');
         add_filter('update_footer', '__return_empty_string');
     }
+
+    /**
+     * Prüft, ob der aktuelle Benutzer ein eingeschränkter Vereins-Admin ist.
+     * Eingeschränkt = Club-Admin ohne WP-Admin/General-Admin/Event-Admin-Sonderrechte.
+     */
+    private function is_restricted_club_admin() {
+        if (current_user_can('manage_options')) {
+            return false;
+        }
+
+        $user = wp_get_current_user();
+        if (!$user || empty($user->roles)) {
+            return false;
+        }
+
+        $roles = (array) $user->roles;
+
+        if (!in_array(Dienstplan_Roles::ROLE_CLUB_ADMIN, $roles, true)) {
+            return false;
+        }
+
+        if (
+            in_array(Dienstplan_Roles::ROLE_GENERAL_ADMIN, $roles, true) ||
+            in_array(Dienstplan_Roles::ROLE_EVENT_ADMIN, $roles, true)
+        ) {
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Liefert die dem aktuellen Benutzer zugeordneten Vereins-IDs.
+     *
+     * @param Dienstplan_Database $db
+     * @return int[]
+     */
+    private function get_current_user_verein_ids($db) {
+        $rows = $db->get_user_vereine(get_current_user_id());
+        if (empty($rows)) {
+            return array();
+        }
+
+        return array_values(array_unique(array_map(function($row) {
+            return intval($row->verein_id);
+        }, $rows)));
+    }
+
+    /**
+     * Prüft, ob der aktuelle Benutzer auf einen Verein zugreifen darf.
+     *
+     * @param Dienstplan_Database $db
+     * @param int $verein_id
+     * @return bool
+     */
+    private function current_user_can_access_verein($db, $verein_id) {
+        if (!$this->is_restricted_club_admin()) {
+            return true;
+        }
+
+        $verein_ids = $this->get_current_user_verein_ids($db);
+        return in_array(intval($verein_id), $verein_ids, true);
+    }
     
     /**
      * Admin-Notices anzeigen
@@ -558,7 +621,23 @@ class Dienstplan_Admin {
     public function display_vereine() {
         require_once DIENSTPLAN_PLUGIN_PATH . 'includes/class-database.php';
         $db = new Dienstplan_Database($this->db_prefix);
-        $vereine = $db->get_vereine();
+
+        if ($this->is_restricted_club_admin()) {
+            $allowed_ids = $this->get_current_user_verein_ids($db);
+            $vereine = array();
+
+            if (!empty($allowed_ids)) {
+                foreach ($allowed_ids as $verein_id) {
+                    $verein = $db->get_verein($verein_id);
+                    if ($verein) {
+                        $vereine[] = $verein;
+                    }
+                }
+            }
+        } else {
+            $vereine = $db->get_vereine();
+        }
+
         include_once DIENSTPLAN_PLUGIN_PATH . 'admin/views/vereine.php';
     }
     
@@ -707,6 +786,19 @@ class Dienstplan_Admin {
             );
             
             $verein_id = !empty($_POST['verein_id']) ? intval($_POST['verein_id']) : 0;
+
+            if ($this->is_restricted_club_admin()) {
+                // Eingeschränkte Vereins-Admins dürfen nur bestehende, zugeordnete Vereine bearbeiten.
+                if ($verein_id <= 0) {
+                    wp_send_json_error(array('message' => 'Keine Berechtigung: Vereins-Admins dürfen keine neuen Vereine anlegen.'));
+                    return;
+                }
+
+                if (!$this->current_user_can_access_verein($db, $verein_id)) {
+                    wp_send_json_error(array('message' => 'Keine Berechtigung für diesen Verein.'));
+                    return;
+                }
+            }
             
             if ($verein_id > 0) {
                 // Update
@@ -1310,6 +1402,11 @@ class Dienstplan_Admin {
         $db = new Dienstplan_Database($this->db_prefix);
         
         $verein_id = intval($_POST['verein_id']);
+
+        if (!$this->current_user_can_access_verein($db, $verein_id)) {
+            wp_send_json_error(array('message' => 'Keine Berechtigung für diesen Verein.'));
+            return;
+        }
         
         // Lösche WordPress-Seiten die zu diesem Verein gehören
         $pages = get_posts(array(
@@ -1358,6 +1455,12 @@ class Dienstplan_Admin {
         $db = new Dienstplan_Database($this->db_prefix);
         
         $verein_id = intval($_POST['verein_id']);
+
+        if (!$this->current_user_can_access_verein($db, $verein_id)) {
+            wp_send_json_error(array('message' => 'Keine Berechtigung für diesen Verein.'));
+            return;
+        }
+
         $verein = $db->get_verein($verein_id);
         
         if ($verein) {

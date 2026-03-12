@@ -67,6 +67,7 @@ class Dienstplan_Roles {
             array(
                 'read' => true,
                 self::CAP_MANAGE_CLUBS => true,
+                self::CAP_MANAGE_EVENTS => true,
                 self::CAP_VIEW_REPORTS => true,
             )
         );
@@ -89,6 +90,38 @@ class Dienstplan_Roles {
             $admin_role->add_cap(self::CAP_MANAGE_CLUBS);
             $admin_role->add_cap(self::CAP_VIEW_REPORTS);
             $admin_role->add_cap(self::CAP_SEND_NOTIFICATIONS);
+        }
+
+        // Bestehende Rollen aktiv aktualisieren (add_role() aktualisiert vorhandene Rollen nicht)
+        $general_admin_role = get_role(self::ROLE_GENERAL_ADMIN);
+        if ($general_admin_role) {
+            $general_admin_role->add_cap('read');
+            $general_admin_role->add_cap(self::CAP_MANAGE_SETTINGS);
+            $general_admin_role->add_cap(self::CAP_MANAGE_USERS);
+            $general_admin_role->add_cap(self::CAP_MANAGE_EVENTS);
+            $general_admin_role->add_cap(self::CAP_MANAGE_CLUBS);
+            $general_admin_role->add_cap(self::CAP_VIEW_REPORTS);
+            $general_admin_role->add_cap(self::CAP_SEND_NOTIFICATIONS);
+        }
+
+        $event_admin_role = get_role(self::ROLE_EVENT_ADMIN);
+        if ($event_admin_role) {
+            $event_admin_role->add_cap('read');
+            $event_admin_role->add_cap(self::CAP_MANAGE_EVENTS);
+            $event_admin_role->add_cap(self::CAP_VIEW_REPORTS);
+        }
+
+        $club_admin_role = get_role(self::ROLE_CLUB_ADMIN);
+        if ($club_admin_role) {
+            $club_admin_role->add_cap('read');
+            $club_admin_role->add_cap(self::CAP_MANAGE_CLUBS);
+            $club_admin_role->add_cap(self::CAP_MANAGE_EVENTS);
+            $club_admin_role->add_cap(self::CAP_VIEW_REPORTS);
+        }
+
+        $crew_role = get_role(self::ROLE_CREW);
+        if ($crew_role) {
+            $crew_role->add_cap('read');
         }
     }
     
