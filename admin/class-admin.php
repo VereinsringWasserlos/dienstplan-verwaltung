@@ -5056,14 +5056,13 @@ class Dienstplan_Admin {
 
         // Dienste laden
         global $wpdb;
-        $prefix  = $wpdb->prefix . $this->db_prefix;
         $dienste = $wpdb->get_results($wpdb->prepare(
             "SELECT s.von_zeit, s.bis_zeit,
                     t.name  AS taetigkeit,
                     b.name  AS bereich,
-                    ve.titel AS veranstaltung,
+                    ve.name  AS veranstaltung,
                     v.name  AS verein,
-                    vt.datum AS tag_datum
+                    vt.tag_datum AS tag_datum
              FROM {$wpdb->prefix}dp_dienst_slots s
              INNER JOIN {$wpdb->prefix}dp_dienste d       ON s.dienst_id       = d.id
              LEFT  JOIN {$wpdb->prefix}dp_taetigkeiten t  ON d.taetigkeit_id   = t.id
@@ -5072,7 +5071,7 @@ class Dienstplan_Admin {
              LEFT  JOIN {$wpdb->prefix}dp_veranstaltungen ve ON d.veranstaltung_id = ve.id
              LEFT  JOIN {$wpdb->prefix}dp_veranstaltung_tage vt ON d.tag_id    = vt.id
              WHERE s.mitarbeiter_id = %d
-             ORDER BY vt.datum ASC, s.von_zeit ASC",
+             ORDER BY vt.tag_datum ASC, s.von_zeit ASC",
             $mitarbeiter_id
         ));
 

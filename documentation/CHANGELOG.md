@@ -7,6 +7,17 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ---
 
+## [0.9.5.10] - 2026-03-12 🛠️ Dienste-Mail Hotfix
+
+### 🐛 Bugfixes
+
+- **Mitarbeiter -> Dienste-Mail senden:** SQL-Feldnamen korrigiert.
+- `dp_veranstaltungen`: `ve.titel` -> `ve.name`
+- `dp_veranstaltung_tage`: `vt.datum` -> `vt.tag_datum`
+- Sortierung entsprechend auf `vt.tag_datum` umgestellt.
+
+---
+
 ## [0.9.5.9] - 2026-03-12 🔄 Update-Seite Fix
 
 ### 🐛 Bugfixes
