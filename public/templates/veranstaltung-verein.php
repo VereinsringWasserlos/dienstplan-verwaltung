@@ -1773,15 +1773,19 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     .dp-frontend-container.dp-verein-specific {
-        width: min(1600px, calc(100vw - 40px));
+        width: 100vw;
         max-width: none;
-        margin: 0;
-        padding: 1.5rem;
-        position: relative;
-        left: 50%;
-        transform: translateX(-50%);
+        margin-left: calc(50% - 50vw);
+        margin-right: calc(50% - 50vw);
+        padding: 1.5rem 20px;
         box-sizing: border-box;
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    }
+
+    .dp-frontend-container.dp-verein-specific > * {
+        max-width: 1600px;
+        margin-left: auto;
+        margin-right: auto;
     }
 
     .dp-title-row {
@@ -1812,8 +1816,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     @media (max-width: 768px) {
         .dp-frontend-container.dp-verein-specific {
-            padding: 1rem;
-            width: calc(100vw - 20px);
+            padding: 1rem 10px;
         }
     }
     

@@ -7,6 +7,16 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ---
 
+## [0.9.5.12] - 2026-03-12 🧭 Layout-Korrektur Vereinsseite
+
+### 🐛 Bugfixes
+
+- **Verschobenes Layout nach Breiten-Fix behoben:** Der Wrapper nutzt jetzt eine saubere
+  Full-Bleed-Zentrierung über `margin-left/right: calc(50% - 50vw)` statt `left + transform`.
+- Der eigentliche Seiteninhalt wird innerhalb des Full-Bleed-Wrappers wieder sauber auf max. 1600px zentriert.
+
+---
+
 ## [0.9.5.11] - 2026-03-12 ↔️ Breiten-Hotfix Vereinsseite
 
 ### 🐛 Bugfixes
