@@ -1772,10 +1772,15 @@ document.addEventListener('DOMContentLoaded', function() {
         display: none !important;
     }
 
-    .dp-verein-specific {
-        max-width: 1600px;
-        margin: 0 auto;
+    .dp-frontend-container.dp-verein-specific {
+        width: min(1600px, calc(100vw - 40px));
+        max-width: none;
+        margin: 0;
         padding: 1.5rem;
+        position: relative;
+        left: 50%;
+        transform: translateX(-50%);
+        box-sizing: border-box;
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
     }
 
@@ -1806,8 +1811,9 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     @media (max-width: 768px) {
-        .dp-verein-specific {
+        .dp-frontend-container.dp-verein-specific {
             padding: 1rem;
+            width: calc(100vw - 20px);
         }
     }
     

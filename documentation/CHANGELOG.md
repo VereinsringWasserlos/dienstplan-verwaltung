@@ -7,6 +7,17 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ---
 
+## [0.9.5.11] - 2026-03-12 ↔️ Breiten-Hotfix Vereinsseite
+
+### 🐛 Bugfixes
+
+- **Vereins-/Veranstaltungsseite weiterhin zu schmal:** Der Wrapper der Vereinsseite
+  bricht jetzt gezielt aus schmalen Theme-/Content-Containern aus.
+- `.dp-frontend-container.dp-verein-specific` nutzt nun die Viewport-Breite bis max. 1600px
+  und wird unabhängig vom Parent-Container sauber zentriert.
+
+---
+
 ## [0.9.5.10] - 2026-03-12 🛠️ Dienste-Mail Hotfix
 
 ### 🐛 Bugfixes
