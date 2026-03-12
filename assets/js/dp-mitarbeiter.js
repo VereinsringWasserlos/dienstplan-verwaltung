@@ -289,19 +289,23 @@
             });
         };
         
-        // Login-Daten erneut senden
+        // Login-Daten erneut senden (aus Modal heraus, liest ID aus Formular)
         window.resendLoginCredentials = function() {
             const mitarbeiterId = $('#mitarbeiter_id').val();
-            
+            resendCredentials(mitarbeiterId);
+        };
+
+        // Zugangsdaten erneut senden – direkt mit ID (für Dropdown)
+        window.resendCredentials = function(mitarbeiterId) {
             if (!mitarbeiterId) {
                 alert('Mitarbeiter-ID nicht gefunden!');
                 return;
             }
-            
+
             if (!confirm('Möchten Sie die Login-Daten erneut per E-Mail versenden?\n\nEs wird ein neues Passwort generiert und versendet.')) {
                 return;
             }
-            
+
             $.ajax({
                 url: dpAjax.ajaxurl,
                 type: 'POST',
@@ -311,20 +315,50 @@
                     mitarbeiter_id: mitarbeiterId
                 },
                 success: function(response) {
-                    console.log('Resend Login Credentials Response:', response);
                     if (response.success) {
-                        alert(response.data.message);
+                        alert('✅ ' + response.data.message);
                     } else {
                         alert('Fehler: ' + (response.data ? response.data.message : 'Unbekannt'));
                     }
                 },
                 error: function(xhr, status, error) {
-                    console.error('AJAX Fehler:', error);
                     alert('AJAX-Fehler: ' + error);
                 }
             });
         };
-        
+
+        // Dienste-Übersicht per E-Mail senden
+        window.resendDiensteEmail = function(mitarbeiterId) {
+            if (!mitarbeiterId) {
+                alert('Mitarbeiter-ID nicht gefunden!');
+                return;
+            }
+
+            if (!confirm('Soll dem Mitarbeiter eine E-Mail mit allen zugewiesenen Diensten gesendet werden?')) {
+                return;
+            }
+
+            $.ajax({
+                url: dpAjax.ajaxurl,
+                type: 'POST',
+                data: {
+                    action: 'dp_resend_dienste_email',
+                    nonce: dpAjax.nonce,
+                    mitarbeiter_id: mitarbeiterId
+                },
+                success: function(response) {
+                    if (response.success) {
+                        alert('✅ ' + response.data.message);
+                    } else {
+                        alert('Fehler: ' + (response.data ? response.data.message : 'Unbekannt'));
+                    }
+                },
+                error: function(xhr, status, error) {
+                    alert('AJAX-Fehler: ' + error);
+                }
+            });
+        };
+
     });
-    
+
 })(jQuery);

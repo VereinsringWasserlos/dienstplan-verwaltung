@@ -364,6 +364,18 @@ ksort($mitarbeiter_nach_vereinen);
                                                             <span class="dashicons dashicons-calendar-alt"></span>
                                                             <?php _e('Dienste anzeigen', 'dienstplan-verwaltung'); ?>
                                                         </a>
+                                                        <?php if (!empty($ma->email)): ?>
+                                                            <a href="#" onclick="resendDiensteEmail(<?php echo $ma->id; ?>); return false;">
+                                                                <span class="dashicons dashicons-calendar-alt"></span>
+                                                                <?php _e('Dienste-Mail senden', 'dienstplan-verwaltung'); ?>
+                                                            </a>
+                                                        <?php endif; ?>
+                                                        <?php if (!empty($ma->user_id) && !empty($ma->email)): ?>
+                                                            <a href="#" onclick="resendCredentials(<?php echo $ma->id; ?>); return false;">
+                                                                <span class="dashicons dashicons-email"></span>
+                                                                <?php _e('Zugangsdaten erneut senden', 'dienstplan-verwaltung'); ?>
+                                                            </a>
+                                                        <?php endif; ?>
                                                         <a href="#" onclick="deleteMitarbeiter(<?php echo $ma->id; ?>); return false;">
                                                             <span class="dashicons dashicons-trash"></span>
                                                             <?php _e('Löschen', 'dienstplan-verwaltung'); ?>
@@ -460,6 +472,18 @@ ksort($mitarbeiter_nach_vereinen);
                                                         <span class="dashicons dashicons-calendar-alt" style="font-size: 18px;"></span>
                                                         <?php _e('Dienste anzeigen', 'dienstplan-verwaltung'); ?>
                                                     </a>
+                                                    <?php if (!empty($ma->email)): ?>
+                                                        <a href="#" onclick="resendDiensteEmail(<?php echo $ma->id; ?>); return false;" style="display: flex; align-items: center; gap: 8px; padding: 10px 14px; text-decoration: none; color: #2271b1; border-bottom: 1px solid #f0f0f1; transition: none;">
+                                                            <span class="dashicons dashicons-calendar-alt" style="font-size: 18px;"></span>
+                                                            <?php _e('Dienste-Mail senden', 'dienstplan-verwaltung'); ?>
+                                                        </a>
+                                                    <?php endif; ?>
+                                                    <?php if (!empty($ma->user_id) && !empty($ma->email)): ?>
+                                                        <a href="#" onclick="resendCredentials(<?php echo $ma->id; ?>); return false;" style="display: flex; align-items: center; gap: 8px; padding: 10px 14px; text-decoration: none; color: #2271b1; border-bottom: 1px solid #f0f0f1; transition: none;">
+                                                            <span class="dashicons dashicons-email" style="font-size: 18px;"></span>
+                                                            <?php _e('Zugangsdaten erneut senden', 'dienstplan-verwaltung'); ?>
+                                                        </a>
+                                                    <?php endif; ?>
                                                     <a href="#" onclick="deleteMitarbeiter(<?php echo $ma->id; ?>); return false;" style="display: flex; align-items: center; gap: 8px; padding: 10px 14px; text-decoration: none; color: #dc3232; transition: none;">
                                                         <span class="dashicons dashicons-trash" style="font-size: 18px;"></span>
                                                         <?php _e('Löschen', 'dienstplan-verwaltung'); ?>

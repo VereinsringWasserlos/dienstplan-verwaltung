@@ -224,6 +224,7 @@ class Dienstplan_Verwaltung {
         $this->loader->add_action('wp_ajax_dp_activate_portal_access', $plugin_admin, 'ajax_activate_portal_access');
         $this->loader->add_action('wp_ajax_dp_deactivate_portal_access', $plugin_admin, 'ajax_deactivate_portal_access');
         $this->loader->add_action('wp_ajax_dp_resend_login_credentials', $plugin_admin, 'ajax_resend_login_credentials');
+        $this->loader->add_action('wp_ajax_dp_resend_dienste_email', $plugin_admin, 'ajax_resend_dienste_email');
         $this->loader->add_action('wp_ajax_dp_bulk_activate_portal_access', $plugin_admin, 'ajax_bulk_activate_portal_access');
         $this->loader->add_action('wp_ajax_dp_bulk_deactivate_portal_access', $plugin_admin, 'ajax_bulk_deactivate_portal_access');
         

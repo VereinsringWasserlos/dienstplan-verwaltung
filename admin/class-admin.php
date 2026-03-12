@@ -5021,14 +5021,124 @@ class Dienstplan_Admin {
     }
     
     /**
+     * AJAX: Dienste-Übersicht per E-Mail an Mitarbeiter senden
+     *
+     * @since 0.9.5.7
+     */
+    public function ajax_resend_dienste_email() {
+        check_ajax_referer('dp_ajax_nonce', 'nonce');
+
+        if (!Dienstplan_Roles::can_manage_events() && !current_user_can('manage_options')) {
+            wp_send_json_error(array('message' => 'Keine Berechtigung.'));
+            return;
+        }
+
+        $mitarbeiter_id = isset($_POST['mitarbeiter_id']) ? intval($_POST['mitarbeiter_id']) : 0;
+
+        if (!$mitarbeiter_id) {
+            wp_send_json_error(array('message' => 'Keine Mitarbeiter-ID angegeben.'));
+            return;
+        }
+
+        require_once DIENSTPLAN_PLUGIN_PATH . 'includes/class-database.php';
+        $db   = new Dienstplan_Database($this->db_prefix);
+        $ma   = $db->get_mitarbeiter($mitarbeiter_id);
+
+        if (!$ma) {
+            wp_send_json_error(array('message' => 'Mitarbeiter nicht gefunden.'));
+            return;
+        }
+
+        if (empty($ma->email)) {
+            wp_send_json_error(array('message' => 'Mitarbeiter hat keine E-Mail-Adresse.'));
+            return;
+        }
+
+        // Dienste laden
+        global $wpdb;
+        $prefix  = $wpdb->prefix . $this->db_prefix;
+        $dienste = $wpdb->get_results($wpdb->prepare(
+            "SELECT s.von_zeit, s.bis_zeit,
+                    t.name  AS taetigkeit,
+                    b.name  AS bereich,
+                    ve.titel AS veranstaltung,
+                    v.name  AS verein,
+                    vt.datum AS tag_datum
+             FROM {$wpdb->prefix}dp_dienst_slots s
+             INNER JOIN {$wpdb->prefix}dp_dienste d       ON s.dienst_id       = d.id
+             LEFT  JOIN {$wpdb->prefix}dp_taetigkeiten t  ON d.taetigkeit_id   = t.id
+             LEFT  JOIN {$wpdb->prefix}dp_bereiche b      ON d.bereich_id      = b.id
+             LEFT  JOIN {$wpdb->prefix}dp_vereine v       ON d.verein_id       = v.id
+             LEFT  JOIN {$wpdb->prefix}dp_veranstaltungen ve ON d.veranstaltung_id = ve.id
+             LEFT  JOIN {$wpdb->prefix}dp_veranstaltung_tage vt ON d.tag_id    = vt.id
+             WHERE s.mitarbeiter_id = %d
+             ORDER BY vt.datum ASC, s.von_zeit ASC",
+            $mitarbeiter_id
+        ));
+
+        if (empty($dienste)) {
+            wp_send_json_error(array('message' => 'Für diesen Mitarbeiter sind keine Dienste hinterlegt.'));
+            return;
+        }
+
+        $subject = sprintf('[%s] Deine Dienst-Übersicht', get_bloginfo('name'));
+
+        $body  = 'Hallo ' . $ma->vorname . ",\n\n";
+        $body .= "hier ist deine aktuelle Übersicht aller zugewiesenen Dienste:\n\n";
+        $body .= str_repeat('-', 50) . "\n";
+
+        $current_event = '';
+        foreach ($dienste as $d) {
+            if ($d->veranstaltung !== $current_event) {
+                $current_event = $d->veranstaltung;
+                $body .= "\n📅 Veranstaltung: " . $current_event . "\n";
+                if ($d->verein) {
+                    $body .= "   Verein: " . $d->verein . "\n";
+                }
+                $body .= str_repeat('-', 40) . "\n";
+            }
+            $datum  = $d->tag_datum ? date_i18n('d.m.Y (l)', strtotime($d->tag_datum)) : 'N/A';
+            $von    = $d->von_zeit  ? substr($d->von_zeit,  0, 5) : '';
+            $bis    = $d->bis_zeit  ? substr($d->bis_zeit,  0, 5) : '';
+            $body  .= "  • {$datum}";
+            if ($von && $bis) {
+                $body .= ", {$von} – {$bis} Uhr";
+            }
+            $body .= "\n";
+            if ($d->taetigkeit) {
+                $body .= "    Tätigkeit: {$d->taetigkeit}";
+                if ($d->bereich) {
+                    $body .= " ({$d->bereich})";
+                }
+                $body .= "\n";
+            }
+        }
+
+        $body .= "\n" . str_repeat('-', 50) . "\n";
+        $body .= "Gesamt: " . count($dienste) . " Dienst" . (count($dienste) !== 1 ? 'e' : '') . "\n\n";
+        $body .= "Bei Fragen wende dich bitte an den Veranstalter.\n\n";
+        $body .= "Viele Grüße\n" . get_bloginfo('name');
+
+        $sent = wp_mail($ma->email, $subject, $body);
+
+        if ($sent) {
+            wp_send_json_success(array(
+                'message' => 'Dienste-Übersicht wurde erfolgreich an ' . $ma->email . ' versendet.'
+            ));
+        } else {
+            wp_send_json_error(array(
+                'message' => 'E-Mail konnte nicht gesendet werden. Bitte WordPress-Mailkonfiguration prüfen.'
+            ));
+        }
+    }
+
+    /**
      * AJAX: Bulk-Portal-Zugriff aktivieren
      *
      * @since 0.7.0
      */
     public function ajax_bulk_activate_portal_access() {
-        check_ajax_referer('dp_ajax_nonce', 'nonce');
-        
-        if (!Dienstplan_Roles::can_manage_events() && !current_user_can('manage_options')) {
+        check_ajax_referer('dp_ajax_nonce', 'nonce');        if (!Dienstplan_Roles::can_manage_events() && !current_user_can('manage_options')) {
             wp_send_json_error(array('message' => 'Keine Berechtigung.'));
             return;
         }
