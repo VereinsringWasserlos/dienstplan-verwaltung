@@ -7,6 +7,17 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ---
 
+## [0.9.5.13] - 2026-03-12 🧱 Overflow-Hotfix Vereinsseite
+
+### 🐛 Bugfixes
+
+- **Horizontales Überlaufen am rechten Rand behoben.**
+- Viewport-Zentrierung der Vereinsseite jetzt mit festen Sicherheitsabständen,
+  damit der Inhalt nicht mehr über die Seitenkante hinausragt.
+- Mobile Breakpoint ebenfalls auf overflow-sichere Breite umgestellt.
+
+---
+
 ## [0.9.5.12] - 2026-03-12 🧭 Layout-Korrektur Vereinsseite
 
 ### 🐛 Bugfixes

@@ -1773,17 +1773,18 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     .dp-frontend-container.dp-verein-specific {
-        width: 100vw;
-        max-width: none;
-        margin-left: calc(50% - 50vw);
-        margin-right: calc(50% - 50vw);
-        padding: 1.5rem 20px;
+        width: min(1600px, calc(100vw - 24px));
+        max-width: min(1600px, calc(100vw - 24px));
+        margin-left: calc(50% - 50vw + 12px);
+        margin-right: calc(50% - 50vw + 12px);
+        padding: 1.5rem;
+        overflow-x: clip;
         box-sizing: border-box;
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
     }
 
     .dp-frontend-container.dp-verein-specific > * {
-        max-width: 1600px;
+        max-width: 100%;
         margin-left: auto;
         margin-right: auto;
     }
@@ -1816,7 +1817,11 @@ document.addEventListener('DOMContentLoaded', function() {
     
     @media (max-width: 768px) {
         .dp-frontend-container.dp-verein-specific {
-            padding: 1rem 10px;
+            width: calc(100vw - 16px);
+            max-width: calc(100vw - 16px);
+            margin-left: calc(50% - 50vw + 8px);
+            margin-right: calc(50% - 50vw + 8px);
+            padding: 1rem;
         }
     }
     
