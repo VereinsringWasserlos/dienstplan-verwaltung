@@ -320,7 +320,7 @@ if ($selected_verein) {
 <?php endif; ?>
 
 <style>
-.dp-vereine-overview { max-width: 1100px; }
+.dp-vereine-overview { max-width: 1600px; }
 
 .dp-landing-header {
     background: linear-gradient(135deg, #eff6ff 0%, #e0ecff 45%, #f8fafc 100%);

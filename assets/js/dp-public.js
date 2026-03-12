@@ -293,7 +293,8 @@ jQuery(document).on('submit', '#dp-anmelde-form', function(e) {
         telefon: jQuery('#dp-telefon').val(),
         besonderheiten: jQuery('#dp-besonderheiten').val(),
         create_user_account: jQuery('input[name="create_user_account"]:checked').val() || '0',
-        create_user_datenschutz: jQuery('#dp-create-user-datenschutz').is(':checked') ? '1' : '0'
+        create_user_datenschutz: jQuery('#dp-create-user-datenschutz').is(':checked') ? '1' : '0',
+        source_url: window.location.href
     };
     
     // Validierung

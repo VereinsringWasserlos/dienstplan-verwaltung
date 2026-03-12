@@ -82,7 +82,7 @@
 
 /* Container */
 .dp-public-container {
-    max-width: 1200px !important;
+    max-width: 1600px !important;
     margin: 0 auto !important;
     padding: var(--dp-spacing-lg) !important;
     font-family: var(--dp-font-family) !important;

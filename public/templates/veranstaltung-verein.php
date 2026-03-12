@@ -99,6 +99,22 @@ foreach ($services as $service) {
 asort($filter_bereiche);
 asort($filter_dienste);
 
+// Sammle alle Vereine aus den Diensten (für Anzeige wenn verein_id = 0)
+$alle_vereine_in_services = [];
+if ($verein_id == 0) {
+    foreach ($services as $service) {
+        $vid = intval($service->verein_id ?? 0);
+        if ($vid > 0 && !isset($alle_vereine_in_services[$vid])) {
+            $alle_vereine_in_services[$vid] = !empty($service->verein) ? $service->verein : '';
+            if (empty($alle_vereine_in_services[$vid])) {
+                $v_obj = $db->get_verein($vid);
+                if ($v_obj) $alle_vereine_in_services[$vid] = $v_obj->name;
+            }
+        }
+    }
+    asort($alle_vereine_in_services);
+}
+
 // View-Modus
 $view_mode = isset($_GET['view']) ? sanitize_text_field($_GET['view']) : 'kachel';
 if ($view_mode === 'list') {
@@ -233,6 +249,13 @@ if ($dienst_start_dt !== null && $dienst_end_dt !== null) {
                             <span class="dashicons dashicons-groups" style="font-size: 16px;"></span>
                             <span><?php echo esc_html($verein->name); ?></span>
                         </div>
+                    <?php elseif ($verein_id == 0 && !empty($alle_vereine_in_services)): ?>
+                        <?php foreach ($alle_vereine_in_services as $vid => $vname): ?>
+                            <div class="dp-header-chip" style="background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%); border-color: #0ea5e9; color: #0369a1;">
+                                <span class="dashicons dashicons-groups" style="font-size: 14px;"></span>
+                                <span><?php echo esc_html($vname); ?></span>
+                            </div>
+                        <?php endforeach; ?>
                     <?php endif; ?>
 
                     <?php if ($status_message): ?>
@@ -1750,7 +1773,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     .dp-verein-specific {
-        max-width: 1200px;
+        max-width: 1600px;
         margin: 0 auto;
         padding: 1.5rem;
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;

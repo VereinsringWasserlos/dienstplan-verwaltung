@@ -1140,6 +1140,7 @@ class Dienstplan_Public {
         $besonderheiten = isset($_POST['besonderheiten']) ? sanitize_textarea_field(wp_unslash($_POST['besonderheiten'])) : '';
         $create_user_account = isset($_POST['create_user_account']) && sanitize_text_field(wp_unslash($_POST['create_user_account'])) === '1';
         $create_user_datenschutz = isset($_POST['create_user_datenschutz']) && sanitize_text_field(wp_unslash($_POST['create_user_datenschutz'])) === '1';
+        $source_url = isset($_POST['source_url']) ? esc_url_raw(sanitize_text_field(wp_unslash($_POST['source_url']))) : '';
         
         if (!$slot_id || !$dienst_id || !$vorname || !$nachname || !$email) {
             wp_send_json_error(array('message' => 'Bitte alle Pflichtfelder ausfüllen.'));
@@ -1312,6 +1313,10 @@ class Dienstplan_Public {
                 $message .= "Beschreibung: {$dienst->beschreibung}\n\n";
             }
             
+            if (!empty($source_url)) {
+                $message .= "Zurück zur Veranstaltungsseite:\n";
+                $message .= $source_url . "\n\n";
+            }
             $message .= "Bei Fragen oder Änderungen wenden Sie sich bitte an den Veranstalter.\n\n";
             $message .= "Mit freundlichen Grüßen\n";
             $message .= "Ihr Dienstplan-Team";
