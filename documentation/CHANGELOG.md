@@ -7,6 +7,19 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ---
 
+## [0.9.5.8] - 2026-03-12 ✉️ Mitarbeiter-Mailfunktionen
+
+### ✨ Neue Features
+
+- **Mitarbeiter-Aktionen erweitert:** Im Aktionen-Dropdown stehen jetzt
+  "Dienste-Mail senden" und (bei aktivem Portalzugang) "Zugangsdaten erneut senden" zur Verfügung.
+- **Zugangsdaten erneut senden:** Für bestehende Portal-User kann ein neues Passwort generiert
+  und per E-Mail versendet werden.
+- **Dienste-Übersicht per E-Mail:** Admins können einem Mitarbeiter eine strukturierte Übersicht
+  aller zugewiesenen Dienste (Veranstaltung, Datum, Uhrzeit, Tätigkeit/Bereich) zusenden.
+
+---
+
 ## [0.9.5.7] - 2026-07-13 🔧 Updater-Bugfix
 
 ### 🐛 Bugfixes
