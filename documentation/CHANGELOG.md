@@ -7,7 +7,38 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ---
 
+## [0.9.5.7] - 2026-07-13 🔧 Updater-Bugfix
+
+### 🐛 Bugfixes
+
+#### WordPress-Updater: "Der Download ist fehlgeschlagen. Service Unavailable"
+- **Problem:** WordPress nutzt intern `wp_safe_remote_get()` beim Download von Plugin-Paketen.
+  Diese Funktion blockiert Weiterleitungen zu externen CDN-Domains wie `objects.githubusercontent.com`,
+  über die GitHub Release-Assets ausgeliefert werden → HTTP 503 / Service Unavailable.
+- **Fix 1 (Produktion):** Neuer `upgrader_pre_download`-Filter (`handle_github_download()`),
+  der alle GitHub-URLs abfängt und mit `wp_remote_get()` (folgt CDN-Redirects) korrekt herunterlädt.
+  Unterstützt optional einen GitHub-Token (`dienstplan_github_token` WP-Option) für private Repos.
+- **Fix 2 (Entwicklung):** Fehlender AJAX-Handler `wp_ajax_dienstplan_download_update` ergänzt
+  (`ajax_download_update()`). Erstellt via `git archive` ein ZIP-Archiv vom Remote-Branch und
+  liefert es als Download aus.
+
+---
+
+## [0.9.5.6] - 2026-07-12 🎨 UI & Mail-Verbesserungen
+
+### ✨ Neue Features
+
+- **Breitere Inhaltscontainer:** `.dp-public-container`, `.dp-verein-specific` und `.dp-vereine-overview`
+  auf max. 1600px erweitert (vorher 1100–1200px).
+- **Vereine im Veranstaltungs-Header:** Wenn eine Veranstaltung verein-übergreifend geöffnet wird
+  (`verein_id = 0`), werden alle am Dienst beteiligten Vereine als blaue Chips im Header angezeigt.
+- **Link in Bestätigungsmail:** Die Anmeldungs-Bestätigungs-E-Mail enthält nun einen direkten
+  Link zurück zur Veranstaltungsseite (`Zurück zur Veranstaltungsseite: <URL>`).
+
+---
+
 ## [0.9.5.5] - 2026-03-11 🎨 Timeline & Filter Redesign
+
 
 ### ✨ Neue Features
 

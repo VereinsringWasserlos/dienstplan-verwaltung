@@ -79,6 +79,8 @@ class Dienstplan_Updater {
         add_filter('site_transient_update_plugins', array($this, 'check_for_updates'));
         add_filter('plugins_api', array($this, 'plugin_info'), 20, 3);
         add_action('upgrader_process_complete', array($this, 'after_update'), 10, 2);
+        add_filter('upgrader_pre_download', array($this, 'handle_github_download'), 10, 3);
+        add_action('wp_ajax_dienstplan_download_update', array($this, 'ajax_download_update'));
         
         // Automatische Updates aktivieren wenn gewünscht
         add_filter('auto_update_plugin', array($this, 'enable_auto_update'), 10, 2);
@@ -361,6 +363,71 @@ class Dienstplan_Updater {
     }
 
     /**
+     * Fängt GitHub-Downloads ab und lädt mit korrekten Headern herunter.
+     * Nötig, weil WordPress wp_safe_remote_get() nutzt, das keine Redirects
+     * zu github CDN-Domains (objects.githubusercontent.com) erlaubt → 503.
+     *
+     * @param bool|WP_Error $reply    Bisheriger Reply (false = noch nicht behandelt)
+     * @param string        $package  Download-URL
+     * @param WP_Upgrader   $upgrader Upgrader-Instanz
+     * @return string|WP_Error Pfad zur temporären Datei oder Fehler
+     */
+    public function handle_github_download($reply, $package, $upgrader) {
+        // Nur für GitHub-Pakete eingreifen
+        if (
+            strpos($package, 'github.com') === false &&
+            strpos($package, 'api.github.com') === false
+        ) {
+            return $reply;
+        }
+
+        // Temporäre Datei anlegen
+        $tmpfname = wp_tempnam($package);
+        if (!$tmpfname) {
+            return new WP_Error('http_no_file', __('Temporäre Datei konnte nicht erstellt werden.'));
+        }
+
+        $headers = array(
+            'Accept'     => 'application/octet-stream',
+            'User-Agent' => 'WordPress/' . get_bloginfo('version') . '; ' . get_bloginfo('url'),
+        );
+
+        // Optionaler GitHub-Token (in WP-Optionen speicherbar)
+        $github_token = get_option('dienstplan_github_token', '');
+        if (!empty($github_token)) {
+            $headers['Authorization'] = 'token ' . $github_token;
+        }
+
+        // wp_remote_get statt wp_safe_remote_get: folgt Redirects zu CDN-Domains
+        $response = wp_remote_get($package, array(
+            'timeout'  => 300,
+            'stream'   => true,
+            'filename' => $tmpfname,
+            'headers'  => $headers,
+        ));
+
+        if (is_wp_error($response)) {
+            @unlink($tmpfname);
+            return $response;
+        }
+
+        $response_code = wp_remote_retrieve_response_code($response);
+        if (200 !== (int) $response_code) {
+            @unlink($tmpfname);
+            return new WP_Error(
+                'http_404',
+                sprintf(
+                    /* translators: %s: HTTP-Statuscode */
+                    __('Der Download ist fehlgeschlagen. HTTP-Fehler: %s'),
+                    $response_code
+                )
+            );
+        }
+
+        return $tmpfname;
+    }
+
+    /**
      * Holt Changelog aus Git
      */
     private function get_changelog() {
@@ -374,8 +441,47 @@ class Dienstplan_Updater {
     }
 
     /**
-     * Plugin-Informationen für Update-Details
+     * AJAX-Handler: Liefert ein Git-Archiv als ZIP für WordPress-Updates
+     * in der Entwicklungsumgebung (wenn Git verfügbar ist).
      */
+    public function ajax_download_update() {
+        if (!current_user_can('update_plugins')) {
+            wp_die('Keine Berechtigung', '', array('response' => 403));
+        }
+
+        if (!$this->git_available) {
+            wp_die('Git nicht verfügbar', '', array('response' => 500));
+        }
+
+        $zipfile = sys_get_temp_dir() . '/dienstplan-verwaltung-update-' . time() . '.zip';
+
+        $current_dir = getcwd();
+        chdir($this->plugin_dir);
+
+        $archive_cmd = '"' . $this->git_cmd . '" archive --format=zip --prefix=dienstplan-verwaltung/ '
+            . 'origin/' . escapeshellarg($this->git_branch)
+            . ' -o ' . escapeshellarg($zipfile) . ' 2>&1';
+
+        exec($archive_cmd, $output, $return_var);
+        chdir($current_dir);
+
+        if ($return_var !== 0 || !file_exists($zipfile)) {
+            error_log('DP Updater: git archive fehlgeschlagen: ' . implode("\n", $output));
+            wp_die('Fehler beim Erstellen des Update-Archivs', '', array('response' => 500));
+        }
+
+        header('Content-Type: application/zip');
+        header('Content-Disposition: attachment; filename="dienstplan-verwaltung.zip"');
+        header('Content-Length: ' . filesize($zipfile));
+        header('Cache-Control: no-cache, no-store, must-revalidate');
+
+        // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+        readfile($zipfile);
+        @unlink($zipfile);
+        exit;
+    }
+
+
     public function plugin_info($false, $action, $response) {
         // Nur für unser Plugin
         if ($action !== 'plugin_information' || $response->slug !== $this->plugin_slug) {
