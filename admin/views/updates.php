@@ -62,8 +62,13 @@ if (isset($_POST['perform_update']) && check_admin_referer('dienstplan_perform_u
         $update_result = $updater->perform_update();
         
         if ($update_result['success']) {
-            echo '<div class="notice notice-success"><p><strong>Update erfolgreich!</strong><br>' . 
-                 nl2br(esc_html($update_result['output'])) . '</p></div>';
+            $success_message = !empty($update_result['message']) ? $update_result['message'] : 'Update erfolgreich!';
+            $success_output = !empty($update_result['output'])
+                ? '<br>' . nl2br(esc_html($update_result['output']))
+                : '';
+
+            echo '<div class="notice notice-success"><p><strong>Update erfolgreich!</strong><br>' .
+                 esc_html($success_message) . $success_output . '</p></div>';
         } else {
             echo '<div class="notice notice-error"><p><strong>Update fehlgeschlagen:</strong><br>' . 
                  esc_html($update_result['message']) . '</p></div>';

@@ -7,6 +7,19 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ---
 
+## [0.9.5.9] - 2026-03-12 🔄 Update-Seite Fix
+
+### 🐛 Bugfixes
+
+- **Manuelles Update im Plugin-Backend repariert:** Der Button "Update durchführen"
+  bricht auf Servern ohne Git nicht mehr mit einem Hinweis ab.
+- **Neues Verhalten auf Produktionsservern:** `perform_update()` nutzt nun direkt den
+  WordPress-Upgrader (`Plugin_Upgrader`) und installiert verfügbare Updates automatisch.
+- **Bessere Rückmeldungen:** Erfolg-/Fehlermeldungen der Update-Seite wurden robuster gemacht,
+  auch wenn kein Konsolen-Output vorhanden ist.
+
+---
+
 ## [0.9.5.8] - 2026-03-12 ✉️ Mitarbeiter-Mailfunktionen
 
 ### ✨ Neue Features

@@ -516,11 +516,60 @@ class Dienstplan_Updater {
      * Führt Update durch (Git oder WordPress-Standard)
      */
     public function perform_update() {
-        // Auf Produktionsservern ohne Git: WordPress Update-Mechanismus nutzen
+        // Auf Produktionsservern ohne Git: WordPress-Update direkt ausführen
         if (!$this->git_available) {
+            require_once ABSPATH . 'wp-admin/includes/update.php';
+            require_once ABSPATH . 'wp-admin/includes/class-wp-upgrader.php';
+
+            // Update-Informationen frisch laden
+            wp_update_plugins();
+            $update_plugins = get_site_transient('update_plugins');
+
+            if (
+                !isset($update_plugins->response) ||
+                !is_array($update_plugins->response) ||
+                !isset($update_plugins->response[$this->plugin_basename])
+            ) {
+                return array(
+                    'success' => false,
+                    'message' => 'Kein Update verfügbar oder WordPress konnte keine Update-Informationen laden.',
+                    'output' => ''
+                );
+            }
+
+            $skin = new Automatic_Upgrader_Skin();
+            $upgrader = new Plugin_Upgrader($skin);
+            $result = $upgrader->upgrade($this->plugin_basename);
+
+            if (is_wp_error($result)) {
+                return array(
+                    'success' => false,
+                    'message' => 'WordPress-Update fehlgeschlagen: ' . $result->get_error_message(),
+                    'output' => ''
+                );
+            }
+
+            if (false === $result) {
+                $errors = method_exists($skin, 'get_errors') ? $skin->get_errors() : null;
+                $error_message = ($errors && $errors->has_errors())
+                    ? implode(' | ', $errors->get_error_messages())
+                    : 'Unbekannter Fehler beim WordPress-Upgrade.';
+
+                return array(
+                    'success' => false,
+                    'message' => 'WordPress-Update fehlgeschlagen: ' . $error_message,
+                    'output' => ''
+                );
+            }
+
+            // Cache leeren und Migrationen ausführen
+            delete_transient('dienstplan_update_info');
+            $this->run_migrations();
+
             return array(
-                'success' => false, 
-                'message' => 'Bitte nutzen Sie die WordPress Plugin-Verwaltung für Updates. Gehen Sie zu: Plugins → Installierte Plugins → Dienstplan Verwaltung → "Jetzt aktualisieren"'
+                'success' => true,
+                'message' => 'Update erfolgreich über den WordPress-Upgrader durchgeführt.',
+                'output' => ''
             );
         }
 
