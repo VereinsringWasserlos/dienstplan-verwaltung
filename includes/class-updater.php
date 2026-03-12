@@ -531,9 +531,17 @@ class Dienstplan_Updater {
         try {
             // Sichere lokale Änderungen
             exec('"' . $this->git_cmd . '" stash 2>&1', $output, $return_var);
-            
-            // Pull Updates
-            $pull_cmd = '"' . $this->git_cmd . '" pull origin ' . escapeshellarg($this->git_branch) . ' 2>&1';
+
+            // Entferne generierte Release-ZIPs, damit sie den Pull nicht blockieren
+            $release_dir = $this->plugin_dir . 'release';
+            if (is_dir($release_dir)) {
+                foreach (glob($release_dir . DIRECTORY_SEPARATOR . '*.zip') as $zip_file) {
+                    @unlink($zip_file);
+                }
+            }
+
+            // Pull Updates (--ff-only vermeidet Merge-Nachfragen und unerwartete Merges)
+            $pull_cmd = '"' . $this->git_cmd . '" pull --ff-only origin ' . escapeshellarg($this->git_branch) . ' 2>&1';
             exec($pull_cmd, $pull_output, $return_var);
             
             if ($return_var !== 0) {
