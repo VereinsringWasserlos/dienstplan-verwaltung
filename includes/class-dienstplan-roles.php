@@ -49,10 +49,10 @@ class Dienstplan_Roles {
         self::cleanup_legacy_roles_and_caps();
         self::migrate_legacy_user_roles();
 
-        // Allgemeiner Admin - Vollzugriff auf alles
+        // Haupt-Admin - Vollzugriff auf alles
         add_role(
             self::ROLE_GENERAL_ADMIN,
-            __('Dienstplan - Allgemeiner Admin', 'dienstplan-verwaltung'),
+            __('Dienstplan - Haupt-Admin', 'dienstplan-verwaltung'),
             array(
                 'read' => true,
                 self::CAP_MANAGE_SETTINGS => true,
@@ -385,7 +385,7 @@ class Dienstplan_Roles {
                     $roles[] = __('WordPress Administrator', 'dienstplan-verwaltung');
                     break;
                 case self::ROLE_GENERAL_ADMIN:
-                    $roles[] = __('Allgemeiner Admin', 'dienstplan-verwaltung');
+                    $roles[] = __('Haupt-Admin', 'dienstplan-verwaltung');
                     break;
                 case self::ROLE_EVENT_ADMIN:
                     $roles[] = __('Veranstaltungs-Admin', 'dienstplan-verwaltung');
@@ -397,7 +397,7 @@ class Dienstplan_Roles {
                     $roles[] = __('Crew-Mitglied', 'dienstplan-verwaltung');
                     break;
                 case self::LEGACY_ROLE_GENERAL_ADMIN:
-                    $roles[] = __('Allgemeiner Admin (Legacy)', 'dienstplan-verwaltung');
+                    $roles[] = __('Haupt-Admin (Legacy)', 'dienstplan-verwaltung');
                     break;
                 case self::LEGACY_ROLE_EVENT_ADMIN:
                     $roles[] = __('Veranstaltungs-Admin (Legacy)', 'dienstplan-verwaltung');

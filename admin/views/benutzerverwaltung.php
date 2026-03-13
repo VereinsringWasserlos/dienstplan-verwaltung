@@ -27,7 +27,7 @@ if (!defined('ABSPATH')) exit;
                     <div class="role-item">
                         <h3>
                             <span class="dashicons dashicons-admin-generic" style="color: #d63638;"></span>
-                            <?php _e('Allgemeiner Admin', 'dienstplan-verwaltung'); ?>
+                            <?php _e('Haupt-Admin', 'dienstplan-verwaltung'); ?>
                         </h3>
                         <p><?php _e('Vollzugriff auf alle Funktionen: Vereine, Veranstaltungen, Benutzerverwaltung und Einstellungen', 'dienstplan-verwaltung'); ?></p>
                     </div>
@@ -46,6 +46,14 @@ if (!defined('ABSPATH')) exit;
                             <?php _e('Vereins-Admin', 'dienstplan-verwaltung'); ?>
                         </h3>
                         <p><?php _e('Kann Vereine erstellen, bearbeiten und löschen. Sieht Reports.', 'dienstplan-verwaltung'); ?></p>
+                    </div>
+
+                    <div class="role-item">
+                        <h3>
+                            <span class="dashicons dashicons-id" style="color: #8c8f94;"></span>
+                            <?php _e('Crew', 'dienstplan-verwaltung'); ?>
+                        </h3>
+                        <p><?php _e('Frontend-Portal Zugriff ohne Backend-Verwaltung.', 'dienstplan-verwaltung'); ?></p>
                     </div>
                 </div>
             </div>
@@ -124,13 +132,16 @@ if (!defined('ABSPATH')) exit;
                         <select name="dp_role" id="dp_role" required class="regular-text">
                             <option value=""><?php _e('Bitte wählen...', 'dienstplan-verwaltung'); ?></option>
                             <option value="<?php echo Dienstplan_Roles::ROLE_GENERAL_ADMIN; ?>">
-                                <?php _e('Allgemeiner Admin', 'dienstplan-verwaltung'); ?>
+                                <?php _e('Haupt-Admin', 'dienstplan-verwaltung'); ?>
                             </option>
                             <option value="<?php echo Dienstplan_Roles::ROLE_EVENT_ADMIN; ?>">
                                 <?php _e('Veranstaltungs-Admin', 'dienstplan-verwaltung'); ?>
                             </option>
                             <option value="<?php echo Dienstplan_Roles::ROLE_CLUB_ADMIN; ?>">
                                 <?php _e('Vereins-Admin', 'dienstplan-verwaltung'); ?>
+                            </option>
+                            <option value="<?php echo Dienstplan_Roles::ROLE_CREW; ?>">
+                                <?php _e('Crew', 'dienstplan-verwaltung'); ?>
                             </option>
                         </select>
                     </div>

@@ -92,7 +92,7 @@ $nav_items = [
                                         <?php _e('Veranstaltungs-Admin', 'dienstplan-verwaltung'); ?>
                                     </option>
                                     <option value="<?php echo Dienstplan_Roles::ROLE_GENERAL_ADMIN; ?>">
-                                        <?php _e('Allgemeiner Admin', 'dienstplan-verwaltung'); ?>
+                                        <?php _e('Haupt-Admin', 'dienstplan-verwaltung'); ?>
                                     </option>
                                 </select>
                                 <p class="description">

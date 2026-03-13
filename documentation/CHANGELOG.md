@@ -7,6 +7,21 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ---
 
+## [0.9.5.24] - 2026-03-13 👥 Rollenbegriffe vereinheitlicht
+
+### ✨ Verbesserungen
+
+- Rolle `Event Admin` ist jetzt konsequent als **Veranstaltungs-Admin** benannt.
+- Rolle **Allgemeiner Admin** wurde in der Oberfläche auf **Haupt-Admin** umbenannt.
+- In der Benutzerverwaltung ist die Zielstruktur jetzt klar als 4 Rollen sichtbar:
+  - Haupt-Admin
+  - Veranstaltungs-Admin
+  - Vereins-Admin
+  - Crew
+- Die Rollenzuweisung in der Benutzerverwaltung enthält jetzt auch **Crew** als auswählbare Option.
+
+---
+
 ## [0.9.5.23] - 2026-03-13 🏷️ Neue Rollen-/Capability-Namen (v2)
 
 ### ♻️ Änderungen
