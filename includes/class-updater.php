@@ -47,6 +47,20 @@ class Dienstplan_Updater {
     private $update_info;
 
     /**
+     * War Plugin vor dem Update aktiv?
+     *
+     * @var bool
+     */
+    private $was_active_before_update = false;
+
+    /**
+     * War Plugin netzwerkweit aktiv?
+     *
+     * @var bool
+     */
+    private $was_network_active_before_update = false;
+
+    /**
      * Git Command Pfad
      * @var string
      */
@@ -79,11 +93,79 @@ class Dienstplan_Updater {
         add_filter('site_transient_update_plugins', array($this, 'check_for_updates'));
         add_filter('plugins_api', array($this, 'plugin_info'), 20, 3);
         add_action('upgrader_process_complete', array($this, 'after_update'), 10, 2);
+        add_filter('upgrader_pre_install', array($this, 'capture_pre_update_state'), 10, 2);
         add_filter('upgrader_pre_download', array($this, 'handle_github_download'), 10, 3);
         add_action('wp_ajax_dienstplan_download_update', array($this, 'ajax_download_update'));
         
         // Automatische Updates aktivieren wenn gewünscht
         add_filter('auto_update_plugin', array($this, 'enable_auto_update'), 10, 2);
+    }
+
+    /**
+     * Merkt sich den Aktivstatus vor der Installation eines Plugin-Updates.
+     *
+     * @param bool|WP_Error $response  Vorheriger Install-Status
+     * @param array         $hook_extra Kontextinformationen des Upgraders
+     * @return bool|WP_Error
+     */
+    public function capture_pre_update_state($response, $hook_extra) {
+        if (!is_array($hook_extra)) {
+            return $response;
+        }
+
+        if (!isset($hook_extra['type']) || $hook_extra['type'] !== 'plugin') {
+            return $response;
+        }
+
+        $targets = array();
+        if (!empty($hook_extra['plugin'])) {
+            $targets[] = $hook_extra['plugin'];
+        }
+        if (!empty($hook_extra['plugins']) && is_array($hook_extra['plugins'])) {
+            $targets = array_merge($targets, $hook_extra['plugins']);
+        }
+
+        if (!in_array($this->plugin_basename, $targets, true)) {
+            return $response;
+        }
+
+        if (!function_exists('is_plugin_active')) {
+            require_once ABSPATH . 'wp-admin/includes/plugin.php';
+        }
+
+        $this->was_active_before_update = is_plugin_active($this->plugin_basename);
+        $this->was_network_active_before_update = function_exists('is_plugin_active_for_network')
+            ? is_plugin_active_for_network($this->plugin_basename)
+            : false;
+
+        return $response;
+    }
+
+    /**
+     * Reaktiviert das Plugin nach erfolgreichem Update, wenn es davor aktiv war.
+     */
+    private function restore_activation_after_update() {
+        if (!$this->was_active_before_update) {
+            return;
+        }
+
+        if (!function_exists('is_plugin_active') || !function_exists('activate_plugin')) {
+            require_once ABSPATH . 'wp-admin/includes/plugin.php';
+        }
+
+        if (is_plugin_active($this->plugin_basename)) {
+            return;
+        }
+
+        $network_wide = is_multisite() && $this->was_network_active_before_update;
+        $result = activate_plugin($this->plugin_basename, '', $network_wide, true);
+
+        if (is_wp_error($result)) {
+            error_log('DP Updater: Reaktivierung nach Update fehlgeschlagen: ' . $result->get_error_message());
+            return;
+        }
+
+        error_log('DP Updater: Plugin nach Update erfolgreich reaktiviert.');
     }
 
     /**
@@ -565,6 +647,7 @@ class Dienstplan_Updater {
             // Cache leeren und Migrationen ausführen
             delete_transient('dienstplan_update_info');
             $this->run_migrations();
+            $this->restore_activation_after_update();
 
             return array(
                 'success' => true,
@@ -653,6 +736,10 @@ class Dienstplan_Updater {
                     
                     // Führe Migrationen aus
                     $this->run_migrations();
+
+                    // Falls WordPress das Plugin beim Update deaktiviert hat,
+                    // den vorherigen Aktivstatus wiederherstellen.
+                    $this->restore_activation_after_update();
                 }
             }
         }

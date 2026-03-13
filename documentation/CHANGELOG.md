@@ -7,6 +7,16 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ---
 
+## [0.9.5.19] - 2026-03-13 🔄 Update-Reaktivierung
+
+### 🐛 Bugfixes
+
+- **Plugin bleibt nach Update nicht aktiv:** Der Updater merkt sich jetzt den Aktivstatus vor dem Update und stellt ihn danach automatisch wieder her.
+- Funktioniert für normale Aktivierung und Netzwerk-Aktivierung in Multisite.
+- Zusätzliche Fehlerprotokollierung für fehlgeschlagene Reaktivierung ergänzt.
+
+---
+
 ## [0.9.5.18] - 2026-03-13 🧭 Manuelle Vereinszuordnung im Mitarbeiter-Modal
 
 ### ✨ Verbesserungen
