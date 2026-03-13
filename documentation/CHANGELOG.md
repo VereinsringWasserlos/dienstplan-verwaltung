@@ -7,6 +7,22 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ---
 
+## [0.9.5.22] - 2026-03-13 ♻️ Rollensystem Hard-Reset (Baseline)
+
+### ⚠️ Breaking Changes
+
+- **Rollensystem zurückgesetzt:** Die bisherige, inkonsistente Scope- und Rollenlogik wurde vorerst deaktiviert.
+- **Berechtigungen aktuell nur noch über WordPress-Admin (`manage_options`).**
+- Damit gibt es bis zum Neuaufbau keine teilweisen Plugin-Admin-Berechtigungen mehr.
+
+### 🧩 Technische Änderungen
+
+- In `Dienstplan_Roles::user_can()` wird vorerst nur `manage_options` ausgewertet.
+- Vereins-Scopes in `Dienstplan_Admin` sind deaktiviert (`is_restricted_club_admin()` liefert immer `false`).
+- Uneingeschränkter Zugriff wird nur noch für WP-Admins angenommen.
+
+---
+
 ## [0.9.5.21] - 2026-03-13 📁 Korrekter Plugin-Ordnername nach Update
 
 ### 🐛 Bugfixes

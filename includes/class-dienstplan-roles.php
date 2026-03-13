@@ -150,7 +150,8 @@ class Dienstplan_Roles {
      * Prüfe ob Benutzer Berechtigung hat
      */
     public static function user_can($capability) {
-        return current_user_can($capability) || current_user_can('manage_options');
+        // Hard-Reset Baseline: Berechtigungen vorerst nur über WP-Admin.
+        return current_user_can('manage_options');
     }
     
     /**
