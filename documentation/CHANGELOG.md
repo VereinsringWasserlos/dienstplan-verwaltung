@@ -7,6 +7,18 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ---
 
+## [0.9.5.23] - 2026-03-13 🏷️ Neue Rollen-/Capability-Namen (v2)
+
+### ♻️ Änderungen
+
+- **Neue Slugs eingeführt**, damit keine Kollisionen mit Altlasten auftreten:
+  - Rollen: `dpv2_general_admin`, `dpv2_event_admin`, `dpv2_club_admin`, `dpv2_crew`
+  - Capabilities: `dpv2_manage_settings`, `dpv2_manage_users`, `dpv2_manage_events`, `dpv2_manage_clubs`, `dpv2_view_reports`, `dpv2_send_notifications`
+- Legacy-Rollen/-Caps werden bei der Rolleninstallation aktiv bereinigt.
+- Benutzer mit Legacy-Rollen werden automatisch auf die neuen v2-Rollen migriert.
+
+---
+
 ## [0.9.5.22] - 2026-03-13 ♻️ Rollensystem Hard-Reset (Baseline)
 
 ### ⚠️ Breaking Changes

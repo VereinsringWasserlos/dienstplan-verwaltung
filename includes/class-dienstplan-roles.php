@@ -15,25 +15,40 @@ class Dienstplan_Roles {
     /**
      * Rollen-Definitionen
      */
-    const ROLE_GENERAL_ADMIN = 'dp_general_admin';
-    const ROLE_EVENT_ADMIN = 'dp_event_admin';
-    const ROLE_CLUB_ADMIN = 'dp_club_admin';
-    const ROLE_CREW = 'dienstplan_crew';
+    const ROLE_GENERAL_ADMIN = 'dpv2_general_admin';
+    const ROLE_EVENT_ADMIN = 'dpv2_event_admin';
+    const ROLE_CLUB_ADMIN = 'dpv2_club_admin';
+    const ROLE_CREW = 'dpv2_crew';
+
+    const LEGACY_ROLE_GENERAL_ADMIN = 'dp_general_admin';
+    const LEGACY_ROLE_EVENT_ADMIN = 'dp_event_admin';
+    const LEGACY_ROLE_CLUB_ADMIN = 'dp_club_admin';
+    const LEGACY_ROLE_CREW = 'dienstplan_crew';
     
     /**
      * Capabilities
      */
-    const CAP_MANAGE_SETTINGS = 'dp_manage_settings';
-    const CAP_MANAGE_USERS = 'dp_manage_users';
-    const CAP_MANAGE_EVENTS = 'dp_manage_events';
-    const CAP_MANAGE_CLUBS = 'dp_manage_clubs';
-    const CAP_VIEW_REPORTS = 'dp_view_reports';
-    const CAP_SEND_NOTIFICATIONS = 'dp_send_notifications';
+    const CAP_MANAGE_SETTINGS = 'dpv2_manage_settings';
+    const CAP_MANAGE_USERS = 'dpv2_manage_users';
+    const CAP_MANAGE_EVENTS = 'dpv2_manage_events';
+    const CAP_MANAGE_CLUBS = 'dpv2_manage_clubs';
+    const CAP_VIEW_REPORTS = 'dpv2_view_reports';
+    const CAP_SEND_NOTIFICATIONS = 'dpv2_send_notifications';
+
+    const LEGACY_CAP_MANAGE_SETTINGS = 'dp_manage_settings';
+    const LEGACY_CAP_MANAGE_USERS = 'dp_manage_users';
+    const LEGACY_CAP_MANAGE_EVENTS = 'dp_manage_events';
+    const LEGACY_CAP_MANAGE_CLUBS = 'dp_manage_clubs';
+    const LEGACY_CAP_VIEW_REPORTS = 'dp_view_reports';
+    const LEGACY_CAP_SEND_NOTIFICATIONS = 'dp_send_notifications';
     
     /**
      * Rollen installieren
      */
     public static function install_roles() {
+        self::cleanup_legacy_roles_and_caps();
+        self::migrate_legacy_user_roles();
+
         // Allgemeiner Admin - Vollzugriff auf alles
         add_role(
             self::ROLE_GENERAL_ADMIN,
@@ -90,6 +105,14 @@ class Dienstplan_Roles {
             $admin_role->add_cap(self::CAP_MANAGE_CLUBS);
             $admin_role->add_cap(self::CAP_VIEW_REPORTS);
             $admin_role->add_cap(self::CAP_SEND_NOTIFICATIONS);
+
+            // Legacy-Caps entfernen, damit nur noch die v2-Varianten existieren.
+            $admin_role->remove_cap(self::LEGACY_CAP_MANAGE_SETTINGS);
+            $admin_role->remove_cap(self::LEGACY_CAP_MANAGE_USERS);
+            $admin_role->remove_cap(self::LEGACY_CAP_MANAGE_EVENTS);
+            $admin_role->remove_cap(self::LEGACY_CAP_MANAGE_CLUBS);
+            $admin_role->remove_cap(self::LEGACY_CAP_VIEW_REPORTS);
+            $admin_role->remove_cap(self::LEGACY_CAP_SEND_NOTIFICATIONS);
         }
 
         // Bestehende Rollen aktiv aktualisieren (add_role() aktualisiert vorhandene Rollen nicht)
@@ -133,6 +156,12 @@ class Dienstplan_Roles {
         remove_role(self::ROLE_EVENT_ADMIN);
         remove_role(self::ROLE_CLUB_ADMIN);
         remove_role(self::ROLE_CREW);
+
+        // Legacy-Rollen ebenfalls entfernen.
+        remove_role(self::LEGACY_ROLE_GENERAL_ADMIN);
+        remove_role(self::LEGACY_ROLE_EVENT_ADMIN);
+        remove_role(self::LEGACY_ROLE_CLUB_ADMIN);
+        remove_role(self::LEGACY_ROLE_CREW);
         
         // Capabilities vom Administrator entfernen
         $admin_role = get_role('administrator');
@@ -143,6 +172,56 @@ class Dienstplan_Roles {
             $admin_role->remove_cap(self::CAP_MANAGE_CLUBS);
             $admin_role->remove_cap(self::CAP_VIEW_REPORTS);
             $admin_role->remove_cap(self::CAP_SEND_NOTIFICATIONS);
+            $admin_role->remove_cap(self::LEGACY_CAP_MANAGE_SETTINGS);
+            $admin_role->remove_cap(self::LEGACY_CAP_MANAGE_USERS);
+            $admin_role->remove_cap(self::LEGACY_CAP_MANAGE_EVENTS);
+            $admin_role->remove_cap(self::LEGACY_CAP_MANAGE_CLUBS);
+            $admin_role->remove_cap(self::LEGACY_CAP_VIEW_REPORTS);
+            $admin_role->remove_cap(self::LEGACY_CAP_SEND_NOTIFICATIONS);
+        }
+    }
+
+    /**
+     * Entfernt alte Rollen und alte Caps, falls diese noch vorhanden sind.
+     */
+    private static function cleanup_legacy_roles_and_caps() {
+        remove_role(self::LEGACY_ROLE_GENERAL_ADMIN);
+        remove_role(self::LEGACY_ROLE_EVENT_ADMIN);
+        remove_role(self::LEGACY_ROLE_CLUB_ADMIN);
+        remove_role(self::LEGACY_ROLE_CREW);
+
+        $admin_role = get_role('administrator');
+        if ($admin_role) {
+            $admin_role->remove_cap(self::LEGACY_CAP_MANAGE_SETTINGS);
+            $admin_role->remove_cap(self::LEGACY_CAP_MANAGE_USERS);
+            $admin_role->remove_cap(self::LEGACY_CAP_MANAGE_EVENTS);
+            $admin_role->remove_cap(self::LEGACY_CAP_MANAGE_CLUBS);
+            $admin_role->remove_cap(self::LEGACY_CAP_VIEW_REPORTS);
+            $admin_role->remove_cap(self::LEGACY_CAP_SEND_NOTIFICATIONS);
+        }
+    }
+
+    /**
+     * Migriert Benutzer mit Legacy-Rollen auf die neuen v2-Rollen.
+     */
+    private static function migrate_legacy_user_roles() {
+        $mapping = array(
+            self::LEGACY_ROLE_GENERAL_ADMIN => self::ROLE_GENERAL_ADMIN,
+            self::LEGACY_ROLE_EVENT_ADMIN => self::ROLE_EVENT_ADMIN,
+            self::LEGACY_ROLE_CLUB_ADMIN => self::ROLE_CLUB_ADMIN,
+            self::LEGACY_ROLE_CREW => self::ROLE_CREW,
+        );
+
+        foreach ($mapping as $legacy_role => $new_role) {
+            $users = get_users(array('role' => $legacy_role));
+            if (empty($users)) {
+                continue;
+            }
+
+            foreach ($users as $user) {
+                $user->add_role($new_role);
+                $user->remove_role($legacy_role);
+            }
         }
     }
     
@@ -313,6 +392,21 @@ class Dienstplan_Roles {
                     break;
                 case self::ROLE_CLUB_ADMIN:
                     $roles[] = __('Vereins-Admin', 'dienstplan-verwaltung');
+                    break;
+                case self::ROLE_CREW:
+                    $roles[] = __('Crew-Mitglied', 'dienstplan-verwaltung');
+                    break;
+                case self::LEGACY_ROLE_GENERAL_ADMIN:
+                    $roles[] = __('Allgemeiner Admin (Legacy)', 'dienstplan-verwaltung');
+                    break;
+                case self::LEGACY_ROLE_EVENT_ADMIN:
+                    $roles[] = __('Veranstaltungs-Admin (Legacy)', 'dienstplan-verwaltung');
+                    break;
+                case self::LEGACY_ROLE_CLUB_ADMIN:
+                    $roles[] = __('Vereins-Admin (Legacy)', 'dienstplan-verwaltung');
+                    break;
+                case self::LEGACY_ROLE_CREW:
+                    $roles[] = __('Crew-Mitglied (Legacy)', 'dienstplan-verwaltung');
                     break;
             }
         }
