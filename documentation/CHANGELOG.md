@@ -7,6 +7,16 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ---
 
+## [0.9.5.31] - 2026-03-13 👤 Vereins-Admin: nur Selbst-Eintragung
+
+### ✨ Verbesserungen
+
+- Bei `Dienst zuweisen` kann ein eingeschraenkter Vereins-Admin nur noch den eigenen Mitarbeiterdatensatz auswaehlen.
+- Serverseitige Absicherung in `ajax_admin_assign_slot`: fremde `mitarbeiter_id` werden fuer Vereins-Admins abgewiesen.
+- Ermittlung des eigenen Mitarbeiterdatensatzes ueber `mitarbeiter.user_id`, mit E-Mail-Fallback.
+
+---
+
 ## [0.9.5.30] - 2026-03-13 🔗 Rollenbasierte Link-Sichtbarkeit
 
 ### ✨ Verbesserungen

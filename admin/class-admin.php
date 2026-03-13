@@ -272,6 +272,52 @@ class Dienstplan_Admin {
         $verein_ids = $this->get_current_user_verein_ids($db);
         return in_array(intval($verein_id), $verein_ids, true);
     }
+
+    /**
+     * Liefert die Mitarbeiter-IDs, die dem aktuellen WP-Benutzer gehoeren.
+     * Primaer ueber mitarbeiter.user_id, Fallback ueber gleiche E-Mail.
+     *
+     * @param Dienstplan_Database $db
+     * @return int[]
+     */
+    private function get_current_user_own_mitarbeiter_ids($db) {
+        global $wpdb;
+
+        $user_id = get_current_user_id();
+        $table = $wpdb->prefix . $this->db_prefix . 'mitarbeiter';
+        $ids = array();
+
+        if ($user_id > 0) {
+            $by_user_id = $wpdb->get_col($wpdb->prepare(
+                "SELECT id FROM {$table} WHERE user_id = %d",
+                $user_id
+            ));
+
+            if (!empty($by_user_id)) {
+                foreach ($by_user_id as $id) {
+                    $ids[] = intval($id);
+                }
+            }
+        }
+
+        if (empty($ids)) {
+            $user = wp_get_current_user();
+            if ($user && !empty($user->user_email)) {
+                $by_email = $wpdb->get_col($wpdb->prepare(
+                    "SELECT id FROM {$table} WHERE email = %s",
+                    $user->user_email
+                ));
+
+                if (!empty($by_email)) {
+                    foreach ($by_email as $id) {
+                        $ids[] = intval($id);
+                    }
+                }
+            }
+        }
+
+        return array_values(array_unique(array_filter($ids)));
+    }
     
     /**
      * Admin-Notices anzeigen
@@ -2351,9 +2397,21 @@ class Dienstplan_Admin {
         // Slots für diesen Dienst laden
         $slots = $db->get_dienst_slots($dienst_id);
         
-        // Alle Mitarbeiter für Auswahlliste
+        // Mitarbeiter-Auswahlliste: Vereins-Admins duerfen nur sich selbst eintragen.
         global $wpdb;
-        $mitarbeiter = $wpdb->get_results("SELECT * FROM {$wpdb->prefix}dp_mitarbeiter ORDER BY vorname, nachname");
+        if ($this->is_restricted_club_admin()) {
+            $own_ids = $this->get_current_user_own_mitarbeiter_ids($db);
+            $mitarbeiter = array();
+
+            foreach ($own_ids as $own_id) {
+                $row = $db->get_mitarbeiter($own_id);
+                if ($row) {
+                    $mitarbeiter[] = $row;
+                }
+            }
+        } else {
+            $mitarbeiter = $wpdb->get_results("SELECT * FROM {$wpdb->prefix}dp_mitarbeiter ORDER BY vorname, nachname");
+        }
         
         wp_send_json_success(array(
             'dienst' => $dienst,
@@ -2400,6 +2458,14 @@ class Dienstplan_Admin {
         if (!$this->current_user_can_access_dienst($db, intval($slot->dienst_id))) {
             wp_send_json_error(array('message' => 'Keine Berechtigung für diesen Dienst'));
             return;
+        }
+
+        if ($this->is_restricted_club_admin()) {
+            $own_ids = $this->get_current_user_own_mitarbeiter_ids($db);
+            if (!in_array($mitarbeiter_id, $own_ids, true)) {
+                wp_send_json_error(array('message' => 'Als Vereins-Admin kannst du nur dich selbst eintragen.'));
+                return;
+            }
         }
         
         // Prüfe ob Slot schon besetzt ist (nur wenn nicht force_replace)
