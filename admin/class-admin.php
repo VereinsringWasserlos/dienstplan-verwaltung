@@ -783,10 +783,6 @@ class Dienstplan_Admin {
         require_once DIENSTPLAN_PLUGIN_PATH . 'includes/class-database.php';
         $db = new Dienstplan_Database($this->db_prefix);
 
-        if (!$this->current_user_can_access_veranstaltung($db, $veranstaltung_id) || !$this->current_user_can_access_verein($db, $verein_id)) {
-            wp_send_json_error(array('message' => 'Keine Berechtigung für Veranstaltung oder Verein.'));
-            return;
-        }
         $stats = $db->get_stats();
         
         // Lade aktuelle Veranstaltungen für Dashboard

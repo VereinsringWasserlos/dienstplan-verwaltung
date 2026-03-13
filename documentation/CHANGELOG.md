@@ -7,6 +7,17 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ---
 
+## [0.9.5.29] - 2026-03-13 🧹 Dashboard/Modal Fehler bereinigt
+
+### 🐛 Bugfixes
+
+- PHP-Warnung behoben: `Undefined variable $veranstaltung_id` und `Undefined variable $verein_id` in `display_dashboard()`.
+- Ursache war ein fehlplatzierter Berechtigungsblock im Dashboard-Renderpfad.
+- Mitarbeiter-Dienste-Modal behoben: versehentlich als Klartext ausgegebener JavaScript-Block aus der Partial entfernt.
+- Das Modal nutzt nun sauber nur noch `assets/js/dp-mitarbeiter-dienste-modal.js`.
+
+---
+
 ## [0.9.5.28] - 2026-03-13 🧭 Vereins-Admin Scope reaktiviert
 
 ### ✨ Verbesserungen
