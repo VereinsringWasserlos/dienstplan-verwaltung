@@ -7,6 +7,15 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ---
 
+## [0.9.5.20] - 2026-03-13 🛡️ Admin-Vollzugriff
+
+### 🐛 Bugfixes
+
+- **Admin-Zugriff vereinheitlicht:** Benutzer mit `dp_manage_settings` gelten jetzt systemweit als uneingeschränkte Admins.
+- Dadurch greifen keine Vereins-Scopes mehr für Admins; alle Vereine, Veranstaltungen, Dienste und Mitarbeiter sind vollständig sichtbar/bearbeitbar.
+
+---
+
 ## [0.9.5.19] - 2026-03-13 🔄 Update-Reaktivierung
 
 ### 🐛 Bugfixes

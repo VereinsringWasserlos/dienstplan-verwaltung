@@ -43,6 +43,11 @@ class Dienstplan_Admin {
             return true;
         }
 
+        // Plugin-Admins mit Settings-Recht haben immer Vollzugriff.
+        if (current_user_can(Dienstplan_Roles::CAP_MANAGE_SETTINGS)) {
+            return true;
+        }
+
         $user = wp_get_current_user();
         if (!$user || empty($user->roles)) {
             return false;
