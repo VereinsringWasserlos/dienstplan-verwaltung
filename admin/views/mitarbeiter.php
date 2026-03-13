@@ -13,7 +13,12 @@ $filter_portal = isset($_GET['filter_portal']) ? sanitize_text_field($_GET['filt
 $search = isset($_GET['search']) ? sanitize_text_field($_GET['search']) : '';
 
 // Mitarbeiter laden
-$mitarbeiter = $db->get_mitarbeiter_with_stats($filter_verein, $filter_veranstaltung, $search);
+if (!isset($mitarbeiter) || !is_array($mitarbeiter)) {
+    $scoped_verein_ids = isset($allowed_verein_ids) && is_array($allowed_verein_ids)
+        ? array_values(array_filter(array_map('intval', $allowed_verein_ids)))
+        : array();
+    $mitarbeiter = $db->get_mitarbeiter_with_stats($filter_verein, $filter_veranstaltung, $search, $scoped_verein_ids);
+}
 
 // Portal-Filter anwenden (da nicht in DB-Funktion)
 if ($filter_portal === 'active') {

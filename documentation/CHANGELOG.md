@@ -7,6 +7,22 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ---
 
+## [0.9.5.16] - 2026-03-13 🧩 Rechte-Refactor Vereinsadmin
+
+### ✨ Verbesserungen
+
+- **Zentrale Scope-Logik im Admin:** Verein-, Veranstaltungs-, Dienst- und Mitarbeiterzugriff
+  werden nun über gemeinsame Helper ermittelt.
+- **Neue Übersicht/Seitenlogik:** Die Seiten Veranstaltungen, Dienste, Mitarbeiter und Übersicht
+  laden für eingeschränkte Vereinsadmins nur noch scoped Daten.
+- **DB-Layer erweitert:** `get_dienste()` und `get_mitarbeiter_with_stats()` unterstützen jetzt
+  erlaubte Vereins-IDs direkt im Query.
+- **AJAX konsistenter abgesichert:** CRUD- und Hilfsaktionen für Veranstaltungen, Dienste,
+  Mitarbeiter und Vereinsseiten prüfen jetzt den konkreten Datenzugriff statt nur eine Capability.
+- **Vereins-/Veranstaltungsseiten-Erstellung scoped:** Kein globales Anfassen fremder Vereine mehr.
+
+---
+
 ## [0.9.5.15] - 2026-03-13 🔒 Vereinsfilter-Hotfix
 
 ### 🐛 Bugfixes

@@ -15,8 +15,11 @@ $filter_status = isset($_GET['status']) ? sanitize_text_field($_GET['status']) :
 
 // Dienste laden (mit Filtern)
 $dienste = array();
+$scoped_verein_ids = isset($allowed_verein_ids) && is_array($allowed_verein_ids)
+    ? array_values(array_filter(array_map('intval', $allowed_verein_ids)))
+    : array();
 if ($selected_veranstaltung > 0) {
-    $all_dienste = $db->get_dienste($selected_veranstaltung, $selected_verein);
+    $all_dienste = $db->get_dienste($selected_veranstaltung, $selected_verein, null, $scoped_verein_ids);
     
     // Status-Filter anwenden
     if ($filter_status === 'unvollstaendig') {

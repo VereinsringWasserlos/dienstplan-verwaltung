@@ -1256,7 +1256,7 @@ class Dienstplan_Database {
     
     // === DIENSTE METHODEN ===
     
-    public function get_dienste($veranstaltung_id = null, $verein_id = null, $tag_id = null) {
+    public function get_dienste($veranstaltung_id = null, $verein_id = null, $tag_id = null, $allowed_verein_ids = array()) {
         $where = array();
         $params = array();
         
@@ -1273,6 +1273,15 @@ class Dienstplan_Database {
         if ($tag_id) {
             $where[] = "d.tag_id = %d";
             $params[] = $tag_id;
+        }
+
+        if (!empty($allowed_verein_ids) && is_array($allowed_verein_ids)) {
+            $allowed_verein_ids = array_values(array_filter(array_map('intval', $allowed_verein_ids)));
+            if (!empty($allowed_verein_ids)) {
+                $placeholders = implode(', ', array_fill(0, count($allowed_verein_ids), '%d'));
+                $where[] = "d.verein_id IN ({$placeholders})";
+                $params = array_merge($params, $allowed_verein_ids);
+            }
         }
         
         $where_sql = !empty($where) ? "WHERE " . implode(" AND ", $where) : "";
@@ -1658,7 +1667,7 @@ class Dienstplan_Database {
      * @param string $search Optional: Suchbegriff für Name/Email
      * @return array Mitarbeiter mit Statistiken
      */
-    public function get_mitarbeiter_with_stats($filter_verein = 0, $filter_veranstaltung = 0, $search = '') {
+    public function get_mitarbeiter_with_stats($filter_verein = 0, $filter_veranstaltung = 0, $search = '', $allowed_verein_ids = array()) {
         $sql = "SELECT m.*, 
                 COUNT(DISTINCT s.id) as total_dienste,
                 COUNT(DISTINCT CASE WHEN s.status = 'besetzt' THEN s.id END) as aktive_dienste,
@@ -1670,6 +1679,15 @@ class Dienstplan_Database {
                 WHERE 1=1";
         
         $params = array();
+
+        if (!empty($allowed_verein_ids) && is_array($allowed_verein_ids)) {
+            $allowed_verein_ids = array_values(array_filter(array_map('intval', $allowed_verein_ids)));
+            if (!empty($allowed_verein_ids)) {
+                $placeholders = implode(', ', array_fill(0, count($allowed_verein_ids), '%d'));
+                $sql .= " AND d.verein_id IN ({$placeholders})";
+                $params = array_merge($params, $allowed_verein_ids);
+            }
+        }
         
         // Filter nach Verein
         if ($filter_verein > 0) {

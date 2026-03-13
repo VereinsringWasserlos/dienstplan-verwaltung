@@ -20,6 +20,9 @@ $zeitslots = array();
 $veranstaltung_tage = array();
 $timeline_start = null;
 $timeline_end = null;
+$scoped_verein_ids = isset($allowed_verein_ids) && is_array($allowed_verein_ids)
+    ? array_values(array_filter(array_map('intval', $allowed_verein_ids)))
+    : array();
 
 if ($selected_veranstaltung > 0) {
     // Lade Tage der Veranstaltung
@@ -27,9 +30,9 @@ if ($selected_veranstaltung > 0) {
     
     // Lade Dienste - optional nach Tag filtern
     if ($selected_tag > 0) {
-        $dienste = $db->get_dienste($selected_veranstaltung, null, $selected_tag);
+        $dienste = $db->get_dienste($selected_veranstaltung, null, $selected_tag, $scoped_verein_ids);
     } else {
-        $dienste = $db->get_dienste($selected_veranstaltung);
+        $dienste = $db->get_dienste($selected_veranstaltung, null, null, $scoped_verein_ids);
     }
     
     // Optional: Nach Bereich filtern

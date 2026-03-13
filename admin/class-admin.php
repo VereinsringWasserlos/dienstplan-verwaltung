@@ -111,6 +111,144 @@ class Dienstplan_Admin {
     }
 
     /**
+     * Liefert die für den aktuellen Benutzer sichtbaren Vereine.
+     *
+     * @param Dienstplan_Database $db
+     * @param bool $active_only
+     * @return array
+     */
+    private function get_scoped_vereine($db, $active_only = false) {
+        if (!$this->is_restricted_club_admin()) {
+            return $db->get_vereine($active_only);
+        }
+
+        $allowed_ids = $this->get_current_user_verein_ids($db);
+        $vereine = array();
+
+        foreach ($allowed_ids as $verein_id) {
+            $verein = $db->get_verein($verein_id);
+            if (!$verein) {
+                continue;
+            }
+
+            if ($active_only && empty($verein->aktiv)) {
+                continue;
+            }
+
+            $vereine[] = $verein;
+        }
+
+        return $vereine;
+    }
+
+    /**
+     * Prüft, ob der aktuelle Benutzer auf eine Veranstaltung zugreifen darf.
+     *
+     * @param Dienstplan_Database $db
+     * @param int $veranstaltung_id
+     * @return bool
+     */
+    private function current_user_can_access_veranstaltung($db, $veranstaltung_id) {
+        if (!$this->is_restricted_club_admin()) {
+            return true;
+        }
+
+        $allowed_verein_ids = $this->get_current_user_verein_ids($db);
+        if (empty($allowed_verein_ids)) {
+            return false;
+        }
+
+        $veranstaltung_vereine = $db->get_veranstaltung_vereine($veranstaltung_id);
+        if (!empty($veranstaltung_vereine)) {
+            foreach ($veranstaltung_vereine as $verein) {
+                if (in_array(intval($verein->verein_id), $allowed_verein_ids, true)) {
+                    return true;
+                }
+            }
+        }
+
+        // Fallback über bereits angelegte Dienste dieser Veranstaltung
+        $dienste = $db->get_dienste($veranstaltung_id);
+        foreach ($dienste as $dienst) {
+            if (in_array(intval($dienst->verein_id), $allowed_verein_ids, true)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Liefert die für den aktuellen Benutzer sichtbaren Veranstaltungen.
+     *
+     * @param Dienstplan_Database $db
+     * @param array $filter
+     * @return array
+     */
+    private function get_scoped_veranstaltungen($db, $filter = array()) {
+        $veranstaltungen = $db->get_veranstaltungen($filter);
+
+        if (!$this->is_restricted_club_admin()) {
+            return $veranstaltungen;
+        }
+
+        return array_values(array_filter($veranstaltungen, function($veranstaltung) use ($db) {
+            return $this->current_user_can_access_veranstaltung($db, intval($veranstaltung->id));
+        }));
+    }
+
+    /**
+     * Prüft, ob der aktuelle Benutzer auf einen Dienst zugreifen darf.
+     *
+     * @param Dienstplan_Database $db
+     * @param int $dienst_id
+     * @return bool
+     */
+    private function current_user_can_access_dienst($db, $dienst_id) {
+        if (!$this->is_restricted_club_admin()) {
+            return true;
+        }
+
+        $dienst = $db->get_dienst($dienst_id);
+        if (!$dienst) {
+            return false;
+        }
+
+        if (!empty($dienst->verein_id)) {
+            return $this->current_user_can_access_verein($db, $dienst->verein_id);
+        }
+
+        return $this->current_user_can_access_veranstaltung($db, $dienst->veranstaltung_id);
+    }
+
+    /**
+     * Prüft, ob der aktuelle Benutzer auf einen Mitarbeiter zugreifen darf.
+     *
+     * @param Dienstplan_Database $db
+     * @param int $mitarbeiter_id
+     * @return bool
+     */
+    private function current_user_can_access_mitarbeiter($db, $mitarbeiter_id) {
+        if (!$this->is_restricted_club_admin()) {
+            return true;
+        }
+
+        $dienste = $db->get_mitarbeiter_dienste($mitarbeiter_id);
+        if (empty($dienste)) {
+            return false;
+        }
+
+        $allowed_verein_ids = $this->get_current_user_verein_ids($db);
+        foreach ($dienste as $dienst) {
+            if (in_array(intval($dienst->verein_id), $allowed_verein_ids, true)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
      * Prüft, ob der aktuelle Benutzer auf einen Verein zugreifen darf.
      *
      * @param Dienstplan_Database $db
@@ -635,6 +773,11 @@ class Dienstplan_Admin {
     public function display_dashboard() {
         require_once DIENSTPLAN_PLUGIN_PATH . 'includes/class-database.php';
         $db = new Dienstplan_Database($this->db_prefix);
+
+        if (!$this->current_user_can_access_veranstaltung($db, $veranstaltung_id) || !$this->current_user_can_access_verein($db, $verein_id)) {
+            wp_send_json_error(array('message' => 'Keine Berechtigung für Veranstaltung oder Verein.'));
+            return;
+        }
         $stats = $db->get_stats();
         
         // Lade aktuelle Veranstaltungen für Dashboard
@@ -650,21 +793,7 @@ class Dienstplan_Admin {
         require_once DIENSTPLAN_PLUGIN_PATH . 'includes/class-database.php';
         $db = new Dienstplan_Database($this->db_prefix);
 
-        if ($this->is_restricted_club_admin()) {
-            $allowed_ids = $this->get_current_user_verein_ids($db);
-            $vereine = array();
-
-            if (!empty($allowed_ids)) {
-                foreach ($allowed_ids as $verein_id) {
-                    $verein = $db->get_verein($verein_id);
-                    if ($verein) {
-                        $vereine[] = $verein;
-                    }
-                }
-            }
-        } else {
-            $vereine = $db->get_vereine();
-        }
+        $vereine = $this->get_scoped_vereine($db);
 
         include_once DIENSTPLAN_PLUGIN_PATH . 'admin/views/vereine.php';
     }
@@ -672,8 +801,8 @@ class Dienstplan_Admin {
     public function display_veranstaltungen() {
         require_once DIENSTPLAN_PLUGIN_PATH . 'includes/class-database.php';
         $db = new Dienstplan_Database($this->db_prefix);
-        $veranstaltungen = $db->get_veranstaltungen();
-        $vereine = $db->get_vereine(); // Für Checkboxen im Modal
+        $veranstaltungen = $this->get_scoped_veranstaltungen($db);
+        $vereine = $this->get_scoped_vereine($db); // Für Checkboxen im Modal
         include_once DIENSTPLAN_PLUGIN_PATH . 'admin/views/veranstaltungen.php';
     }
     
@@ -686,10 +815,26 @@ class Dienstplan_Admin {
     public function display_dienste() {
         require_once DIENSTPLAN_PLUGIN_PATH . 'includes/class-database.php';
         $db = new Dienstplan_Database($this->db_prefix);
+
+        $allowed_verein_ids = $this->is_restricted_club_admin() ? $this->get_current_user_verein_ids($db) : array();
+        $veranstaltungen = $this->get_scoped_veranstaltungen($db);
+        $vereine = $this->get_scoped_vereine($db);
+
+        $allowed_veranstaltung_ids = array_map(function($veranstaltung) {
+            return intval($veranstaltung->id);
+        }, $veranstaltungen);
+
+        $selected_veranstaltung = isset($_GET['veranstaltung']) ? intval($_GET['veranstaltung']) : 0;
+        $selected_verein = isset($_GET['verein']) ? intval($_GET['verein']) : 0;
+
+        if ($selected_veranstaltung > 0 && !in_array($selected_veranstaltung, $allowed_veranstaltung_ids, true)) {
+            $_GET['veranstaltung'] = 0;
+        }
+
+        if (!empty($allowed_verein_ids) && $selected_verein > 0 && !in_array($selected_verein, $allowed_verein_ids, true)) {
+            $_GET['verein'] = 0;
+        }
         
-        // Lade alle benötigten Daten
-        $veranstaltungen = $db->get_veranstaltungen();
-        $vereine = $db->get_vereine();
         $bereiche = $db->get_bereiche(true); // nur aktive
         $taetigkeiten = $db->get_taetigkeiten(true); // nur aktive
         
@@ -699,9 +844,18 @@ class Dienstplan_Admin {
     public function display_overview() {
         require_once DIENSTPLAN_PLUGIN_PATH . 'includes/class-database.php';
         $db = new Dienstplan_Database($this->db_prefix);
+
+        $allowed_verein_ids = $this->is_restricted_club_admin() ? $this->get_current_user_verein_ids($db) : array();
+        $veranstaltungen = $this->get_scoped_veranstaltungen($db);
+        $allowed_veranstaltung_ids = array_map(function($veranstaltung) {
+            return intval($veranstaltung->id);
+        }, $veranstaltungen);
+
+        $selected_veranstaltung = isset($_GET['veranstaltung']) ? intval($_GET['veranstaltung']) : 0;
+        if ($selected_veranstaltung > 0 && !in_array($selected_veranstaltung, $allowed_veranstaltung_ids, true)) {
+            $_GET['veranstaltung'] = 0;
+        }
         
-        // Lade alle benötigten Daten
-        $veranstaltungen = $db->get_veranstaltungen();
         $bereiche = $db->get_bereiche(true); // nur aktive
         
         include_once DIENSTPLAN_PLUGIN_PATH . 'admin/views/overview.php';
@@ -716,15 +870,30 @@ class Dienstplan_Admin {
     public function display_mitarbeiter() {
         require_once DIENSTPLAN_PLUGIN_PATH . 'includes/class-database.php';
         $db = new Dienstplan_Database($this->db_prefix);
+
+        $allowed_verein_ids = $this->is_restricted_club_admin() ? $this->get_current_user_verein_ids($db) : array();
+        $veranstaltungen = $this->get_scoped_veranstaltungen($db);
+        $vereine = $this->get_scoped_vereine($db, true);
+
+        $allowed_veranstaltung_ids = array_map(function($veranstaltung) {
+            return intval($veranstaltung->id);
+        }, $veranstaltungen);
         
-        // Filter-Parameter
         $filter_verein = isset($_GET['filter_verein']) ? intval($_GET['filter_verein']) : 0;
         $filter_veranstaltung = isset($_GET['filter_veranstaltung']) ? intval($_GET['filter_veranstaltung']) : 0;
         $search = isset($_GET['search']) ? sanitize_text_field($_GET['search']) : '';
+
+        if (!empty($allowed_verein_ids) && $filter_verein > 0 && !in_array($filter_verein, $allowed_verein_ids, true)) {
+            $_GET['filter_verein'] = 0;
+            $filter_verein = 0;
+        }
+
+        if ($filter_veranstaltung > 0 && !in_array($filter_veranstaltung, $allowed_veranstaltung_ids, true)) {
+            $_GET['filter_veranstaltung'] = 0;
+            $filter_veranstaltung = 0;
+        }
         
-        // Lade Daten für Filter
-        $vereine = $db->get_vereine(true);
-        $veranstaltungen = $db->get_veranstaltungen();
+        $mitarbeiter = $db->get_mitarbeiter_with_stats($filter_verein, $filter_veranstaltung, $search, $allowed_verein_ids);
         
         include_once DIENSTPLAN_PLUGIN_PATH . 'admin/views/mitarbeiter.php';
     }
@@ -1040,6 +1209,11 @@ class Dienstplan_Admin {
         
         require_once DIENSTPLAN_PLUGIN_PATH . 'includes/class-database.php';
         $db = new Dienstplan_Database($this->db_prefix);
+
+        if (!$this->current_user_can_access_veranstaltung($db, $veranstaltung_id)) {
+            wp_send_json_error(array('message' => 'Keine Berechtigung für diese Veranstaltung'));
+            return;
+        }
         
         $tage = $db->get_veranstaltung_tage($veranstaltung_id);
         wp_send_json_success($tage);
@@ -1087,6 +1261,16 @@ class Dienstplan_Admin {
             );
             
             $dienst_id = !empty($_POST['dienst_id']) ? intval($_POST['dienst_id']) : 0;
+
+            if (!$this->current_user_can_access_veranstaltung($db, $data['veranstaltung_id']) || !$this->current_user_can_access_verein($db, $data['verein_id'])) {
+                wp_send_json_error(array('message' => 'Keine Berechtigung für Veranstaltung oder Verein'));
+                return;
+            }
+
+            if ($dienst_id > 0 && !$this->current_user_can_access_dienst($db, $dienst_id)) {
+                wp_send_json_error(array('message' => 'Keine Berechtigung für diesen Dienst'));
+                return;
+            }
             
             if ($dienst_id > 0) {
                 // Update
@@ -1160,6 +1344,11 @@ class Dienstplan_Admin {
         
         require_once DIENSTPLAN_PLUGIN_PATH . 'includes/class-database.php';
         $db = new Dienstplan_Database($this->db_prefix);
+
+        if (!$this->current_user_can_access_dienst($db, $dienst_id)) {
+            wp_send_json_error(array('message' => 'Keine Berechtigung für diesen Dienst'));
+            return;
+        }
         
         $dienst = $db->get_dienst($dienst_id);
         
@@ -1199,6 +1388,11 @@ class Dienstplan_Admin {
         
         require_once DIENSTPLAN_PLUGIN_PATH . 'includes/class-database.php';
         $db = new Dienstplan_Database($this->db_prefix);
+
+        if (!$this->current_user_can_access_dienst($db, $dienst_id)) {
+            wp_send_json_error(array('message' => 'Keine Berechtigung für diesen Dienst'));
+            return;
+        }
         
         $result = $db->delete_dienst($dienst_id);
         
@@ -1233,6 +1427,11 @@ class Dienstplan_Admin {
         
         require_once DIENSTPLAN_PLUGIN_PATH . 'includes/class-database.php';
         $db = new Dienstplan_Database($this->db_prefix);
+
+        if (!$this->current_user_can_access_dienst($db, $dienst_id)) {
+            wp_send_json_error(array('message' => 'Keine Berechtigung für diesen Dienst'));
+            return;
+        }
         
         // Lade Original-Dienst
         global $wpdb;
@@ -1519,14 +1718,21 @@ class Dienstplan_Admin {
             
             check_ajax_referer('dp_ajax_nonce', 'nonce');
             
-            if (!current_user_can('manage_options')) {
+            if (!Dienstplan_Roles::can_manage_events()) {
                 error_log('Keine Berechtigung');
                 wp_send_json_error(array('message' => 'Keine Berechtigung'));
+                return;
             }
             
             require_once DIENSTPLAN_PLUGIN_PATH . 'includes/class-database.php';
             $db = new Dienstplan_Database($this->db_prefix);
             
+            $veranstaltung_id = isset($_POST['veranstaltung_id']) ? intval($_POST['veranstaltung_id']) : 0;
+            if ($veranstaltung_id > 0 && !$this->current_user_can_access_veranstaltung($db, $veranstaltung_id)) {
+                wp_send_json_error(array('message' => 'Keine Berechtigung für diese Veranstaltung'));
+                return;
+            }
+
             // Validierung
             if (empty($_POST['titel'])) {
                 wp_send_json_error(array('message' => 'Titel ist erforderlich'));
@@ -1560,6 +1766,22 @@ class Dienstplan_Admin {
             if (empty($veranstaltung_data['start_datum'])) {
                 wp_send_json_error(array('message' => 'Mindestens ein Tag mit Datum ist erforderlich'));
                 return;
+            }
+
+            $selected_vereine = array();
+            if (isset($_POST['vereine']) && !empty($_POST['vereine'])) {
+                $selected_vereine = json_decode(stripslashes($_POST['vereine']), true);
+                $selected_vereine = is_array($selected_vereine) ? array_map('intval', $selected_vereine) : array();
+            }
+
+            if ($this->is_restricted_club_admin()) {
+                $allowed_verein_ids = $this->get_current_user_verein_ids($db);
+                foreach ($selected_vereine as $verein_id) {
+                    if (!in_array($verein_id, $allowed_verein_ids, true)) {
+                        wp_send_json_error(array('message' => 'Keine Berechtigung für einen oder mehrere ausgewählte Vereine'));
+                        return;
+                    }
+                }
             }
             
             // Speichern oder Aktualisieren
@@ -1649,7 +1871,7 @@ class Dienstplan_Admin {
             // Vereine speichern
             if ($result && isset($_POST['vereine']) && !empty($_POST['vereine'])) {
                 error_log('Vereine JSON: ' . $_POST['vereine']);
-                $vereine = json_decode(stripslashes($_POST['vereine']), true);
+                $vereine = $selected_vereine;
                 error_log('Vereine decoded: ' . print_r($vereine, true));
                 
                 if (is_array($vereine)) {
@@ -1708,14 +1930,20 @@ class Dienstplan_Admin {
     public function ajax_get_veranstaltung() {
         check_ajax_referer('dp_ajax_nonce', 'nonce');
         
-        if (!current_user_can('manage_options')) {
+        if (!Dienstplan_Roles::can_manage_events()) {
             wp_send_json_error(array('message' => 'Keine Berechtigung'));
+            return;
         }
         
         require_once DIENSTPLAN_PLUGIN_PATH . 'includes/class-database.php';
         $db = new Dienstplan_Database($this->db_prefix);
         
         $veranstaltung_id = intval($_POST['veranstaltung_id']);
+
+        if (!$this->current_user_can_access_veranstaltung($db, $veranstaltung_id)) {
+            wp_send_json_error(array('message' => 'Keine Berechtigung für diese Veranstaltung'));
+            return;
+        }
         $veranstaltung = $db->get_veranstaltung($veranstaltung_id);
         
         error_log('AJAX get_veranstaltung - ID: ' . $veranstaltung_id);
@@ -1754,14 +1982,20 @@ class Dienstplan_Admin {
     public function ajax_delete_veranstaltung() {
         check_ajax_referer('dp_ajax_nonce', 'nonce');
         
-        if (!current_user_can('manage_options')) {
+        if (!Dienstplan_Roles::can_manage_events()) {
             wp_send_json_error(array('message' => 'Keine Berechtigung'));
+            return;
         }
         
         require_once DIENSTPLAN_PLUGIN_PATH . 'includes/class-database.php';
         $db = new Dienstplan_Database($this->db_prefix);
         
         $veranstaltung_id = intval($_POST['veranstaltung_id']);
+
+        if (!$this->current_user_can_access_veranstaltung($db, $veranstaltung_id)) {
+            wp_send_json_error(array('message' => 'Keine Berechtigung für diese Veranstaltung'));
+            return;
+        }
         $delete_dienste = isset($_POST['delete_dienste']) ? (bool) $_POST['delete_dienste'] : false;
         
         // Zähle Dienste für diese Veranstaltung
@@ -2259,6 +2493,11 @@ class Dienstplan_Admin {
         $db = new Dienstplan_Database($this->db_prefix);
         
         $mitarbeiter = $db->get_mitarbeiter($mitarbeiter_id);
+
+        if (!$this->current_user_can_access_mitarbeiter($db, $mitarbeiter_id)) {
+            wp_send_json_error(array('message' => 'Keine Berechtigung für diesen Mitarbeiter'));
+            return;
+        }
         
         if (!$mitarbeiter) {
             wp_send_json_error(array('message' => 'Mitarbeiter nicht gefunden'));
@@ -2293,6 +2532,11 @@ class Dienstplan_Admin {
         
         require_once DIENSTPLAN_PLUGIN_PATH . 'includes/class-database.php';
         $db = new Dienstplan_Database($this->db_prefix);
+
+        if ($mitarbeiter_id > 0 && !$this->current_user_can_access_mitarbeiter($db, $mitarbeiter_id)) {
+            wp_send_json_error(array('message' => 'Keine Berechtigung für diesen Mitarbeiter'));
+            return;
+        }
         
         $data = array(
             'vorname' => $vorname,
@@ -2413,6 +2657,11 @@ class Dienstplan_Admin {
         
         require_once DIENSTPLAN_PLUGIN_PATH . 'includes/class-database.php';
         $db = new Dienstplan_Database($this->db_prefix);
+
+        if (!$this->current_user_can_access_mitarbeiter($db, $mitarbeiter_id)) {
+            wp_send_json_error(array('message' => 'Keine Berechtigung für diesen Mitarbeiter'));
+            return;
+        }
         
         $result = $db->delete_mitarbeiter($mitarbeiter_id);
         
@@ -2443,6 +2692,11 @@ class Dienstplan_Admin {
         
         require_once DIENSTPLAN_PLUGIN_PATH . 'includes/class-database.php';
         $db = new Dienstplan_Database($this->db_prefix);
+
+        if (!$this->current_user_can_access_mitarbeiter($db, $mitarbeiter_id)) {
+            wp_send_json_error(array('message' => 'Keine Berechtigung für diesen Mitarbeiter'));
+            return;
+        }
         
         $mitarbeiter = $db->get_mitarbeiter($mitarbeiter_id);
         
@@ -2507,6 +2761,11 @@ class Dienstplan_Admin {
         foreach ($mitarbeiter_ids as $id) {
             $id = intval($id);
             if ($id <= 0) continue;
+
+            if (!$this->current_user_can_access_mitarbeiter($db, $id)) {
+                $failed_count++;
+                continue;
+            }
             
             $result = $db->delete_mitarbeiter($id);
             if ($result !== false) {
@@ -4246,6 +4505,11 @@ class Dienstplan_Admin {
 
         require_once DIENSTPLAN_PLUGIN_PATH . 'includes/class-database.php';
         $db = new Dienstplan_Database($this->db_prefix);
+
+        if (!$this->current_user_can_access_verein($db, $verein_id)) {
+            wp_send_json_error(array('message' => 'Keine Berechtigung für diesen Verein.'));
+            return;
+        }
         $verein = $db->get_verein($verein_id);
 
         if (!$verein) {
@@ -4344,7 +4608,7 @@ class Dienstplan_Admin {
 
         require_once DIENSTPLAN_PLUGIN_PATH . 'includes/class-database.php';
         $db = new Dienstplan_Database($this->db_prefix);
-        $vereine = $db->get_vereine(false);
+        $vereine = $this->get_scoped_vereine($db, false);
 
         if (empty($vereine)) {
             wp_send_json_error(array('message' => 'Keine Vereine gefunden.'));
