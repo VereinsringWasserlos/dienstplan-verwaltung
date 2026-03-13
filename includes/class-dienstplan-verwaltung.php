@@ -109,6 +109,7 @@ class Dienstplan_Verwaltung {
         $plugin_i18n = new Dienstplan_i18n();
 
         $this->loader->add_action('init', $plugin_i18n, 'load_plugin_textdomain');
+        $this->loader->add_action('init', 'Dienstplan_Roles', 'run_pending_role_migration', 20);
     }
 
     /**

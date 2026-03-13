@@ -47,7 +47,14 @@ class Dienstplan_Roles {
      */
     public static function install_roles() {
         self::cleanup_legacy_roles_and_caps();
-        self::migrate_legacy_user_roles();
+        $migration_done = self::migrate_legacy_user_roles();
+
+        if ($migration_done) {
+            delete_option('dienstplan_roles_migration_pending');
+        } else {
+            // Zu frueh im Bootstrap: Migration auf init verschieben.
+            update_option('dienstplan_roles_migration_pending', 1);
+        }
 
         // Haupt-Admin - Vollzugriff auf alles
         add_role(
@@ -205,6 +212,11 @@ class Dienstplan_Roles {
      * Migriert Benutzer mit Legacy-Rollen auf die neuen v2-Rollen.
      */
     private static function migrate_legacy_user_roles() {
+        // In fruehen Bootstrap-Phasen kann get_user_by() noch fehlen.
+        if (!function_exists('get_users') || !function_exists('get_user_by')) {
+            return false;
+        }
+
         $mapping = array(
             self::LEGACY_ROLE_GENERAL_ADMIN => self::ROLE_GENERAL_ADMIN,
             self::LEGACY_ROLE_EVENT_ADMIN => self::ROLE_EVENT_ADMIN,
@@ -222,6 +234,21 @@ class Dienstplan_Roles {
                 $user->add_role($new_role);
                 $user->remove_role($legacy_role);
             }
+        }
+
+        return true;
+    }
+
+    /**
+     * Fuehrt eine ggf. ausstehende Rollenmigration nach dem Bootstrap aus.
+     */
+    public static function run_pending_role_migration() {
+        if (!get_option('dienstplan_roles_migration_pending', 0)) {
+            return;
+        }
+
+        if (self::migrate_legacy_user_roles()) {
+            delete_option('dienstplan_roles_migration_pending');
         }
     }
     

@@ -7,6 +7,18 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ---
 
+## [0.9.5.25] - 2026-03-13 🩹 Fatal bei Rollenmigration behoben
+
+### 🐛 Bugfixes
+
+- **Fatal Error behoben:** `Call to undefined function get_user_by()` waehrend der Rollenmigration beim fruehen Plugin-Load.
+- Ursache: Legacy-Rollenmigration lief teilweise vor vollstaendigem WordPress-Bootstrap.
+- Fix:
+  - Migration wird nur ausgefuehrt, wenn `get_users()` und `get_user_by()` verfuegbar sind.
+  - Falls zu frueh geladen, wird ein Pending-Flag gesetzt und die Migration automatisch auf `init` nachgeholt.
+
+---
+
 ## [0.9.5.24] - 2026-03-13 👥 Rollenbegriffe vereinheitlicht
 
 ### ✨ Verbesserungen
