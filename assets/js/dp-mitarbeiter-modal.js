@@ -1,12 +1,43 @@
 (function($) {
     'use strict';
+
+    function setSelectedVereine(vereinIds) {
+        const selected = Array.isArray(vereinIds) ? vereinIds.map(String) : [];
+
+        $('#ma_vereine option').each(function() {
+            $(this).prop('selected', selected.indexOf(String($(this).val())) !== -1);
+        });
+    }
+
+    function updateVereinOptions(vereine) {
+        const $select = $('#ma_vereine');
+        if (!$select.length || !Array.isArray(vereine)) {
+            return;
+        }
+
+        $select.empty();
+        vereine.forEach(function(verein) {
+            if (!verein || typeof verein.id === 'undefined') {
+                return;
+            }
+            const option = $('<option></option>')
+                .val(String(verein.id))
+                .text(verein.name || ('Verein #' + verein.id));
+            $select.append(option);
+        });
+    }
     
     $(document).ready(function() {
         console.log('Mitarbeiter Modal geladen');
     });
     
-    window.openMitarbeiterModal = function() {
+    window.openMitarbeiterModal = function(id) {
         console.log('=== openMitarbeiterModal START ===');
+
+        if (id) {
+            window.editMitarbeiter(id);
+            return;
+        }
         
         // Form zurücksetzen mit Error-Handling
         const form = document.getElementById('mitarbeiter-form');
@@ -18,6 +49,7 @@
         
         $('#mitarbeiter_id').val('');
         $('#mitarbeiter-modal-title').text('Neuer Mitarbeiter');
+        setSelectedVereine([]);
         
         // Portal-Zugriff-Zeile verstecken bei neuem Mitarbeiter
         $('#portal-access-row').hide();
@@ -69,6 +101,11 @@
                     $('#ma_email').val(ma.email);
                     $('#ma_telefon').val(ma.telefon || '');
                     $('#ma_notizen').val(ma.notizen || '');
+
+                    if (Array.isArray(ma.allowed_vereine)) {
+                        updateVereinOptions(ma.allowed_vereine);
+                    }
+                    setSelectedVereine(ma.verein_ids || []);
                     
                     // Portal-Zugriff anzeigen
                     if (ma.email) {
@@ -122,6 +159,9 @@
             notizen: $('#ma_notizen').val(),
             portal_access: $('#ma_portal_access').is(':checked') ? '1' : '0'
         };
+
+        const vereinIds = $('#ma_vereine').val() || [];
+        formData.verein_ids = vereinIds;
         
         console.log('Sende Save Request:', formData);
         

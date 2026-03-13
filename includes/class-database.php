@@ -204,6 +204,32 @@ class Dienstplan_Database {
         ) $charset;";
 
         dbDelta($sql);
+
+        // Mitarbeiter-Verein Zuordnung (m:n)
+        $sql = "CREATE TABLE IF NOT EXISTS {$this->prefix}mitarbeiter_vereine (
+            id mediumint(9) NOT NULL AUTO_INCREMENT,
+            mitarbeiter_id mediumint(9) NOT NULL,
+            verein_id mediumint(9) NOT NULL,
+            source varchar(50) DEFAULT 'slot_assignment',
+            erstellt_am datetime DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (id),
+            UNIQUE KEY mitarbeiter_verein (mitarbeiter_id, verein_id),
+            KEY mitarbeiter_id (mitarbeiter_id),
+            KEY verein_id (verein_id)
+        ) $charset;";
+
+        dbDelta($sql);
+
+                $this->wpdb->query(
+                        "INSERT IGNORE INTO {$this->prefix}mitarbeiter_vereine (mitarbeiter_id, verein_id, source)
+                         SELECT DISTINCT s.mitarbeiter_id, d.verein_id, 'slot_assignment'
+                         FROM {$this->prefix}dienst_slots s
+                         INNER JOIN {$this->prefix}dienste d ON s.dienst_id = d.id
+                         WHERE s.mitarbeiter_id IS NOT NULL
+                             AND s.mitarbeiter_id > 0
+                             AND d.verein_id IS NOT NULL
+                             AND d.verein_id > 0"
+                );
         
         // Veranstaltung-Verantwortliche Zuordnung (m:n)
         $sql = "CREATE TABLE IF NOT EXISTS {$this->prefix}veranstaltung_verantwortliche (
@@ -1650,6 +1676,13 @@ class Dienstplan_Database {
             array('mitarbeiter_id' => $id),
             array('%d')
         );
+
+        // Entferne Vereinszuordnungen des Mitarbeiters
+        $this->wpdb->delete(
+            $this->prefix . 'mitarbeiter_vereine',
+            array('mitarbeiter_id' => $id),
+            array('%d')
+        );
         
         // Lösche Mitarbeiter
         return $this->wpdb->delete(
@@ -1668,55 +1701,211 @@ class Dienstplan_Database {
      * @return array Mitarbeiter mit Statistiken
      */
     public function get_mitarbeiter_with_stats($filter_verein = 0, $filter_veranstaltung = 0, $search = '', $allowed_verein_ids = array()) {
-        $sql = "SELECT m.*, 
-                COUNT(DISTINCT s.id) as total_dienste,
-                COUNT(DISTINCT CASE WHEN s.status = 'besetzt' THEN s.id END) as aktive_dienste,
-                GROUP_CONCAT(DISTINCT v.name ORDER BY v.name SEPARATOR ', ') as vereine
-                FROM {$this->prefix}mitarbeiter m
-                LEFT JOIN {$this->prefix}dienst_slots s ON m.id = s.mitarbeiter_id
-                LEFT JOIN {$this->prefix}dienste d ON s.dienst_id = d.id
-                LEFT JOIN {$this->prefix}vereine v ON d.verein_id = v.id
-                WHERE 1=1";
-        
-        $params = array();
+        $allowed_verein_ids = !empty($allowed_verein_ids) && is_array($allowed_verein_ids)
+            ? array_values(array_filter(array_map('intval', $allowed_verein_ids)))
+            : array();
 
-        if (!empty($allowed_verein_ids) && is_array($allowed_verein_ids)) {
-            $allowed_verein_ids = array_values(array_filter(array_map('intval', $allowed_verein_ids)));
-            if (!empty($allowed_verein_ids)) {
-                $placeholders = implode(', ', array_fill(0, count($allowed_verein_ids), '%d'));
-                $sql .= " AND d.verein_id IN ({$placeholders})";
-                $params = array_merge($params, $allowed_verein_ids);
+        $club_where = array();
+        $club_params = array();
+        $stats_where = array();
+        $stats_params = array();
+        $sql_params = array();
+        $requires_club_match = false;
+        $requires_stats_match = false;
+
+        if (!empty($allowed_verein_ids)) {
+            $placeholders = implode(', ', array_fill(0, count($allowed_verein_ids), '%d'));
+            $club_where[] = "mv.verein_id IN ({$placeholders})";
+            $stats_where[] = "d.verein_id IN ({$placeholders})";
+            $club_params = array_merge($club_params, $allowed_verein_ids);
+            $stats_params = array_merge($stats_params, $allowed_verein_ids);
+            $requires_club_match = true;
+        }
+
+        if ($filter_verein > 0) {
+            $club_where[] = 'mv.verein_id = %d';
+            $stats_where[] = 'd.verein_id = %d';
+            $club_params[] = $filter_verein;
+            $stats_params[] = $filter_verein;
+            $requires_club_match = true;
+        }
+
+        if ($filter_veranstaltung > 0) {
+            $stats_where[] = 'd.veranstaltung_id = %d';
+            $stats_params[] = $filter_veranstaltung;
+            $requires_stats_match = true;
+        }
+
+        $clubs_sql = "SELECT mv.mitarbeiter_id,
+                GROUP_CONCAT(DISTINCT v.id ORDER BY v.name SEPARATOR ',') as verein_ids,
+                GROUP_CONCAT(DISTINCT v.name ORDER BY v.name SEPARATOR ',') as verein_namen,
+                GROUP_CONCAT(DISTINCT v.name ORDER BY v.name SEPARATOR ', ') as vereine
+            FROM {$this->prefix}mitarbeiter_vereine mv
+            INNER JOIN {$this->prefix}vereine v ON mv.verein_id = v.id";
+
+        if (!empty($club_where)) {
+            $clubs_sql .= ' WHERE ' . implode(' AND ', $club_where);
+        }
+
+        $clubs_sql .= ' GROUP BY mv.mitarbeiter_id';
+
+        $stats_sql = "SELECT s.mitarbeiter_id,
+                COUNT(DISTINCT s.id) as total_dienste,
+                COUNT(DISTINCT CASE WHEN s.status IN ('besetzt', 'vergeben') THEN s.id END) as aktive_dienste
+            FROM {$this->prefix}dienst_slots s
+            INNER JOIN {$this->prefix}dienste d ON s.dienst_id = d.id
+            WHERE s.mitarbeiter_id IS NOT NULL";
+
+        if (!empty($stats_where)) {
+            $stats_sql .= ' AND ' . implode(' AND ', $stats_where);
+        }
+
+        $stats_sql .= ' GROUP BY s.mitarbeiter_id';
+
+        $sql = "SELECT m.*,
+                COALESCE(stats.total_dienste, 0) as total_dienste,
+                COALESCE(stats.aktive_dienste, 0) as aktive_dienste,
+                clubs.verein_ids,
+                clubs.verein_namen,
+                clubs.vereine
+            FROM {$this->prefix}mitarbeiter m
+            LEFT JOIN ({$clubs_sql}) clubs ON clubs.mitarbeiter_id = m.id
+            LEFT JOIN ({$stats_sql}) stats ON stats.mitarbeiter_id = m.id
+            WHERE 1=1";
+
+        $sql_params = array_merge($sql_params, $club_params, $stats_params);
+
+        if ($requires_club_match) {
+            $sql .= ' AND clubs.mitarbeiter_id IS NOT NULL';
+        }
+
+        if ($requires_stats_match) {
+            $sql .= ' AND stats.mitarbeiter_id IS NOT NULL';
+        }
+
+        if (!empty($search)) {
+            $sql .= ' AND (m.vorname LIKE %s OR m.nachname LIKE %s OR m.email LIKE %s OR clubs.verein_namen LIKE %s)';
+            $search_term = '%' . $this->wpdb->esc_like($search) . '%';
+            $sql_params[] = $search_term;
+            $sql_params[] = $search_term;
+            $sql_params[] = $search_term;
+            $sql_params[] = $search_term;
+        }
+
+        $sql .= ' ORDER BY m.nachname ASC, m.vorname ASC';
+
+        if (!empty($sql_params)) {
+            return $this->wpdb->get_results($this->wpdb->prepare($sql, $sql_params));
+        }
+
+        return $this->wpdb->get_results($sql);
+    }
+
+    public function get_mitarbeiter_vereine($mitarbeiter_id) {
+        return $this->wpdb->get_results($this->wpdb->prepare(
+            "SELECT mv.*, v.name as verein_name
+             FROM {$this->prefix}mitarbeiter_vereine mv
+             INNER JOIN {$this->prefix}vereine v ON mv.verein_id = v.id
+             WHERE mv.mitarbeiter_id = %d
+             ORDER BY v.name ASC",
+            $mitarbeiter_id
+        ));
+    }
+
+    public function get_mitarbeiter_slot_verein_ids($mitarbeiter_id) {
+        return $this->wpdb->get_col($this->wpdb->prepare(
+            "SELECT DISTINCT d.verein_id
+             FROM {$this->prefix}dienst_slots s
+             INNER JOIN {$this->prefix}dienste d ON s.dienst_id = d.id
+             WHERE s.mitarbeiter_id = %d
+               AND d.verein_id IS NOT NULL
+               AND d.verein_id > 0",
+            $mitarbeiter_id
+        ));
+    }
+
+    public function assign_mitarbeiter_to_verein($mitarbeiter_id, $verein_id, $source = 'slot_assignment') {
+        $mitarbeiter_id = intval($mitarbeiter_id);
+        $verein_id = intval($verein_id);
+
+        if ($mitarbeiter_id <= 0 || $verein_id <= 0) {
+            return false;
+        }
+
+        $existing = $this->wpdb->get_var($this->wpdb->prepare(
+            "SELECT id FROM {$this->prefix}mitarbeiter_vereine WHERE mitarbeiter_id = %d AND verein_id = %d",
+            $mitarbeiter_id,
+            $verein_id
+        ));
+
+        if ($existing) {
+            return true;
+        }
+
+        $result = $this->wpdb->insert(
+            $this->prefix . 'mitarbeiter_vereine',
+            array(
+                'mitarbeiter_id' => $mitarbeiter_id,
+                'verein_id' => $verein_id,
+                'source' => sanitize_key($source),
+            ),
+            array('%d', '%d', '%s')
+        );
+
+        return $result !== false;
+    }
+
+    public function sync_mitarbeiter_vereine($mitarbeiter_id, $manual_verein_ids = array()) {
+        $mitarbeiter_id = intval($mitarbeiter_id);
+        if ($mitarbeiter_id <= 0) {
+            return false;
+        }
+
+        $manual_verein_ids = is_array($manual_verein_ids)
+            ? array_values(array_unique(array_filter(array_map('intval', $manual_verein_ids))))
+            : array();
+
+        $slot_verein_ids = array_values(array_unique(array_filter(array_map('intval', $this->get_mitarbeiter_slot_verein_ids($mitarbeiter_id)))));
+        $final_verein_ids = array_values(array_unique(array_merge($slot_verein_ids, $manual_verein_ids)));
+
+        if (empty($final_verein_ids)) {
+            $delete_result = $this->wpdb->delete(
+                $this->prefix . 'mitarbeiter_vereine',
+                array('mitarbeiter_id' => $mitarbeiter_id),
+                array('%d')
+            );
+            return $delete_result !== false;
+        }
+
+        $placeholders = implode(', ', array_fill(0, count($final_verein_ids), '%d'));
+        $delete_sql = "DELETE FROM {$this->prefix}mitarbeiter_vereine
+            WHERE mitarbeiter_id = %d
+              AND verein_id NOT IN ({$placeholders})";
+        $delete_params = array_merge(array($mitarbeiter_id), $final_verein_ids);
+        $delete_result = $this->wpdb->query($this->wpdb->prepare($delete_sql, $delete_params));
+        if ($delete_result === false) {
+            return false;
+        }
+
+        foreach ($final_verein_ids as $verein_id) {
+            $source = in_array($verein_id, $manual_verein_ids, true) ? 'manual_admin' : 'slot_assignment';
+
+            $result = $this->wpdb->replace(
+                $this->prefix . 'mitarbeiter_vereine',
+                array(
+                    'mitarbeiter_id' => $mitarbeiter_id,
+                    'verein_id' => $verein_id,
+                    'source' => $source,
+                ),
+                array('%d', '%d', '%s')
+            );
+
+            if ($result === false) {
+                return false;
             }
         }
-        
-        // Filter nach Verein
-        if ($filter_verein > 0) {
-            $sql .= " AND d.verein_id = %d";
-            $params[] = $filter_verein;
-        }
-        
-        // Filter nach Veranstaltung
-        if ($filter_veranstaltung > 0) {
-            $sql .= " AND d.veranstaltung_id = %d";
-            $params[] = $filter_veranstaltung;
-        }
-        
-        // Suche
-        if (!empty($search)) {
-            $sql .= " AND (m.vorname LIKE %s OR m.nachname LIKE %s OR m.email LIKE %s)";
-            $search_term = '%' . $this->wpdb->esc_like($search) . '%';
-            $params[] = $search_term;
-            $params[] = $search_term;
-            $params[] = $search_term;
-        }
-        
-        $sql .= " GROUP BY m.id ORDER BY m.nachname ASC, m.vorname ASC";
-        
-        if (!empty($params)) {
-            return $this->wpdb->get_results($this->wpdb->prepare($sql, $params));
-        }
-        
-        return $this->wpdb->get_results($sql);
+
+        return true;
     }
     
     // === SLOT-ZUWEISUNGEN METHODEN ===
@@ -1728,30 +1917,46 @@ class Dienstplan_Database {
         ));
     }
     
-    public function assign_mitarbeiter_to_slot($slot_id, $mitarbeiter_id) {
-        // Prüfe ob Slot noch frei ist
-        $existing = $this->wpdb->get_var($this->wpdb->prepare(
-            "SELECT mitarbeiter_id FROM {$this->prefix}dienst_slots WHERE id = %d",
+    public function assign_mitarbeiter_to_slot($slot_id, $mitarbeiter_id, $force_replace = false) {
+        $slot = $this->wpdb->get_row($this->wpdb->prepare(
+            "SELECT s.id, s.mitarbeiter_id, s.status, d.verein_id
+             FROM {$this->prefix}dienst_slots s
+             INNER JOIN {$this->prefix}dienste d ON s.dienst_id = d.id
+             WHERE s.id = %d",
             $slot_id
         ));
-        
-        if ($existing) {
+
+        if (!$slot) {
+            return array('error' => true, 'message' => 'Slot nicht gefunden');
+        }
+
+        if (!$force_replace && !empty($slot->mitarbeiter_id) && intval($slot->mitarbeiter_id) !== intval($mitarbeiter_id)) {
             return array('error' => true, 'message' => 'Dieser Slot ist bereits vergeben');
         }
-        
-        // Aktualisiere Slot
+
         $result = $this->wpdb->update(
             $this->prefix . 'dienst_slots',
             array(
                 'mitarbeiter_id' => $mitarbeiter_id,
-                'status' => 'vergeben'
+                'status' => 'besetzt'
             ),
             array('id' => $slot_id),
             array('%d', '%s'),
             array('%d')
         );
-        
-        return $result !== false;
+
+        if ($result === false) {
+            return false;
+        }
+
+        if (!empty($slot->verein_id)) {
+            $assigned = $this->assign_mitarbeiter_to_verein($mitarbeiter_id, $slot->verein_id, 'slot_assignment');
+            if ($assigned === false) {
+                return false;
+            }
+        }
+
+        return true;
     }
     
     public function remove_mitarbeiter_from_slot($slot_id) {

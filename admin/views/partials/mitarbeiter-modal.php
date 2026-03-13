@@ -45,6 +45,20 @@ if (!defined('ABSPATH')) exit;
                             <input type="tel" id="ma_telefon" name="telefon" class="regular-text">
                         </td>
                     </tr>
+
+                    <tr>
+                        <th><label for="ma_vereine"><?php _e('Vereine', 'dienstplan-verwaltung'); ?></label></th>
+                        <td>
+                            <select id="ma_vereine" name="verein_ids[]" class="regular-text" multiple size="6" style="width: 100%; min-height: 140px;">
+                                <?php if (!empty($vereine) && is_array($vereine)): ?>
+                                    <?php foreach ($vereine as $verein): ?>
+                                        <option value="<?php echo intval($verein->id); ?>"><?php echo esc_html($verein->name); ?></option>
+                                    <?php endforeach; ?>
+                                <?php endif; ?>
+                            </select>
+                            <p class="description"><?php _e('Mehrfachauswahl mit Strg/Cmd. Buchungen pflegen die Zuordnung automatisch mit.', 'dienstplan-verwaltung'); ?></p>
+                        </td>
+                    </tr>
                     
                     <tr id="portal-access-row" style="display: none;">
                         <th><label for="ma_portal_access"><?php _e('Portal-Zugriff', 'dienstplan-verwaltung'); ?></label></th>

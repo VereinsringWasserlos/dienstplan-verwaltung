@@ -233,12 +233,25 @@ class Dienstplan_Admin {
             return true;
         }
 
+        $allowed_verein_ids = $this->get_current_user_verein_ids($db);
+        if (empty($allowed_verein_ids)) {
+            return false;
+        }
+
+        $mitarbeiter_vereine = $db->get_mitarbeiter_vereine($mitarbeiter_id);
+        if (!empty($mitarbeiter_vereine)) {
+            foreach ($mitarbeiter_vereine as $verein) {
+                if (in_array(intval($verein->verein_id), $allowed_verein_ids, true)) {
+                    return true;
+                }
+            }
+        }
+
         $dienste = $db->get_mitarbeiter_dienste($mitarbeiter_id);
         if (empty($dienste)) {
             return false;
         }
 
-        $allowed_verein_ids = $this->get_current_user_verein_ids($db);
         foreach ($dienste as $dienst) {
             if (in_array(intval($dienst->verein_id), $allowed_verein_ids, true)) {
                 return true;
@@ -2391,6 +2404,11 @@ class Dienstplan_Admin {
             wp_send_json_error(array('message' => 'Slot nicht gefunden'));
             return;
         }
+
+        if (!$this->current_user_can_access_dienst($db, intval($slot->dienst_id))) {
+            wp_send_json_error(array('message' => 'Keine Berechtigung für diesen Dienst'));
+            return;
+        }
         
         // Prüfe ob Slot schon besetzt ist (nur wenn nicht force_replace)
         if (!$force_replace && $slot->mitarbeiter_id && $slot->mitarbeiter_id > 0) {
@@ -2399,16 +2417,12 @@ class Dienstplan_Admin {
         }
         
         // Zuweisung durchführen (oder ersetzen)
-        $result = $wpdb->update(
-            $wpdb->prefix . 'dp_dienst_slots',
-            array(
-                'mitarbeiter_id' => $mitarbeiter_id,
-                'status' => 'besetzt'
-            ),
-            array('id' => $slot_id),
-            array('%d', '%s'),
-            array('%d')
-        );
+        $result = $db->assign_mitarbeiter_to_slot($slot_id, $mitarbeiter_id, (bool) $force_replace);
+
+        if (is_array($result) && isset($result['error'])) {
+            wp_send_json_error(array('message' => $result['message']));
+            return;
+        }
         
         if ($result !== false) {
             error_log("=== ADMIN ASSIGN SLOT SUCCESS ===");
@@ -2503,6 +2517,13 @@ class Dienstplan_Admin {
             wp_send_json_error(array('message' => 'Mitarbeiter nicht gefunden'));
             return;
         }
+
+        $allowed_vereine = $this->get_scoped_vereine($db, true);
+        $mitarbeiter->vereine = $db->get_mitarbeiter_vereine($mitarbeiter_id);
+        $mitarbeiter->allowed_vereine = $allowed_vereine;
+        $mitarbeiter->verein_ids = array_map(function($row) {
+            return intval($row->verein_id);
+        }, $mitarbeiter->vereine);
         
         wp_send_json_success($mitarbeiter);
     }
@@ -2533,6 +2554,16 @@ class Dienstplan_Admin {
         require_once DIENSTPLAN_PLUGIN_PATH . 'includes/class-database.php';
         $db = new Dienstplan_Database($this->db_prefix);
 
+        $allowed_verein_ids = $this->is_restricted_club_admin() ? $this->get_current_user_verein_ids($db) : array();
+        $requested_verein_ids = isset($_POST['verein_ids']) ? (array) $_POST['verein_ids'] : array();
+        $requested_verein_ids = array_values(array_unique(array_filter(array_map('intval', $requested_verein_ids))));
+
+        if (!empty($allowed_verein_ids)) {
+            $requested_verein_ids = array_values(array_filter($requested_verein_ids, function($verein_id) use ($allowed_verein_ids) {
+                return in_array(intval($verein_id), $allowed_verein_ids, true);
+            }));
+        }
+
         if ($mitarbeiter_id > 0 && !$this->current_user_can_access_mitarbeiter($db, $mitarbeiter_id)) {
             wp_send_json_error(array('message' => 'Keine Berechtigung für diesen Mitarbeiter'));
             return;
@@ -2555,6 +2586,14 @@ class Dienstplan_Admin {
             $result = $db->add_mitarbeiter($data);
             $message = 'Mitarbeiter erfolgreich erstellt';
             $return_id = $result;
+        }
+
+        if ($result !== false && $return_id) {
+            $sync_result = $db->sync_mitarbeiter_vereine($return_id, $requested_verein_ids);
+            if ($sync_result === false) {
+                wp_send_json_error(array('message' => 'Mitarbeiter gespeichert, aber Vereinszuordnung konnte nicht aktualisiert werden'));
+                return;
+            }
         }
         
         // Portal-Zugriff aktivieren, falls angefordert (nur bei neuen ohne Zugang)

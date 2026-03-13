@@ -7,6 +7,28 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ---
 
+## [0.9.5.18] - 2026-03-13 🧭 Manuelle Vereinszuordnung im Mitarbeiter-Modal
+
+### ✨ Verbesserungen
+
+- **Mitarbeiter-Modal erweitert:** Vereine können jetzt manuell per Mehrfachauswahl zugeordnet oder entfernt werden.
+- **Speichern mit Rechtebeachtung:** Für eingeschränkte Vereinsadmins werden nur erlaubte Vereine gespeichert.
+- **Automatik bleibt erhalten:** Slot-basierte Vereinszuordnungen bleiben beim manuellen Speichern erhalten und werden nicht überschrieben.
+- **Modal-Einbindung repariert:** Mitarbeiter-Modal und Dienste-Modal werden auf der Mitarbeiterseite wieder explizit eingebunden.
+
+---
+
+## [0.9.5.17] - 2026-03-13 👥 Mitarbeiter-Vereinszuordnung
+
+### ✨ Verbesserungen
+
+- **Mitarbeiter jetzt dauerhaft mehreren Vereinen zuordenbar:** Neue Zuordnungstabelle `dp_mitarbeiter_vereine` speichert Vereinsbezüge unabhängig von einzelnen Slots.
+- **Automatische Pflege bei Buchungen:** Backend-Zuweisungen sowie öffentliche Dienst- und Vereinsanmeldungen tragen den Mitarbeiter jetzt automatisch dem betroffenen Verein zu.
+- **Mitarbeiterübersicht zeigt Vereine sauber an:** Die Übersicht liefert jetzt `verein_ids` und `verein_namen` direkt aus der Datenbank und gruppiert Mitarbeiter zuverlässig nach Verein.
+- **Scoped Zugriff robuster:** Vereinsadmins erhalten Mitarbeiterzugriff jetzt auch über die neue Vereinszuordnung, nicht nur über bestehende Dienste.
+
+---
+
 ## [0.9.5.16] - 2026-03-13 🧩 Rechte-Refactor Vereinsadmin
 
 ### ✨ Verbesserungen

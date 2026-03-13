@@ -633,17 +633,13 @@ class Dienstplan_Public {
             }
             
             // Aktualisiere Slot mit Mitarbeiter
-            $slot_update = $wpdb->update(
-                $prefix . 'dienst_slots',
-                array(
-                    'mitarbeiter_id' => $mitarbeiter_id,
-                    'status' => 'besetzt'
-                ),
-                array('id' => $free_slot->id),
-                array('%d', '%s'),
-                array('%d')
-            );
-            
+            $slot_update = $db->assign_mitarbeiter_to_slot(intval($free_slot->id), $mitarbeiter_id);
+
+            if (is_array($slot_update) && isset($slot_update['error'])) {
+                wp_send_json_error(array('message' => $slot_update['message']));
+                return;
+            }
+
             if ($slot_update === false) {
                 wp_send_json_error(array('message' => 'Fehler beim Zuweisen des Slots'));
                 return;
@@ -1252,17 +1248,13 @@ class Dienstplan_Public {
         }
         
         // Slot zuweisen
-        $update_result = $wpdb->update(
-            $prefix . 'dienst_slots',
-            array(
-                'mitarbeiter_id' => $mitarbeiter_id,
-                'status' => 'besetzt'
-            ),
-            array('id' => $slot_id),
-            array('%d', '%s'),
-            array('%d')
-        );
-        
+        $update_result = $db->assign_mitarbeiter_to_slot($slot_id, $mitarbeiter_id);
+
+        if (is_array($update_result) && isset($update_result['error'])) {
+            wp_send_json_error(array('message' => $update_result['message']));
+            return;
+        }
+
         if ($update_result === false) {
             wp_send_json_error(array('message' => 'Fehler bei der Zuweisung.'));
             return;

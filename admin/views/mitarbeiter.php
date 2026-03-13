@@ -559,3 +559,8 @@ document.addEventListener('click', function(event) {
     }
 });
 </script>
+
+<?php
+include_once DIENSTPLAN_PLUGIN_PATH . 'admin/views/partials/mitarbeiter-modal.php';
+include_once DIENSTPLAN_PLUGIN_PATH . 'admin/views/partials/mitarbeiter-dienste-modal.php';
+?>
