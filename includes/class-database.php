@@ -1026,6 +1026,37 @@ class Dienstplan_Database {
         ));
     }
 
+    public function get_direct_verein_user_ids($verein_id) {
+        return $this->wpdb->get_col($this->wpdb->prepare(
+            "SELECT user_id
+             FROM {$this->prefix}user_vereine
+             WHERE verein_id = %d
+               AND (mitarbeiter_id IS NULL OR mitarbeiter_id = 0)",
+            intval($verein_id)
+        ));
+    }
+
+    public function assign_direct_user_to_verein($user_id, $verein_id) {
+        return $this->wpdb->query($this->wpdb->prepare(
+            "INSERT INTO {$this->prefix}user_vereine (user_id, verein_id, mitarbeiter_id)
+             VALUES (%d, %d, NULL)
+             ON DUPLICATE KEY UPDATE user_id = user_id",
+            intval($user_id),
+            intval($verein_id)
+        ));
+    }
+
+    public function delete_direct_user_verein_assignment($user_id, $verein_id) {
+        return $this->wpdb->query($this->wpdb->prepare(
+            "DELETE FROM {$this->prefix}user_vereine
+             WHERE user_id = %d
+               AND verein_id = %d
+               AND (mitarbeiter_id IS NULL OR mitarbeiter_id = 0)",
+            intval($user_id),
+            intval($verein_id)
+        ));
+    }
+
     public function delete_user_verein_assignments($user_id) {
         return $this->wpdb->delete(
             $this->prefix . 'user_vereine',
@@ -1646,11 +1677,42 @@ class Dienstplan_Database {
     }
     
     public function add_mitarbeiter($data) {
+        if (array_key_exists('email', $data)) {
+            $email = sanitize_email($data['email']);
+            if (!empty($email)) {
+                $existing = $this->get_mitarbeiter_by_email($email);
+                if ($existing && !empty($existing->id)) {
+                    return false;
+                }
+                $data['email'] = $email;
+            } else {
+                $data['email'] = null;
+            }
+        }
+
         $result = $this->wpdb->insert($this->prefix . 'mitarbeiter', $data);
         return $result ? $this->wpdb->insert_id : false;
     }
     
     public function update_mitarbeiter($id, $data) {
+        $id = intval($id);
+        if ($id <= 0) {
+            return false;
+        }
+
+        if (array_key_exists('email', $data)) {
+            $email = sanitize_email($data['email']);
+            if (!empty($email)) {
+                $existing = $this->get_mitarbeiter_by_email($email);
+                if ($existing && intval($existing->id) !== $id) {
+                    return false;
+                }
+                $data['email'] = $email;
+            } else {
+                $data['email'] = null;
+            }
+        }
+
         return $this->wpdb->update(
             $this->prefix . 'mitarbeiter',
             $data,
@@ -1814,12 +1876,14 @@ class Dienstplan_Database {
 
     public function get_mitarbeiter_slot_verein_ids($mitarbeiter_id) {
         return $this->wpdb->get_col($this->wpdb->prepare(
-            "SELECT DISTINCT d.verein_id
-             FROM {$this->prefix}dienst_slots s
-             INNER JOIN {$this->prefix}dienste d ON s.dienst_id = d.id
-             WHERE s.mitarbeiter_id = %d
-               AND d.verein_id IS NOT NULL
-               AND d.verein_id > 0",
+                        "SELECT DISTINCT d.verein_id
+                         FROM {$this->prefix}dienst_slots s
+                         INNER JOIN {$this->prefix}dienste d ON s.dienst_id = d.id
+                         LEFT JOIN {$this->prefix}veranstaltung_tage vt ON d.tag_id = vt.id
+                         WHERE s.mitarbeiter_id = %d
+                             AND d.verein_id IS NOT NULL
+                             AND d.verein_id > 0
+                             AND (vt.tag_datum IS NULL OR vt.tag_datum >= CURDATE())",
             $mitarbeiter_id
         ));
     }

@@ -6,7 +6,84 @@
 jQuery(document).ready(function($) {
     console.log('Dienstplan Admin JS geladen');
     console.log('dpAjax verfügbar:', typeof dpAjax !== 'undefined');
+
+    if (typeof window.dpConvertDropdownActionsToButtons === 'function') {
+        window.dpConvertDropdownActionsToButtons();
+    }
 });
+
+/**
+ * Ersetzt Aktions-Dropdowns durch einzelne Icon-Buttons.
+ * Gilt global fuer alle Backend-Seiten des Plugins.
+ */
+window.dpConvertDropdownActionsToButtons = function() {
+    const menuSelector = '.action-dropdown-menu, .dienst-action-dropdown, .taetigkeit-action-dropdown, .mitarbeiter-action-dropdown';
+
+    document.querySelectorAll(menuSelector).forEach(function(menu) {
+        if (!menu || menu.dataset.dpConverted === '1') {
+            return;
+        }
+
+        const container = menu.closest('.dropdown-actions, .dienst-action-button-container');
+        if (!container) {
+            return;
+        }
+
+        const links = Array.from(menu.querySelectorAll('a'));
+        if (!links.length) {
+            return;
+        }
+
+        const buttonWrap = document.createElement('div');
+        buttonWrap.className = 'dp-inline-action-buttons';
+
+        links.forEach(function(link) {
+            const label = (link.textContent || '').trim();
+            if (!label) {
+                return;
+            }
+
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'button button-small dp-inline-action-button';
+            button.title = label;
+            button.setAttribute('aria-label', label);
+
+            const icon = link.querySelector('.dashicons');
+            if (icon) {
+                button.innerHTML = icon.outerHTML;
+            } else {
+                button.textContent = label;
+            }
+
+            if (/lösch|loesch|delete/i.test(label)) {
+                button.classList.add('is-danger');
+            }
+
+            const onClickCode = link.getAttribute('onclick');
+            if (onClickCode) {
+                button.setAttribute('onclick', onClickCode);
+            } else {
+                const href = link.getAttribute('href');
+                if (href && href !== '#') {
+                    button.addEventListener('click', function() {
+                        window.location.href = href;
+                    });
+                }
+            }
+
+            buttonWrap.appendChild(button);
+        });
+
+        if (!buttonWrap.children.length) {
+            return;
+        }
+
+        menu.dataset.dpConverted = '1';
+        container.innerHTML = '';
+        container.appendChild(buttonWrap);
+    });
+};
 
 /**
  * ===== SAFE PAGE RELOAD =====
@@ -14,6 +91,12 @@ jQuery(document).ready(function($) {
  */
 window.dpSafeReload = function(delay) {
     delay = delay || 3000; // Standard: 3 Sekunden (Zeit zum Lesen der Erfolgsmeldung)
+
+    // Verhindert mehrfaches Triggern und Reload-Schleifen.
+    if (window.__dpReloadScheduled) {
+        return;
+    }
+    window.__dpReloadScheduled = true;
     
     setTimeout(function() {
         // Prüfe verschiedene Modal-Typen
@@ -52,9 +135,10 @@ window.dpSafeReload = function(delay) {
         
         // Reload nur wenn keine Modals offen
         if (!hasOpenModal) {
-            if(typeof dpSafeReload === "function") { dpSafeReload(); } else { location.reload(); };
+            window.location.reload();
         } else {
             console.log('Reload unterdrückt: Modal ist geöffnet');
+            window.__dpReloadScheduled = false;
         }
     }, delay);
 };

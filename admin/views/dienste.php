@@ -8,6 +8,8 @@
 
 if (!defined('ABSPATH')) exit;
 
+$is_restricted_club_admin = Dienstplan_Roles::can_manage_clubs() && !current_user_can('manage_options') && !current_user_can(Dienstplan_Roles::CAP_MANAGE_SETTINGS);
+
 // Filter-Parameter
 $selected_veranstaltung = isset($_GET['veranstaltung']) ? intval($_GET['veranstaltung']) : 0;
 $selected_verein = isset($_GET['verein']) ? intval($_GET['verein']) : 0;

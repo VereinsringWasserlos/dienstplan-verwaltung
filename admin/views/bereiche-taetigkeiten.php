@@ -7,6 +7,7 @@
 if (!defined('ABSPATH')) exit;
 
 $bereiche = $db->get_bereiche();
+$is_restricted_club_admin = Dienstplan_Roles::can_manage_clubs() && !current_user_can('manage_options') && !current_user_can(Dienstplan_Roles::CAP_MANAGE_SETTINGS);
 
 // Setup für Page-Header Partial
 $page_title = __('Bereiche & Tätigkeiten', 'dienstplan-verwaltung');
@@ -63,10 +64,14 @@ $nav_items = [
             <p style="color: #787c82; margin-bottom: 2rem;">
                 <?php _e('Erstellen Sie den ersten Bereich, um Tätigkeiten zu organisieren.', 'dienstplan-verwaltung'); ?>
             </p>
-            <button class="button button-primary button-hero" onclick="openBereichModal(); return false;">
-                <span class="dashicons dashicons-plus-alt" style="margin-top: 4px;"></span>
-                <?php _e('Ersten Bereich erstellen', 'dienstplan-verwaltung'); ?>
-            </button>
+            <?php if (!$is_restricted_club_admin): ?>
+                <button class="button button-primary button-hero" onclick="openBereichModal(); return false;">
+                    <span class="dashicons dashicons-plus-alt" style="margin-top: 4px;"></span>
+                    <?php _e('Ersten Bereich erstellen', 'dienstplan-verwaltung'); ?>
+                </button>
+            <?php else: ?>
+                <p style="color: #6b7280; margin-top: 1rem;"><?php _e('Als Club-Admin können Sie Bereiche nur ansehen.', 'dienstplan-verwaltung'); ?></p>
+            <?php endif; ?>
         </div>
     <?php else: ?>
         
@@ -91,9 +96,11 @@ $nav_items = [
                             <?php _e('Neue Tätigkeit', 'dienstplan-verwaltung'); ?>
                         </button>
                         
-                        <button type="button" class="button" onclick="event.stopPropagation(); openBereichModal(<?php echo $bereich->id; ?>);" style="background: rgba(255,255,255,0.8); color: #333; border: none; padding: 0.5rem 1rem; border-radius: 3px;">
-                            <span class="dashicons dashicons-edit"></span>
-                        </button>
+                        <?php if (!$is_restricted_club_admin): ?>
+                            <button type="button" class="button" onclick="event.stopPropagation(); openBereichModal(<?php echo $bereich->id; ?>);" style="background: rgba(255,255,255,0.8); color: #333; border: none; padding: 0.5rem 1rem; border-radius: 3px;">
+                                <span class="dashicons dashicons-edit"></span>
+                            </button>
+                        <?php endif; ?>
                         
                         <span style="background: rgba(255,255,255,0.2); padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.9rem;">
                             <?php echo count($taetigkeiten); ?> Tätigkeit<?php echo count($taetigkeiten) != 1 ? 'en' : ''; ?>
@@ -245,7 +252,9 @@ $nav_items = [
         </div>
         <div class="dp-modal-footer">
             <button class="button" onclick="closeBereichModal()"><?php _e('Abbrechen', 'dienstplan-verwaltung'); ?></button>
-            <button class="button button-primary" onclick="saveBereich()"><?php _e('Speichern', 'dienstplan-verwaltung'); ?></button>
+            <?php if (!$is_restricted_club_admin): ?>
+                <button class="button button-primary" onclick="saveBereich()"><?php _e('Speichern', 'dienstplan-verwaltung'); ?></button>
+            <?php endif; ?>
         </div>
     </div>
 </div>

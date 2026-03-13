@@ -20,27 +20,46 @@ require_once DIENSTPLAN_PLUGIN_PATH . 'includes/class-dienstplan-roles.php';
 $is_logged_in = is_user_logged_in();
 $current_user_id = get_current_user_id();
 $can_manage_dienste = current_user_can('manage_options') || Dienstplan_Roles::can_manage_events() || Dienstplan_Roles::can_manage_clubs();
+$is_restricted_crew = false;
+$crew_allowed_verein_ids = array();
 $admin_dienste_url = admin_url('admin.php?page=dienstplan-dienste');
 $current_mitarbeiter_id = 0;
 $current_mitarbeiter = null;
 $current_user_obj = null;
+$admin_selectable_mitarbeiter = array();
 $dp_prefix = defined('DIENSTPLAN_DB_PREFIX') ? DIENSTPLAN_DB_PREFIX : 'dp_';
 
 if ($is_logged_in && $current_user_id > 0) {
     global $wpdb;
+    $current_user_obj = wp_get_current_user();
+    $is_restricted_crew = !$can_manage_dienste && in_array(Dienstplan_Roles::ROLE_CREW, (array) $current_user_obj->roles, true);
+
     $mitarbeiter_table = $wpdb->prefix . $dp_prefix . 'mitarbeiter';
     $current_mitarbeiter_id = (int) $wpdb->get_var($wpdb->prepare(
         "SELECT id FROM {$mitarbeiter_table} WHERE user_id = %d LIMIT 1",
         $current_user_id
     ));
 
-    $current_user_obj = get_user_by('id', $current_user_id);
     if ($current_mitarbeiter_id > 0) {
         $current_mitarbeiter = $wpdb->get_row($wpdb->prepare(
             "SELECT * FROM {$mitarbeiter_table} WHERE id = %d LIMIT 1",
             $current_mitarbeiter_id
         ));
     }
+
+    if ($is_restricted_crew) {
+        $user_verein_ids = $wpdb->get_col($wpdb->prepare(
+            "SELECT DISTINCT verein_id FROM {$wpdb->prefix}{$dp_prefix}user_vereine WHERE user_id = %d",
+            $current_user_id
+        ));
+
+        $crew_allowed_verein_ids = array_values(array_unique(array_filter(array_map('intval', (array) $user_verein_ids))));
+        sort($crew_allowed_verein_ids);
+    }
+}
+
+if ($can_manage_dienste) {
+    $admin_selectable_mitarbeiter = $db->get_mitarbeiter();
 }
 
 // Lade alle Dienste der Veranstaltung
@@ -53,6 +72,16 @@ if ($verein_id > 0) {
     });
 } else {
     $services = $all_services;
+}
+
+if ($is_restricted_crew) {
+    if (!empty($crew_allowed_verein_ids)) {
+        $services = array_filter($services, function($s) use ($crew_allowed_verein_ids) {
+            return in_array(intval($s->verein_id), $crew_allowed_verein_ids, true);
+        });
+    } else {
+        $services = array();
+    }
 }
 
 // Lade Veranstaltungstage
@@ -835,6 +864,8 @@ window.dpTrace = function(message, payload) {
 
 window.dpTrace('Script geladen: veranstaltung-verein');
 window.dpLoggedIn = <?php echo $is_logged_in ? 'true' : 'false'; ?>;
+window.dpCanManageDienste = <?php echo $can_manage_dienste ? 'true' : 'false'; ?>;
+window.dpCurrentMitarbeiterId = <?php echo intval($current_mitarbeiter_id); ?>;
 window.dpLoggedInPrefill = <?php echo wp_json_encode(array(
     'vorname' => $current_mitarbeiter->vorname ?? ($current_user_obj ? $current_user_obj->display_name : ''),
     'nachname' => $current_mitarbeiter->nachname ?? '',
@@ -936,9 +967,20 @@ window.dpOpenLoggedInModal = function(slotId, dienstId, event) {
 
     jQuery('#dp-li-slot-id').val(slotId);
     jQuery('#dp-li-dienst-id').val(dienstId);
-    jQuery('#dp-li-vorname').text(window.dpLoggedInPrefill.vorname || '-');
-    jQuery('#dp-li-nachname').text(window.dpLoggedInPrefill.nachname || '-');
-    jQuery('#dp-li-email').text(window.dpLoggedInPrefill.email || '-');
+
+    if (window.dpCanManageDienste) {
+        var select = document.getElementById('dp-li-mitarbeiter-id');
+        if (select) {
+            if (!select.value && window.dpCurrentMitarbeiterId > 0) {
+                select.value = String(window.dpCurrentMitarbeiterId);
+            }
+            window.dpApplyAdminMitarbeiterSelection();
+        }
+    } else {
+        jQuery('#dp-li-vorname').text(window.dpLoggedInPrefill.vorname || '-');
+        jQuery('#dp-li-nachname').text(window.dpLoggedInPrefill.nachname || '-');
+        jQuery('#dp-li-email').text(window.dpLoggedInPrefill.email || '-');
+    }
 
     modal.classList.add('dp-modal-force-open');
     modal.style.setProperty('display', 'block', 'important');
@@ -966,6 +1008,33 @@ window.dpCloseLoggedInModal = function() {
     if (form) {
         form.reset();
     }
+};
+
+window.dpApplyAdminMitarbeiterSelection = function() {
+    if (!window.dpCanManageDienste) {
+        return;
+    }
+
+    var select = document.getElementById('dp-li-mitarbeiter-id');
+    if (!select || !select.value) {
+        jQuery('#dp-li-vorname').text('-');
+        jQuery('#dp-li-nachname').text('-');
+        jQuery('#dp-li-email').text('-');
+        return;
+    }
+
+    var option = select.options[select.selectedIndex];
+    if (!option) {
+        return;
+    }
+
+    var vorname = option.getAttribute('data-vorname') || '-';
+    var nachname = option.getAttribute('data-nachname') || '-';
+    var email = option.getAttribute('data-email') || '-';
+
+    jQuery('#dp-li-vorname').text(vorname);
+    jQuery('#dp-li-nachname').text(nachname);
+    jQuery('#dp-li-email').text(email);
 };
 
 function dpCancelDienst(slotId, buttonElement) {
@@ -1577,14 +1646,32 @@ document.addEventListener('DOMContentLoaded', function() {
                 nonce: dpConfig.nonce,
                 slot_id: jQuery('#dp-li-slot-id').val(),
                 dienst_id: jQuery('#dp-li-dienst-id').val(),
-                vorname: window.dpLoggedInPrefill.vorname || 'Portal',
-                nachname: window.dpLoggedInPrefill.nachname || 'Nutzer',
-                email: window.dpLoggedInPrefill.email || '',
-                telefon: window.dpLoggedInPrefill.telefon || '',
                 besonderheiten: jQuery('#dp-li-anpassung').val(),
                 create_user_account: '0',
                 create_user_datenschutz: '0'
             };
+
+            if (window.dpCanManageDienste) {
+                var select = document.getElementById('dp-li-mitarbeiter-id');
+                var selectedId = select ? parseInt(select.value || '0', 10) : 0;
+
+                if (!selectedId) {
+                    alert('Bitte einen Mitarbeiter auswählen.');
+                    return;
+                }
+
+                var option = select.options[select.selectedIndex];
+                payload.selected_mitarbeiter_id = String(selectedId);
+                payload.vorname = (option && option.getAttribute('data-vorname')) || '';
+                payload.nachname = (option && option.getAttribute('data-nachname')) || '';
+                payload.email = (option && option.getAttribute('data-email')) || '';
+                payload.telefon = (option && option.getAttribute('data-telefon')) || '';
+            } else {
+                payload.vorname = window.dpLoggedInPrefill.vorname || 'Portal';
+                payload.nachname = window.dpLoggedInPrefill.nachname || 'Nutzer';
+                payload.email = window.dpLoggedInPrefill.email || '';
+                payload.telefon = window.dpLoggedInPrefill.telefon || '';
+            }
 
             if (!payload.email || !payload.vorname) {
                 alert('Bitte Profil im Portal ergänzen (Name/E-Mail fehlen).');
@@ -1616,6 +1703,12 @@ document.addEventListener('DOMContentLoaded', function() {
                     submitBtn.prop('disabled', false).text(originalText);
                 }
             });
+        });
+    }
+
+    if (window.dpCanManageDienste) {
+        jQuery(document).on('change', '#dp-li-mitarbeiter-id', function() {
+            window.dpApplyAdminMitarbeiterSelection();
         });
     }
 
@@ -1740,8 +1833,31 @@ document.addEventListener('DOMContentLoaded', function() {
                 <input type="hidden" id="dp-li-slot-id" name="slot_id">
                 <input type="hidden" id="dp-li-dienst-id" name="dienst_id">
 
+                <?php if ($can_manage_dienste): ?>
+                    <div class="dp-form-group">
+                        <label for="dp-li-mitarbeiter-id">Mitarbeiter auswählen *</label>
+                        <select id="dp-li-mitarbeiter-id" name="selected_mitarbeiter_id" required>
+                            <option value="">Bitte auswählen</option>
+                            <?php foreach ($admin_selectable_mitarbeiter as $admin_ma): ?>
+                                <option
+                                    value="<?php echo intval($admin_ma->id); ?>"
+                                    data-vorname="<?php echo esc_attr($admin_ma->vorname ?? ''); ?>"
+                                    data-nachname="<?php echo esc_attr($admin_ma->nachname ?? ''); ?>"
+                                    data-email="<?php echo esc_attr($admin_ma->email ?? ''); ?>"
+                                    data-telefon="<?php echo esc_attr($admin_ma->telefon ?? ''); ?>"
+                                >
+                                    <?php echo esc_html(trim(($admin_ma->vorname ?? '') . ' ' . ($admin_ma->nachname ?? ''))); ?>
+                                    <?php if (!empty($admin_ma->email)): ?>
+                                        (<?php echo esc_html($admin_ma->email); ?>)
+                                    <?php endif; ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                <?php endif; ?>
+
                 <div class="dp-form-group">
-                    <label>Angemeldet als</label>
+                    <label><?php echo $can_manage_dienste ? 'Ausgewählter Mitarbeiter' : 'Angemeldet als'; ?></label>
                     <div class="dp-loggedin-meta">
                         <div><strong>Vorname:</strong> <span id="dp-li-vorname">-</span></div>
                         <div><strong>Nachname:</strong> <span id="dp-li-nachname">-</span></div>

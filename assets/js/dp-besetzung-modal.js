@@ -222,6 +222,7 @@
         const nachname = $('#new_mitarbeiter_nachname').val().trim();
         const email = $('#new_mitarbeiter_email').val().trim();
         const telefon = $('#new_mitarbeiter_telefon').val().trim();
+        const vereinId = parseInt(window.dpCurrentDienstVereinId || '0', 10);
         
         // Validierung nur für Pflichtfelder
         if (!vorname || !nachname) {
@@ -240,48 +241,33 @@
         
         console.log('saveNeuerMitarbeiter', {vorname, nachname, email, telefon});
         
+        const requestData = {
+            action: 'dp_add_mitarbeiter',
+            nonce: dpAjax.nonce,
+            vorname: vorname,
+            nachname: nachname,
+            email: email,
+            telefon: telefon
+        };
+
+        if (vereinId > 0) {
+            // Direkt beim Anlegen dem aktuellen Dienst-Verein zuordnen,
+            // damit der neue Mitarbeiter sofort im Club-Admin-Scope sichtbar ist.
+            requestData.verein_ids = [vereinId];
+        }
+
         $.ajax({
             url: dpAjax.ajaxurl,
             type: 'POST',
-            data: {
-                action: 'dp_add_mitarbeiter',
-                nonce: dpAjax.nonce,
-                vorname: vorname,
-                nachname: nachname,
-                email: email,
-                telefon: telefon
-            },
+            data: requestData,
             success: function(response) {
                 console.log('Add Mitarbeiter Response:', response);
                 if (response.success) {
                     const newMitarbeiterId = response.data.mitarbeiter_id;
                     alert('Mitarbeiter erfolgreich angelegt!');
                     window.closeNeuerMitarbeiterForm();
-                    
-                    // Reload Besetzung und wähle neuen Mitarbeiter vor
                     const dienstId = $('#besetzung_dienst_id').val();
-                    $.ajax({
-                        url: dpAjax.ajaxurl,
-                        type: 'POST',
-                        data: {
-                            action: 'dp_get_dienst_besetzung',
-                            nonce: dpAjax.nonce,
-                            dienst_id: dienstId
-                        },
-                        success: function(resp) {
-                            if (resp.success) {
-                                renderBesetzung(resp.data);
-                                // Wähle neuen Mitarbeiter im ersten freien Slot aus
-                                setTimeout(function() {
-                                    const firstFreeSlotSelect = $('.slot-badge-frei').first().closest('.slot-card').find('select[id^="slot-"]');
-                                    if (firstFreeSlotSelect.length > 0) {
-                                        firstFreeSlotSelect.val(newMitarbeiterId).focus();
-                                        firstFreeSlotSelect.css('border', '2px solid #2271b1');
-                                    }
-                                }, 100);
-                            }
-                        }
-                    });
+                    reloadBesetzungAndPreselect(dienstId, newMitarbeiterId);
                 } else {
                     alert('Fehler: ' + (response.data ? response.data.message : 'Unbekannt'));
                 }
@@ -292,6 +278,30 @@
             }
         });
     };
+
+    function reloadBesetzungAndPreselect(dienstId, newMitarbeiterId) {
+        $.ajax({
+            url: dpAjax.ajaxurl,
+            type: 'POST',
+            data: {
+                action: 'dp_get_dienst_besetzung',
+                nonce: dpAjax.nonce,
+                dienst_id: dienstId
+            },
+            success: function(resp) {
+                if (resp.success) {
+                    renderBesetzung(resp.data);
+                    setTimeout(function() {
+                        const firstFreeSlotSelect = $('.slot-badge-frei').first().closest('.slot-card').find('select[id^="slot-"]');
+                        if (firstFreeSlotSelect.length > 0) {
+                            firstFreeSlotSelect.val(newMitarbeiterId).focus();
+                            firstFreeSlotSelect.css('border', '2px solid #2271b1');
+                        }
+                    }, 100);
+                }
+            }
+        });
+    }
 
     // ========================================
     // Private Funktionen
@@ -310,6 +320,7 @@
         $('#info-bereich').text(dienst.bereich_name);
         $('#info-zeit').text(dienst.von_zeit.substring(0, 5) + ' - ' + dienst.bis_zeit.substring(0, 5) + ' Uhr');
         $('#info-verein').text(dienst.verein_name);
+        window.dpCurrentDienstVereinId = parseInt(dienst.verein_id || '0', 10);
         
         // Slots
         if (!slots || slots.length === 0) {

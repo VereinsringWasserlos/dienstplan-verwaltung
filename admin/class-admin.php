@@ -311,7 +311,48 @@ class Dienstplan_Admin {
                 if (!empty($by_email)) {
                     foreach ($by_email as $id) {
                         $ids[] = intval($id);
+                        if ($user_id > 0) {
+                            $db->update_mitarbeiter(intval($id), array('user_id' => $user_id));
+                        }
                     }
+                }
+            }
+        }
+
+        // Falls noch kein eigenes Mitarbeiterprofil existiert, lege fuer Vereins-Admins
+        // ein minimales Profil an, damit die Self-Zuweisung im Modal moeglich bleibt.
+        if (empty($ids) && $this->is_restricted_club_admin()) {
+            $user = wp_get_current_user();
+            if ($user && $user_id > 0 && !empty($user->user_email) && is_email($user->user_email)) {
+                $first_name = trim((string) get_user_meta($user_id, 'first_name', true));
+                $last_name = trim((string) get_user_meta($user_id, 'last_name', true));
+
+                if ($first_name === '' && $last_name === '') {
+                    $display_name = trim((string) $user->display_name);
+                    if ($display_name !== '') {
+                        $parts = preg_split('/\s+/', $display_name);
+                        $first_name = trim((string) ($parts[0] ?? 'Verein'));
+                        $last_name = trim((string) (count($parts) > 1 ? implode(' ', array_slice($parts, 1)) : 'Admin'));
+                    }
+                }
+
+                if ($first_name === '') {
+                    $first_name = 'Verein';
+                }
+                if ($last_name === '') {
+                    $last_name = 'Admin';
+                }
+
+                $new_id = $db->add_mitarbeiter(array(
+                    'vorname' => $first_name,
+                    'nachname' => $last_name,
+                    'email' => sanitize_email($user->user_email),
+                    'telefon' => ''
+                ));
+
+                if (!empty($new_id)) {
+                    $db->update_mitarbeiter(intval($new_id), array('user_id' => $user_id));
+                    $ids[] = intval($new_id);
                 }
             }
         }
@@ -867,6 +908,14 @@ class Dienstplan_Admin {
         require_once DIENSTPLAN_PLUGIN_PATH . 'includes/class-database.php';
         $db = new Dienstplan_Database($this->db_prefix);
 
+        if (!empty($email)) {
+            $existing_email_mitarbeiter = $db->get_mitarbeiter_by_email($email);
+            if ($existing_email_mitarbeiter && intval($existing_email_mitarbeiter->id) !== intval($mitarbeiter_id)) {
+                wp_send_json_error(array('message' => 'Ein Mitarbeiter mit dieser E-Mail-Adresse existiert bereits.'));
+                return;
+            }
+        }
+
         $allowed_verein_ids = $this->is_restricted_club_admin() ? $this->get_current_user_verein_ids($db) : array();
         $veranstaltungen = $this->get_scoped_veranstaltungen($db);
         $vereine = $this->get_scoped_vereine($db);
@@ -1061,6 +1110,7 @@ class Dienstplan_Admin {
                     ? array_map('intval', $_POST['verantwortliche']) 
                     : array();
                 $db->save_verein_verantwortliche($verein_id, $verantwortliche);
+                $this->sync_direct_verein_user_assignments($db, $verein_id, $verantwortliche);
 
                 if (!empty($seite_id)) {
                     update_post_meta($seite_id, '_dp_verein_id', $verein_id);
@@ -1084,6 +1134,7 @@ class Dienstplan_Admin {
                     ? array_map('intval', $_POST['verantwortliche']) 
                     : array();
                 $db->save_verein_verantwortliche($verein_id, $verantwortliche);
+                $this->sync_direct_verein_user_assignments($db, $verein_id, $verantwortliche);
 
                 if (!empty($seite_id)) {
                     update_post_meta($seite_id, '_dp_verein_id', $verein_id);
@@ -1278,6 +1329,11 @@ class Dienstplan_Admin {
                 wp_send_json_error(array('message' => 'Keine Berechtigung zum Verwalten von Diensten'));
                 return;
             }
+
+            if ($this->is_restricted_club_admin()) {
+                wp_send_json_error(array('message' => 'Club-Admins dürfen Dienste nicht bearbeiten. Bitte nutzen Sie nur Zuteilung/Splitting.'));
+                return;
+            }
             
             // Prüfe welche Pflichtfelder gefüllt sind
             $required = array('veranstaltung_id', 'tag_id', 'verein_id', 'bereich_id', 'taetigkeit_id', 'von_zeit', 'bis_zeit', 'anzahl_personen');
@@ -1385,6 +1441,11 @@ class Dienstplan_Admin {
             wp_send_json_error(array('message' => 'Keine Berechtigung'));
             return;
         }
+
+        if ($this->is_restricted_club_admin()) {
+            wp_send_json_error(array('message' => 'Club-Admins dürfen Dienste nicht bearbeiten.'));
+            return;
+        }
         
         $dienst_id = isset($_POST['dienst_id']) ? intval($_POST['dienst_id']) : 0;
         
@@ -1429,6 +1490,11 @@ class Dienstplan_Admin {
             wp_send_json_error(array('message' => 'Keine Berechtigung zum Löschen von Diensten'));
             return;
         }
+
+        if ($this->is_restricted_club_admin()) {
+            wp_send_json_error(array('message' => 'Club-Admins dürfen Dienste nicht löschen.'));
+            return;
+        }
         
         $dienst_id = isset($_POST['dienst_id']) ? intval($_POST['dienst_id']) : 0;
         
@@ -1460,6 +1526,11 @@ class Dienstplan_Admin {
         
         if (!Dienstplan_Roles::can_manage_events()) {
             wp_send_json_error(array('message' => 'Keine Berechtigung zum Kopieren von Diensten'));
+            return;
+        }
+
+        if ($this->is_restricted_club_admin()) {
+            wp_send_json_error(array('message' => 'Club-Admins dürfen Dienste nicht kopieren.'));
             return;
         }
         
@@ -1531,12 +1602,88 @@ class Dienstplan_Admin {
             'count' => $created_count
         ));
     }
+
+    /**
+     * AJAX: Dienst in 2 Halbdienste splitten (Slots neu aufteilen)
+     */
+    public function ajax_split_dienst() {
+        check_ajax_referer('dp_ajax_nonce', 'nonce');
+
+        if (!Dienstplan_Roles::can_manage_events()) {
+            wp_send_json_error(array('message' => 'Keine Berechtigung zum Splitten von Diensten'));
+            return;
+        }
+
+        $dienst_id = isset($_POST['dienst_id']) ? intval($_POST['dienst_id']) : 0;
+        if ($dienst_id <= 0) {
+            wp_send_json_error(array('message' => 'Keine Dienst-ID angegeben'));
+            return;
+        }
+
+        require_once DIENSTPLAN_PLUGIN_PATH . 'includes/class-database.php';
+        $db = new Dienstplan_Database($this->db_prefix);
+
+        if (!$this->current_user_can_access_dienst($db, $dienst_id)) {
+            wp_send_json_error(array('message' => 'Keine Berechtigung für diesen Dienst'));
+            return;
+        }
+
+        $dienst = $db->get_dienst($dienst_id);
+        if (!$dienst) {
+            wp_send_json_error(array('message' => 'Dienst nicht gefunden'));
+            return;
+        }
+
+        if (intval($dienst->splittbar) === 1) {
+            wp_send_json_success(array('message' => 'Dienst ist bereits gesplittet'));
+            return;
+        }
+
+        if (empty($dienst->von_zeit) || empty($dienst->bis_zeit)) {
+            wp_send_json_error(array('message' => 'Dienst ohne gültige Zeiten kann nicht gesplittet werden'));
+            return;
+        }
+
+        $slots = $db->get_dienst_slots($dienst_id);
+        foreach ($slots as $slot) {
+            if (!empty($slot->mitarbeiter_id)) {
+                wp_send_json_error(array('message' => 'Dienst kann nicht gesplittet werden, solange Zuweisungen bestehen'));
+                return;
+            }
+        }
+
+        global $wpdb;
+        $table_slots = $wpdb->prefix . $this->db_prefix . 'dienst_slots';
+        $wpdb->delete($table_slots, array('dienst_id' => $dienst_id), array('%d'));
+
+        $update_result = $db->update_dienst($dienst_id, array('splittbar' => 1));
+        if ($update_result === false) {
+            wp_send_json_error(array('message' => 'Fehler beim Aktualisieren des Dienstes'));
+            return;
+        }
+
+        $slot_data = array(
+            'von_zeit' => $dienst->von_zeit,
+            'bis_zeit' => $dienst->bis_zeit,
+            'bis_datum' => $dienst->bis_datum,
+            'anzahl_personen' => 1,
+            'splittbar' => 1
+        );
+        $this->create_dienst_slots_for_copy($dienst_id, $slot_data);
+
+        wp_send_json_success(array('message' => 'Dienst wurde erfolgreich in Halbdienste gesplittet'));
+    }
     
     public function ajax_create_bereich() {
         check_ajax_referer('dp_ajax_nonce', 'nonce');
         
         if (!Dienstplan_Roles::can_manage_events()) {
             wp_send_json_error(array('message' => 'Keine Berechtigung'));
+            return;
+        }
+
+        if ($this->is_restricted_club_admin()) {
+            wp_send_json_error(array('message' => 'Club-Admins dürfen Bereiche nicht bearbeiten.'));
             return;
         }
         
@@ -2397,15 +2544,14 @@ class Dienstplan_Admin {
         // Slots für diesen Dienst laden
         $slots = $db->get_dienst_slots($dienst_id);
         
-        // Mitarbeiter-Auswahlliste: Vereins-Admins duerfen nur sich selbst eintragen.
+        // Mitarbeiter-Auswahlliste: Vereins-Admins sehen nur Mitarbeiter im eigenen Scope.
         global $wpdb;
         if ($this->is_restricted_club_admin()) {
-            $own_ids = $this->get_current_user_own_mitarbeiter_ids($db);
+            $all_mitarbeiter = $wpdb->get_results("SELECT * FROM {$wpdb->prefix}dp_mitarbeiter ORDER BY vorname, nachname");
             $mitarbeiter = array();
 
-            foreach ($own_ids as $own_id) {
-                $row = $db->get_mitarbeiter($own_id);
-                if ($row) {
+            foreach ((array) $all_mitarbeiter as $row) {
+                if ($this->current_user_can_access_mitarbeiter($db, intval($row->id))) {
                     $mitarbeiter[] = $row;
                 }
             }
@@ -2460,12 +2606,9 @@ class Dienstplan_Admin {
             return;
         }
 
-        if ($this->is_restricted_club_admin()) {
-            $own_ids = $this->get_current_user_own_mitarbeiter_ids($db);
-            if (!in_array($mitarbeiter_id, $own_ids, true)) {
-                wp_send_json_error(array('message' => 'Als Vereins-Admin kannst du nur dich selbst eintragen.'));
-                return;
-            }
+        if ($this->is_restricted_club_admin() && !$this->current_user_can_access_mitarbeiter($db, $mitarbeiter_id)) {
+            wp_send_json_error(array('message' => 'Keine Berechtigung für diesen Mitarbeiter.'));
+            return;
         }
         
         // Prüfe ob Slot schon besetzt ist (nur wenn nicht force_replace)
@@ -3717,6 +3860,11 @@ class Dienstplan_Admin {
             wp_send_json_error(array('message' => 'Keine Berechtigung'));
             return;
         }
+
+        if ($this->is_restricted_club_admin()) {
+            wp_send_json_error(array('message' => 'Club-Admins dürfen Bereiche nicht bearbeiten.'));
+            return;
+        }
         
         $bereich_id = isset($_POST['bereich_id']) ? intval($_POST['bereich_id']) : 0;
         
@@ -3744,6 +3892,11 @@ class Dienstplan_Admin {
         
         if (!Dienstplan_Roles::can_manage_events() && !current_user_can('manage_options')) {
             wp_send_json_error(array('message' => 'Keine Berechtigung'));
+            return;
+        }
+
+        if ($this->is_restricted_club_admin()) {
+            wp_send_json_error(array('message' => 'Club-Admins dürfen Bereiche nicht bearbeiten.'));
             return;
         }
         
@@ -3785,6 +3938,11 @@ class Dienstplan_Admin {
         
         if (!Dienstplan_Roles::can_manage_events() && !current_user_can('manage_options')) {
             wp_send_json_error(array('message' => 'Keine Berechtigung'));
+            return;
+        }
+
+        if ($this->is_restricted_club_admin()) {
+            wp_send_json_error(array('message' => 'Club-Admins dürfen Bereiche nicht bearbeiten.'));
             return;
         }
         
@@ -5509,6 +5667,45 @@ class Dienstplan_Admin {
 
         foreach ($verein_ids as $verein_id) {
             $db->assign_user_to_verein($user_id, intval($verein_id), $mitarbeiter_id);
+        }
+    }
+
+    /**
+     * Synchronisiert direkte User↔Verein-Zuordnungen für Vereins-Verantwortliche.
+     *
+     * Es werden nur direkte Zuordnungen (ohne mitarbeiter_id) angepasst,
+     * damit dienstbasierte Zuordnungen unverändert bleiben.
+     *
+     * @param Dienstplan_Database $db
+     * @param int $verein_id
+     * @param int[] $user_ids
+     * @return void
+     */
+    private function sync_direct_verein_user_assignments($db, $verein_id, $user_ids) {
+        $verein_id = intval($verein_id);
+
+        if ($verein_id <= 0) {
+            return;
+        }
+
+        $desired_ids = array_values(array_unique(array_filter(array_map('intval', (array) $user_ids))));
+        $current_ids_raw = $db->get_direct_verein_user_ids($verein_id);
+        $current_ids = array();
+
+        foreach ((array) $current_ids_raw as $current_id) {
+            $current_ids[] = intval($current_id);
+        }
+
+        foreach ($current_ids as $current_id) {
+            if (!in_array($current_id, $desired_ids, true)) {
+                $db->delete_direct_user_verein_assignment($current_id, $verein_id);
+            }
+        }
+
+        foreach ($desired_ids as $desired_id) {
+            if (!in_array($desired_id, $current_ids, true)) {
+                $db->assign_direct_user_to_verein($desired_id, $verein_id);
+            }
         }
     }
     

@@ -4,6 +4,10 @@
  */
 if (!defined('ABSPATH')) exit;
 
+if (!isset($is_restricted_club_admin)) {
+    $is_restricted_club_admin = Dienstplan_Roles::can_manage_clubs() && !current_user_can('manage_options') && !current_user_can(Dienstplan_Roles::CAP_MANAGE_SETTINGS);
+}
+
 // Gruppiere Dienste nach Tagen
 $dienste_nach_tagen = array();
 $dienste_ohne_tag = array();
@@ -54,10 +58,12 @@ uasort($dienste_nach_tagen, function($a, $b) {
                     <span><?php echo date_i18n('l, d.m.Y', strtotime($tag->tag_datum)); ?></span>
                 </span>
                 
-                <button type="button" class="button button-primary" onclick="event.stopPropagation(); openDienstModal(<?php echo $tag_id; ?>);" style="background: rgba(255,255,255,0.9); color: #667eea; border: none; font-weight: 600; padding: 0.5rem 1rem; border-radius: 3px; display: flex; align-items: center; gap: 0.5rem; transition: all 0.2s;" onmouseover="this.style.background='#fff'" onmouseout="this.style.background='rgba(255,255,255,0.9)'">
-                    <span class="dashicons dashicons-plus-alt" style="font-size: 18px; width: 18px; height: 18px;"></span>
-                    <?php _e('Neuer Dienst', 'dienstplan-verwaltung'); ?>
-                </button>
+                <?php if (!$is_restricted_club_admin): ?>
+                    <button type="button" class="button button-primary" onclick="event.stopPropagation(); openDienstModal(<?php echo $tag_id; ?>);" style="background: rgba(255,255,255,0.9); color: #667eea; border: none; font-weight: 600; padding: 0.5rem 1rem; border-radius: 3px; display: flex; align-items: center; gap: 0.5rem; transition: all 0.2s;" onmouseover="this.style.background='#fff'" onmouseout="this.style.background='rgba(255,255,255,0.9)'">
+                        <span class="dashicons dashicons-plus-alt" style="font-size: 18px; width: 18px; height: 18px;"></span>
+                        <?php _e('Neuer Dienst', 'dienstplan-verwaltung'); ?>
+                    </button>
+                <?php endif; ?>
                 
                 <span style="background: rgba(255,255,255,0.2); padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.9rem;">
                     <?php echo count($tag_dienste); ?> Dienst<?php echo count($tag_dienste) != 1 ? 'e' : ''; ?>
@@ -80,33 +86,39 @@ uasort($dienste_nach_tagen, function($a, $b) {
             
             <!-- Einklappbarer Content -->
             <div id="<?php echo $collapse_id; ?>" class="tag-content" style="display: block;">
-            <!-- Bulk-Aktionen Toolbar -->
-            <div class="bulk-actions-toolbar" style="background: #f9fafb; padding: 1rem; border: 1px solid #e5e7eb; border-bottom: none; display: flex;">
-                <div style="display: flex; gap: 1rem; align-items: center;">
-                    <span class="selected-count" style="color: #6b7280;">
-                        <span class="count">0</span> <?php _e('ausgewählt', 'dienstplan-verwaltung'); ?>
-                    </span>
-                    
-                    <select class="bulk-action-select" style="min-width: 200px;">
-                        <option value=""><?php _e('-- Aktion wählen --', 'dienstplan-verwaltung'); ?></option>
-                        <option value="delete"><?php _e('Löschen', 'dienstplan-verwaltung'); ?></option>
-                        <option value="move_tag"><?php _e('Tag verschieben', 'dienstplan-verwaltung'); ?></option>
-                        <option value="change_time"><?php _e('Zeiten ändern', 'dienstplan-verwaltung'); ?></option>
-                        <option value="change_verein"><?php _e('Verein ändern', 'dienstplan-verwaltung'); ?></option>
-                        <option value="change_bereich"><?php _e('Bereich ändern', 'dienstplan-verwaltung'); ?></option>
-                        <option value="change_taetigkeit"><?php _e('Tätigkeit ändern', 'dienstplan-verwaltung'); ?></option>
-                        <option value="change_status"><?php _e('Status ändern', 'dienstplan-verwaltung'); ?></option>
-                    </select>
-                    
-                    <button type="button" class="button bulk-action-apply">
-                        <?php _e('Anwenden', 'dienstplan-verwaltung'); ?>
-                    </button>
-                    
-                    <button type="button" class="button bulk-action-cancel">
-                        <?php _e('Abbrechen', 'dienstplan-verwaltung'); ?>
-                    </button>
+            <?php if (!$is_restricted_club_admin): ?>
+                <!-- Bulk-Aktionen Toolbar -->
+                <div class="bulk-actions-toolbar" style="background: #f9fafb; padding: 1rem; border: 1px solid #e5e7eb; border-bottom: none; display: flex;">
+                    <div style="display: flex; gap: 1rem; align-items: center;">
+                        <span class="selected-count" style="color: #6b7280;">
+                            <span class="count">0</span> <?php _e('ausgewählt', 'dienstplan-verwaltung'); ?>
+                        </span>
+                        
+                        <select class="bulk-action-select" style="min-width: 200px;">
+                            <option value=""><?php _e('-- Aktion wählen --', 'dienstplan-verwaltung'); ?></option>
+                            <option value="delete"><?php _e('Löschen', 'dienstplan-verwaltung'); ?></option>
+                            <option value="move_tag"><?php _e('Tag verschieben', 'dienstplan-verwaltung'); ?></option>
+                            <option value="change_time"><?php _e('Zeiten ändern', 'dienstplan-verwaltung'); ?></option>
+                            <option value="change_verein"><?php _e('Verein ändern', 'dienstplan-verwaltung'); ?></option>
+                            <option value="change_bereich"><?php _e('Bereich ändern', 'dienstplan-verwaltung'); ?></option>
+                            <option value="change_taetigkeit"><?php _e('Tätigkeit ändern', 'dienstplan-verwaltung'); ?></option>
+                            <option value="change_status"><?php _e('Status ändern', 'dienstplan-verwaltung'); ?></option>
+                        </select>
+                        
+                        <button type="button" class="button bulk-action-apply">
+                            <?php _e('Anwenden', 'dienstplan-verwaltung'); ?>
+                        </button>
+                        
+                        <button type="button" class="button bulk-action-cancel">
+                            <?php _e('Abbrechen', 'dienstplan-verwaltung'); ?>
+                        </button>
+                    </div>
                 </div>
-            </div>
+            <?php else: ?>
+                <div style="background: #f9fafb; padding: 0.75rem 1rem; border: 1px solid #e5e7eb; border-bottom: none; color: #6b7280; font-size: 0.85rem;">
+                    <?php _e('Als Club-Admin sind nur Splitten/Zuteilen (Besetzung) erlaubt.', 'dienstplan-verwaltung'); ?>
+                </div>
+            <?php endif; ?>
             
             <div style="overflow: visible;">
             <table class="wp-list-table widefat fixed striped" style="position: relative; overflow: visible;">
@@ -244,30 +256,27 @@ uasort($dienste_nach_tagen, function($a, $b) {
                                 <?php endif; ?>
                             </td>
                             <td>
-                                <div class="dienst-action-button-container">
-                                    <button class="dienst-action-button" onclick="toggleDienstActionDropdown(event, <?php echo $dienst->id; ?>)">
-                                        <span class="dashicons dashicons-menu" style="font-size: 16px;"></span>
-                                        <?php _e('Aktionen', 'dienstplan-verwaltung'); ?>
+                                <div style="display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end;">
+                                    <button type="button" class="button button-small" title="<?php esc_attr_e('Besetzung verwalten', 'dienstplan-verwaltung'); ?>" onclick="editBesetzung(<?php echo $dienst->id; ?>)">
+                                        <span class="dashicons dashicons-admin-users"></span>
                                     </button>
-                                    <div id="dienst-action-dropdown-<?php echo $dienst->id; ?>" class="dienst-action-dropdown">
-                                        <a href="#" onclick="event.preventDefault(); editDienst(<?php echo $dienst->id; ?>); hideDienstDropdown(<?php echo $dienst->id; ?>);">
+                                    <?php if (!$is_restricted_club_admin): ?>
+                                        <button type="button" class="button button-small" title="<?php esc_attr_e('Dienst bearbeiten', 'dienstplan-verwaltung'); ?>" onclick="editDienst(<?php echo $dienst->id; ?>)">
                                             <span class="dashicons dashicons-edit"></span>
-                                            <?php _e('Dienst bearbeiten', 'dienstplan-verwaltung'); ?>
-                                        </a>
-                                        <a href="#" onclick="event.preventDefault(); editBesetzung(<?php echo $dienst->id; ?>); hideDienstDropdown(<?php echo $dienst->id; ?>);">
-                                            <span class="dashicons dashicons-admin-users"></span>
-                                            <?php _e('Besetzung verwalten', 'dienstplan-verwaltung'); ?>
-                                        </a>
-                                        <a href="#" onclick="event.preventDefault(); copyDienst(<?php echo $dienst->id; ?>); hideDienstDropdown(<?php echo $dienst->id; ?>);">
+                                        </button>
+                                        <button type="button" class="button button-small" title="<?php esc_attr_e('Dienst kopieren', 'dienstplan-verwaltung'); ?>" onclick="copyDienst(<?php echo $dienst->id; ?>)">
                                             <span class="dashicons dashicons-admin-page"></span>
-                                            <?php _e('Dienst kopieren', 'dienstplan-verwaltung'); ?>
-                                        </a>
-                                        <div style="border-top: 1px solid #e5e5e5; margin: 4px 0;"></div>
-                                        <a href="#" onclick="event.preventDefault(); if(confirm('<?php _e('Wirklich löschen?', 'dienstplan-verwaltung'); ?>')) { deleteDienst(<?php echo $dienst->id; ?>); hideDienstDropdown(<?php echo $dienst->id; ?>); }">
+                                        </button>
+                                        <button type="button" class="button button-small" title="<?php esc_attr_e('Dienst löschen', 'dienstplan-verwaltung'); ?>" onclick="if(confirm('<?php _e('Wirklich löschen?', 'dienstplan-verwaltung'); ?>')) { deleteDienst(<?php echo $dienst->id; ?>); }" style="color: #dc2626; border-color: #fecaca;">
                                             <span class="dashicons dashicons-trash"></span>
-                                            <?php _e('Dienst löschen', 'dienstplan-verwaltung'); ?>
-                                        </a>
-                                    </div>
+                                        </button>
+                                    <?php else: ?>
+                                        <?php if (empty($dienst->splittbar)): ?>
+                                            <button type="button" class="button button-small" title="<?php esc_attr_e('Dienst splitten', 'dienstplan-verwaltung'); ?>" onclick="splitDienst(<?php echo $dienst->id; ?>)">
+                                                <span class="dashicons dashicons-randomize"></span>
+                                            </button>
+                                        <?php endif; ?>
+                                    <?php endif; ?>
                                 </div>
                             </td>
                         </tr>
@@ -434,33 +443,19 @@ uasort($dienste_nach_tagen, function($a, $b) {
                                 <?php endif; ?>
                             </td>
                             <td>
-                                <div style="position: relative; display: inline-block;">
-                                    <button class="button" onclick="toggleDienstActionDropdown(event, <?php echo $dienst->id; ?>)" style="padding: 8px 12px; display: flex; align-items: center; gap: 6px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; font-weight: 500; border-radius: 4px; cursor: pointer;">
-                                        <span class="dashicons dashicons-admin-generic" style="font-size: 16px; width: 16px; height: 16px;"></span>
-                                        <?php _e('Aktionen', 'dienstplan-verwaltung'); ?>
-                                        <span class="dashicons dashicons-arrow-down-alt2" style="font-size: 14px; width: 14px; height: 14px;"></span>
+                                <div style="display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end;">
+                                    <button type="button" class="button button-small" title="<?php esc_attr_e('Dienst bearbeiten', 'dienstplan-verwaltung'); ?>" onclick="editDienst(<?php echo $dienst->id; ?>)">
+                                        <span class="dashicons dashicons-edit"></span>
                                     </button>
-                                    <div id="dienst-action-dropdown-<?php echo $dienst->id; ?>" class="dienst-action-dropdown" style="display: none; position: absolute; top: 100%; right: 0; background: #fff; border: 1px solid #e5e7eb; box-shadow: 0 4px 16px rgba(0,0,0,0.12); z-index: 100001 !important; min-width: 240px; border-radius: 6px; margin-top: 4px; overflow: hidden;">
-                                        <div style="padding: 4px 0;">
-                                            <a href="#" onclick="event.preventDefault(); editDienst(<?php echo $dienst->id; ?>); hideDienstDropdown(<?php echo $dienst->id; ?>);" style="display: block; padding: 8px 12px; text-decoration: none; color: #333; transition: background 0.2s;" onmouseover="this.style.background='#f0f0f0'" onmouseout="this.style.background='transparent'">
-                                                <span class="dashicons dashicons-edit" style="font-size: 16px; width: 16px; height: 16px; margin-right: 8px;"></span>
-                                                <?php _e('Dienst bearbeiten', 'dienstplan-verwaltung'); ?>
-                                            </a>
-                                            <a href="#" onclick="event.preventDefault(); editBesetzung(<?php echo $dienst->id; ?>); hideDienstDropdown(<?php echo $dienst->id; ?>);" style="display: block; padding: 8px 12px; text-decoration: none; color: #333; transition: background 0.2s;" onmouseover="this.style.background='#f0f0f0'" onmouseout="this.style.background='transparent'">
-                                                <span class="dashicons dashicons-admin-users" style="font-size: 16px; width: 16px; height: 16px; margin-right: 8px;"></span>
-                                                <?php _e('Besetzung verwalten', 'dienstplan-verwaltung'); ?>
-                                            </a>
-                                            <a href="#" onclick="event.preventDefault(); copyDienst(<?php echo $dienst->id; ?>); hideDienstDropdown(<?php echo $dienst->id; ?>);" style="display: block; padding: 8px 12px; text-decoration: none; color: #2271b1; transition: background 0.2s;" onmouseover="this.style.background='#f0f6fc'" onmouseout="this.style.background='transparent'">
-                                                <span class="dashicons dashicons-admin-page" style="font-size: 16px; width: 16px; height: 16px; margin-right: 8px;"></span>
-                                                <?php _e('Dienst kopieren', 'dienstplan-verwaltung'); ?>
-                                            </a>
-                                            <div style="border-top: 1px solid #e5e5e5; margin: 4px 0;"></div>
-                                            <a href="#" onclick="event.preventDefault(); if(confirm('<?php _e('Wirklich löschen?', 'dienstplan-verwaltung'); ?>')) { deleteDienst(<?php echo $dienst->id; ?>); hideDienstDropdown(<?php echo $dienst->id; ?>); }" style="display: block; padding: 8px 12px; text-decoration: none; color: #dc2626; transition: background 0.2s;" onmouseover="this.style.background='#fee2e2'" onmouseout="this.style.background='transparent'">
-                                                <span class="dashicons dashicons-trash" style="font-size: 16px; width: 16px; height: 16px; margin-right: 8px;"></span>
-                                                <?php _e('Dienst löschen', 'dienstplan-verwaltung'); ?>
-                                            </a>
-                                        </div>
-                                    </div>
+                                    <button type="button" class="button button-small" title="<?php esc_attr_e('Besetzung verwalten', 'dienstplan-verwaltung'); ?>" onclick="editBesetzung(<?php echo $dienst->id; ?>)">
+                                        <span class="dashicons dashicons-admin-users"></span>
+                                    </button>
+                                    <button type="button" class="button button-small" title="<?php esc_attr_e('Dienst kopieren', 'dienstplan-verwaltung'); ?>" onclick="copyDienst(<?php echo $dienst->id; ?>)">
+                                        <span class="dashicons dashicons-admin-page"></span>
+                                    </button>
+                                    <button type="button" class="button button-small" title="<?php esc_attr_e('Dienst löschen', 'dienstplan-verwaltung'); ?>" onclick="if(confirm('<?php _e('Wirklich löschen?', 'dienstplan-verwaltung'); ?>')) { deleteDienst(<?php echo $dienst->id; ?>); }" style="color: #dc2626; border-color: #fecaca;">
+                                        <span class="dashicons dashicons-trash"></span>
+                                    </button>
                                 </div>
                             </td>
                         </tr>

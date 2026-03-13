@@ -6,6 +6,8 @@
 
 if (!defined('ABSPATH')) exit;
 
+$is_restricted_club_admin = Dienstplan_Roles::can_manage_clubs() && !current_user_can('manage_options') && !current_user_can(Dienstplan_Roles::CAP_MANAGE_SETTINGS);
+
 // Filter-Parameter
 $filter_verein = isset($_GET['filter_verein']) ? intval($_GET['filter_verein']) : 0;
 $filter_veranstaltung = isset($_GET['filter_veranstaltung']) ? intval($_GET['filter_veranstaltung']) : 0;
@@ -261,13 +263,15 @@ ksort($mitarbeiter_nach_vereinen);
                                     <option value="activate_portal"><?php _e('Portal-Zugriff aktivieren', 'dienstplan-verwaltung'); ?></option>
                                     <option value="deactivate_portal"><?php _e('Portal-Zugriff deaktivieren', 'dienstplan-verwaltung'); ?></option>
                                     <option value="export"><?php _e('Exportieren (CSV)', 'dienstplan-verwaltung'); ?></option>
-                                    <option value="export_portal"><?php _e('Portal-Zugänge exportieren', 'dienstplan-verwaltung'); ?></option>
+                                    <?php if (!$is_restricted_club_admin): ?>
+                                        <option value="export_portal"><?php _e('Portal-Zugänge exportieren', 'dienstplan-verwaltung'); ?></option>
+                                    <?php endif; ?>
                                 </select>
-                                <button class="button button-primary bulk-action-apply">
+                                <button class="button button-primary bulk-action-apply dp-bulk-button">
                                     <span class="dashicons dashicons-yes" style="margin-top: 3px;"></span>
                                     <?php _e('Anwenden', 'dienstplan-verwaltung'); ?>
                                 </button>
-                                <button class="button cancel-bulk-selection" style="margin-left: auto;">
+                                <button class="button cancel-bulk-selection dp-bulk-button" style="margin-left: auto;">
                                     <span class="dashicons dashicons-no-alt" style="margin-top: 3px;"></span>
                                     <?php _e('Abbrechen', 'dienstplan-verwaltung'); ?>
                                 </button>

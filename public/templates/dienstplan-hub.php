@@ -35,6 +35,7 @@ $is_logged_in = is_user_logged_in();
 $current_user = wp_get_current_user();
 $current_mitarbeiter_id = 0;
 $assigned_event_ids = array();
+$crew_allowed_verein_ids = array();
 
 // Logging für eingeloggte Portal-Benutzer
 if ($is_logged_in) {
@@ -47,6 +48,14 @@ if ($is_logged_in) {
             $current_user->ID
         ));
         $current_mitarbeiter_id = intval($mitarbeiter_id);
+
+        $user_verein_ids = $wpdb->get_col($wpdb->prepare(
+            "SELECT DISTINCT verein_id FROM {$wpdb->prefix}dp_user_vereine WHERE user_id = %d",
+            $current_user->ID
+        ));
+
+        $crew_allowed_verein_ids = array_values(array_unique(array_filter(array_map('intval', (array) $user_verein_ids))));
+        sort($crew_allowed_verein_ids);
 
         if ($current_mitarbeiter_id > 0) {
             $assigned_event_ids_raw = $wpdb->get_col($wpdb->prepare(
@@ -74,6 +83,24 @@ if ($is_logged_in) {
             ),
             array('%d', '%d', '%s', '%s', '%s')
         );
+    }
+}
+
+if ($is_logged_in && in_array(Dienstplan_Roles::ROLE_CREW, $current_user->roles, true)) {
+    if (empty($crew_allowed_verein_ids)) {
+        $aktuelle_veranstaltungen = array();
+    } else {
+        $prefix = $wpdb->prefix . DIENSTPLAN_DB_PREFIX;
+        $crew_allowed_events = $wpdb->get_col(
+            "SELECT DISTINCT veranstaltung_id
+             FROM {$prefix}veranstaltung_vereine
+             WHERE verein_id IN (" . implode(',', array_map('intval', $crew_allowed_verein_ids)) . ")"
+        );
+        $crew_allowed_event_ids = array_values(array_unique(array_filter(array_map('intval', (array) $crew_allowed_events))));
+
+        $aktuelle_veranstaltungen = array_values(array_filter($aktuelle_veranstaltungen, function($event) use ($crew_allowed_event_ids) {
+            return in_array(intval($event->id), $crew_allowed_event_ids, true);
+        }));
     }
 }
 

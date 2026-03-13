@@ -1112,6 +1112,15 @@ class Dienstplan_Public {
     public function ajax_anmeldung_verein() {
         global $wpdb;
         $prefix = $wpdb->prefix . $this->db_prefix;
+        require_once DIENSTPLAN_PLUGIN_PATH . 'includes/class-database.php';
+        $db = new Dienstplan_Database($this->db_prefix);
+
+        $can_manage_frontend_assignments = is_user_logged_in()
+            && (
+                current_user_can('manage_options')
+                || Dienstplan_Roles::can_manage_events()
+                || Dienstplan_Roles::can_manage_clubs()
+            );
         
         // Nonce-Prüfung (kompatibel: alter und neuer Nonce-Name)
         $request_nonce = isset($_POST['nonce']) ? sanitize_text_field(wp_unslash($_POST['nonce'])) : '';
@@ -1136,15 +1145,26 @@ class Dienstplan_Public {
         $besonderheiten = isset($_POST['besonderheiten']) ? sanitize_textarea_field(wp_unslash($_POST['besonderheiten'])) : '';
         $create_user_account = isset($_POST['create_user_account']) && sanitize_text_field(wp_unslash($_POST['create_user_account'])) === '1';
         $create_user_datenschutz = isset($_POST['create_user_datenschutz']) && sanitize_text_field(wp_unslash($_POST['create_user_datenschutz'])) === '1';
+        $selected_mitarbeiter_id = isset($_POST['selected_mitarbeiter_id']) ? intval($_POST['selected_mitarbeiter_id']) : 0;
         $source_url = isset($_POST['source_url']) ? esc_url_raw(sanitize_text_field(wp_unslash($_POST['source_url']))) : '';
         
-        if (!$slot_id || !$dienst_id || !$vorname || !$nachname || !$email) {
+        if (!$slot_id || !$dienst_id) {
+            wp_send_json_error(array('message' => 'Bitte gültigen Dienst-Slot auswählen.'));
+            return;
+        }
+
+        if ($selected_mitarbeiter_id > 0 && !$can_manage_frontend_assignments) {
+            wp_send_json_error(array('message' => 'Keine Berechtigung für diese Zuweisung.'));
+            return;
+        }
+
+        if ($selected_mitarbeiter_id <= 0 && (!$vorname || !$nachname || !$email)) {
             wp_send_json_error(array('message' => 'Bitte alle Pflichtfelder ausfüllen.'));
             return;
         }
         
-        // E-Mail validieren
-        if (!is_email($email)) {
+        // E-Mail validieren (nur bei freier Eingabe)
+        if ($selected_mitarbeiter_id <= 0 && !is_email($email)) {
             wp_send_json_error(array('message' => 'Ungültige E-Mail-Adresse.'));
             return;
         }
@@ -1198,52 +1218,74 @@ class Dienstplan_Public {
             return;
         }
         
-        // Mitarbeiter erstellen oder finden
-        $existing_mitarbeiter = $wpdb->get_row($wpdb->prepare(
-            "SELECT id FROM {$prefix}mitarbeiter WHERE email = %s",
-            $email
-        ));
-        
-        if ($existing_mitarbeiter) {
-            $mitarbeiter_id = $existing_mitarbeiter->id;
-        } else {
-            // Neuen Mitarbeiter anlegen (schema-sicher: nur vorhandene Spalten)
-            $mitarbeiter_columns = $wpdb->get_col("SHOW COLUMNS FROM {$prefix}mitarbeiter", 0);
-            $insert_data = array(
-                'vorname' => $vorname,
-                'nachname' => $nachname,
-                'email' => $email,
-                'telefon' => $telefon,
-            );
-
-            if (in_array('datenschutz_akzeptiert', $mitarbeiter_columns, true)) {
-                $insert_data['datenschutz_akzeptiert'] = $create_user_account && $create_user_datenschutz ? 1 : 0;
-            }
-
-            if (in_array('notizen', $mitarbeiter_columns, true)) {
-                $insert_data['notizen'] = $besonderheiten;
-            }
-
-            if (in_array('created_at', $mitarbeiter_columns, true)) {
-                $insert_data['created_at'] = current_time('mysql');
-            }
-
-            if (in_array('updated_at', $mitarbeiter_columns, true)) {
-                $insert_data['updated_at'] = current_time('mysql');
-            }
-
-            $insert_format = array();
-            foreach ($insert_data as $column => $value) {
-                $insert_format[] = $column === 'datenschutz_akzeptiert' ? '%d' : '%s';
-            }
-
-            $wpdb->insert($prefix . 'mitarbeiter', $insert_data, $insert_format);
-            
-            $mitarbeiter_id = $wpdb->insert_id;
-            
-            if (!$mitarbeiter_id) {
-                wp_send_json_error(array('message' => 'Fehler beim Anlegen des Mitarbeiterprofils.'));
+        // Mitarbeiter ermitteln (Admin-Auswahl) oder erstellen/finden (freies Formular)
+        if ($selected_mitarbeiter_id > 0) {
+            $selected_mitarbeiter = $db->get_mitarbeiter($selected_mitarbeiter_id);
+            if (!$selected_mitarbeiter) {
+                wp_send_json_error(array('message' => 'Ausgewählter Mitarbeiter wurde nicht gefunden.'));
                 return;
+            }
+
+            $mitarbeiter_id = intval($selected_mitarbeiter->id);
+            $vorname = sanitize_text_field($selected_mitarbeiter->vorname ?? '');
+            $nachname = sanitize_text_field($selected_mitarbeiter->nachname ?? '');
+            $email = sanitize_email($selected_mitarbeiter->email ?? '');
+            $telefon = sanitize_text_field($selected_mitarbeiter->telefon ?? $telefon);
+
+            if (empty($email) || !is_email($email)) {
+                wp_send_json_error(array('message' => 'Der ausgewählte Mitarbeiter hat keine gültige E-Mail-Adresse.'));
+                return;
+            }
+
+            $create_user_account = false;
+            $create_user_datenschutz = false;
+        } else {
+            $existing_mitarbeiter = $wpdb->get_row($wpdb->prepare(
+                "SELECT id FROM {$prefix}mitarbeiter WHERE email = %s",
+                $email
+            ));
+
+            if ($existing_mitarbeiter) {
+                $mitarbeiter_id = $existing_mitarbeiter->id;
+            } else {
+                // Neuen Mitarbeiter anlegen (schema-sicher: nur vorhandene Spalten)
+                $mitarbeiter_columns = $wpdb->get_col("SHOW COLUMNS FROM {$prefix}mitarbeiter", 0);
+                $insert_data = array(
+                    'vorname' => $vorname,
+                    'nachname' => $nachname,
+                    'email' => $email,
+                    'telefon' => $telefon,
+                );
+
+                if (in_array('datenschutz_akzeptiert', $mitarbeiter_columns, true)) {
+                    $insert_data['datenschutz_akzeptiert'] = $create_user_account && $create_user_datenschutz ? 1 : 0;
+                }
+
+                if (in_array('notizen', $mitarbeiter_columns, true)) {
+                    $insert_data['notizen'] = $besonderheiten;
+                }
+
+                if (in_array('created_at', $mitarbeiter_columns, true)) {
+                    $insert_data['created_at'] = current_time('mysql');
+                }
+
+                if (in_array('updated_at', $mitarbeiter_columns, true)) {
+                    $insert_data['updated_at'] = current_time('mysql');
+                }
+
+                $insert_format = array();
+                foreach ($insert_data as $column => $value) {
+                    $insert_format[] = $column === 'datenschutz_akzeptiert' ? '%d' : '%s';
+                }
+
+                $wpdb->insert($prefix . 'mitarbeiter', $insert_data, $insert_format);
+
+                $mitarbeiter_id = $wpdb->insert_id;
+
+                if (!$mitarbeiter_id) {
+                    wp_send_json_error(array('message' => 'Fehler beim Anlegen des Mitarbeiterprofils.'));
+                    return;
+                }
             }
         }
         
@@ -1274,8 +1316,6 @@ class Dienstplan_Public {
 
         // Optional: Nur bei expliziter Auswahl Portal-User anlegen/verknüpfen
         if ($create_user_account) {
-            require_once DIENSTPLAN_PLUGIN_PATH . 'includes/class-database.php';
-            $db = new Dienstplan_Database($this->db_prefix);
             $mitarbeiter = $db->get_mitarbeiter($mitarbeiter_id);
             $verein_id = !empty($dienst->verein_id) ? intval($dienst->verein_id) : 0;
             $this->ensure_portal_user_for_mitarbeiter($db, $mitarbeiter, $email, $verein_id);

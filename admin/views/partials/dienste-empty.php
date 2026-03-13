@@ -10,9 +10,13 @@ if (!defined('ABSPATH')) exit;
         <span class="dashicons dashicons-calendar-alt"></span>
     </div>
     <h3><?php _e('Noch keine Dienste', 'dienstplan-verwaltung'); ?></h3>
-    <p><?php _e('Erstellen Sie den ersten Dienst für diese Veranstaltung.', 'dienstplan-verwaltung'); ?></p>
-    <button type="button" class="button button-primary button-large" onclick="openDienstModal()" style="margin-top: 1rem;">
-        <span class="dashicons dashicons-plus-alt"></span>
-        <?php _e('Ersten Dienst erstellen', 'dienstplan-verwaltung'); ?>
-    </button>
+    <?php if (!empty($is_restricted_club_admin)): ?>
+        <p><?php _e('Als Club-Admin können Sie Dienste hier nur splitten und zuteilen.', 'dienstplan-verwaltung'); ?></p>
+    <?php else: ?>
+        <p><?php _e('Erstellen Sie den ersten Dienst für diese Veranstaltung.', 'dienstplan-verwaltung'); ?></p>
+        <button type="button" class="button button-primary button-large" onclick="openDienstModal()" style="margin-top: 1rem;">
+            <span class="dashicons dashicons-plus-alt"></span>
+            <?php _e('Ersten Dienst erstellen', 'dienstplan-verwaltung'); ?>
+        </button>
+    <?php endif; ?>
 </div>

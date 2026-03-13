@@ -984,6 +984,32 @@ body {
     flex-shrink: 0;
 }
 
+/* Globale Einzel-Action-Buttons (statt Dropdown-Menues) */
+.dp-inline-action-buttons {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    justify-content: center;
+}
+
+.dp-inline-action-button {
+    min-width: 30px;
+    padding: 4px 7px;
+    line-height: 1;
+}
+
+.dp-inline-action-button .dashicons {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+    margin: 0;
+}
+
+.dp-inline-action-button.is-danger {
+    color: #b32d2e;
+    border-color: #b32d2e;
+}
+
 /**
  * ===== EINHEITLICHE SEITEN-HEADER =====
  */
@@ -2123,6 +2149,33 @@ body {
 
 .bulk-action-select {
     min-width: 200px;
+}
+
+.bulk-actions-toolbar .dp-bulk-button,
+.bulk-actions-toolbar .button,
+.bulk-actions-toolbar .button-primary {
+    min-height: 30px !important;
+    height: 30px !important;
+    padding: 0 12px !important;
+    font-size: 13px !important;
+    line-height: 28px !important;
+    border-radius: 6px !important;
+    box-shadow: none !important;
+    transform: none !important;
+}
+
+.bulk-actions-toolbar .button-primary:hover,
+.bulk-actions-toolbar .button:hover {
+    transform: none !important;
+    box-shadow: none !important;
+}
+
+.bulk-actions-toolbar .button .dashicons,
+.bulk-actions-toolbar .button-primary .dashicons {
+    font-size: 14px;
+    width: 14px;
+    height: 14px;
+    margin-right: 4px;
 }
 
 /* Rotation Animation für Loading */

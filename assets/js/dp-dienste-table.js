@@ -7,6 +7,14 @@
     'use strict';
 
     $(document).ready(function() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const currentPage = urlParams.get('page');
+
+        // Dieses Skript darf ausschließlich auf der Dienste-Seite laufen.
+        if (currentPage !== 'dienstplan-dienste') {
+            return;
+        }
+
         console.log('Dienste-Tabelle geladen');
 
         // ========================================
@@ -296,18 +304,48 @@
         // ========================================
         // toggleDienstActionDropdown() und hideDienstDropdown() sind jetzt in dp-admin.js definiert
 
+        window.splitDienst = function(dienstId) {
+            if (!dienstId) {
+                return;
+            }
+
+            if (!window.confirm('Möchten Sie diesen Dienst in zwei Halbdienste splitten?')) {
+                return;
+            }
+
+            $.ajax({
+                url: dpAjax.ajaxurl,
+                method: 'POST',
+                data: {
+                    action: 'dp_split_dienst',
+                    nonce: dpAjax.nonce,
+                    dienst_id: dienstId
+                },
+                success: function(response) {
+                    if (response && response.success) {
+                        alert(response.data?.message || 'Dienst wurde gesplittet.');
+                        if(typeof dpSafeReload === "function") { dpSafeReload(); } else { location.reload(); };
+                    } else {
+                        alert('Fehler: ' + (response?.data?.message || 'Unbekannter Fehler'));
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('AJAX-Fehler bei splitDienst:', error, xhr?.responseText);
+                    alert('AJAX-Fehler beim Splitten: ' + error);
+                }
+            });
+        };
+
         // Auto-Refresh
         // ========================================
 
         // Auto-Refresh alle 30 Sekunden
         // Aber NICHT auf der Import/Export-Seite!
-        const urlParams = new URLSearchParams(window.location.search);
-        const currentPage = urlParams.get('page');
-        
         let autoRefreshInterval = null;
         
-        // Nur aktivieren wenn NICHT auf Import/Export-Seite
-        if (currentPage !== 'dienstplan-import-export') {
+        // Nur auf der Dienste-Seite und nur wenn auch wirklich eine Dienste-Tabelle vorhanden ist.
+        const hasDiensteTable = $('.dienst-checkbox').length > 0 || $('.tag-dienste-gruppe').length > 0;
+        if (currentPage === 'dienstplan-dienste' && hasDiensteTable) {
             autoRefreshInterval = setInterval(function() {
                 // Nur aktualisieren wenn kein Modal offen ist
                 if (!$('#dienst-modal').is(':visible') && !$('#besetzung-modal').is(':visible')) {

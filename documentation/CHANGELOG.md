@@ -7,6 +7,32 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ---
 
+## [0.9.5.42] - 2026-03-13 🚀 Rollen-, Modal- und Zuweisungs-Release
+
+### ✨ Verbesserungen
+
+- Mitarbeiter koennen mehreren Vereinen stabil zugeordnet werden; manuelle Vereinsauswahl im Mitarbeiter-Modal wurde konsolidiert.
+- Club-Admin-Rechte geschaerft:
+  - Bereiche nur noch ansehen, nicht bearbeiten.
+  - Dienste nicht mehr bearbeiten/kopieren/loeschen, nur Besetzung (Zuteilen) und Splitten.
+- Dienste-Tabelle erhielt klare Direktbuttons statt verschachtelter Aktionsmenues.
+- Neuer Split-Flow fuer Club-Admins: `dp_split_dienst` mit UI-Button und serverseitiger Absicherung.
+
+### 🐛 Bugfixes
+
+- Mitarbeiter-Dienste-Modal blieb bei "Lade Dienste..." haengen: Funktionskonflikt bereinigt und Aufrufpfad stabilisiert.
+- Reload-Schleife in Admin-JS behoben (`dpSafeReload` + Seiten-Gating in Dienste-Skripten).
+- Neuanlage im Besetzungs-Modal: neuer Mitarbeiter wird sofort im Scope sichtbar und vorausgewaehlt.
+- Entfernen einer Vereinszugehoerigkeit im Mitarbeiter-Modal korrigiert:
+  - automatische Vereinspflege aus Slots beruecksichtigt nur noch aktuelle/kommende Einsaetze.
+
+### 🔒 Sicherheit & Konsistenz
+
+- Zentrale E-Mail-Duplikatspruefung bei Mitarbeiter-Anlage und -Update eingefuehrt.
+- Frontend-/Backend-Zuweisungsflows wurden serverseitig strenger auf Rollen- und Scope-Regeln geprueft.
+
+---
+
 ## [0.9.5.31] - 2026-03-13 👤 Vereins-Admin: nur Selbst-Eintragung
 
 ### ✨ Verbesserungen
