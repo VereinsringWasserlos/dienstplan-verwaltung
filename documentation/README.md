@@ -1,8 +1,8 @@
 # Dokumentation - Dienstplan-Verwaltung V2
 
-**Version:** 0.9.5.5 (Stable Release)  
-**Stand:** 11. März 2026  
-**Status:** Production Ready - Timeline & Filter Redesign
+**Version:** 0.9.5.24  
+**Stand:** 13. März 2026  
+**Status:** Rollen-/Rechte-System in v2-Umstellung (Baseline aktiv)
 
 ---
 
