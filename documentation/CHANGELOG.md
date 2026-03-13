@@ -7,6 +7,16 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ---
 
+## [0.9.5.21] - 2026-03-13 📁 Korrekter Plugin-Ordnername nach Update
+
+### 🐛 Bugfixes
+
+- **Falscher Verzeichnisname nach Installation:** GitHub-Auto-ZIPs benennen den Ordner nach dem Schema `{repo}-{tag}-{hash}` (z. B. `dienstplan-verwaltung-v0.9.5.18-WBZKhI`). WordPress deaktiviert das Plugin danach, weil der gespeicherte Pfad nicht mehr existiert.
+- **Fix:** Neuer `upgrader_post_install`-Hook benennt den extrahierten Ordner nach der Installation automatisch auf den korrekten Slug `dienstplan-verwaltung` um — unabhängig davon, welchen Namen die ZIP-Datei enthält.
+- Gilt für Updates über den WordPress-Updater (GitHub Release-Asset und zipball-Fallback).
+
+---
+
 ## [0.9.5.20] - 2026-03-13 🛡️ Admin-Vollzugriff
 
 ### 🐛 Bugfixes

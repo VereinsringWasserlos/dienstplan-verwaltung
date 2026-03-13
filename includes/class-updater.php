@@ -95,6 +95,7 @@ class Dienstplan_Updater {
         add_action('upgrader_process_complete', array($this, 'after_update'), 10, 2);
         add_filter('upgrader_pre_install', array($this, 'capture_pre_update_state'), 10, 2);
         add_filter('upgrader_pre_download', array($this, 'handle_github_download'), 10, 3);
+        add_filter('upgrader_post_install', array($this, 'post_install_rename'), 10, 3);
         add_action('wp_ajax_dienstplan_download_update', array($this, 'ajax_download_update'));
         
         // Automatische Updates aktivieren wenn gewünscht
@@ -442,6 +443,61 @@ class Dienstplan_Updater {
     private function get_download_url() {
         // Für lokales Git-Repository: Erstelle temporäres Archiv
         return admin_url('admin-ajax.php?action=dienstplan_download_update');
+    }
+
+    /**
+     * Benennt den extrahierten Plugin-Ordner nach der Installation auf den
+     * korrekten Slug um. Verhindert falsche Verzeichnisnamen bei GitHub-ZIPs
+     * (z.B. "dienstplan-verwaltung-v0.9.5.18-WBZKhI").
+     *
+     * @param bool|WP_Error $response True bei Erfolg, WP_Error bei Fehler.
+     * @param array         $extra    Kontext-Informationen des Upgraders.
+     * @param array         $result   Ergebnis der Installation mit 'destination' usw.
+     * @return array|WP_Error Ggf. korrigiertes Ergebnis.
+     */
+    public function post_install_rename($response, $extra, $result) {
+        global $wp_filesystem;
+
+        // Nur für dieses Plugin relevant
+        if (
+            !is_array($extra) ||
+            empty($extra['plugin']) ||
+            $extra['plugin'] !== $this->plugin_basename
+        ) {
+            return $result;
+        }
+
+        $proper_destination = WP_PLUGIN_DIR . '/' . $this->plugin_slug;
+
+        // Nur umbenennen, wenn der Ordner tatsächlich falsch heißt
+        if (
+            isset($result['destination']) &&
+            $result['destination'] !== $proper_destination
+        ) {
+            if ($wp_filesystem->exists($proper_destination)) {
+                $wp_filesystem->delete($proper_destination, true);
+            }
+
+            $moved = $wp_filesystem->move($result['destination'], $proper_destination, true);
+
+            if (!$moved) {
+                return new WP_Error(
+                    'rename_failed',
+                    sprintf(
+                        'Plugin-Ordner konnte nicht von "%s" nach "%s" umbenannt werden.',
+                        $result['destination'],
+                        $proper_destination
+                    )
+                );
+            }
+
+            $result['destination']      = $proper_destination;
+            $result['destination_name'] = $this->plugin_slug;
+
+            error_log('DP Updater: Plugin-Ordner erfolgreich auf "' . $this->plugin_slug . '" umbenannt.');
+        }
+
+        return $result;
     }
 
     /**
