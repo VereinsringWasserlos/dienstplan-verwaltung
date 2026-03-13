@@ -7,6 +7,16 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ---
 
+## [0.9.5.30] - 2026-03-13 🔗 Rollenbasierte Link-Sichtbarkeit
+
+### ✨ Verbesserungen
+
+- Navigations-Links im einheitlichen Seitenkopf werden jetzt pro Rolle/Berechtigung gefiltert.
+- Benutzer sehen nur noch Links zu Seiten, fuer die sie die passende Capability haben.
+- Umsetzung zentral in `admin/views/partials/page-header.php`, damit alle Verwaltungsseiten konsistent sind.
+
+---
+
 ## [0.9.5.29] - 2026-03-13 🧹 Dashboard/Modal Fehler bereinigt
 
 ### 🐛 Bugfixes

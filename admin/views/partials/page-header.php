@@ -28,6 +28,60 @@ $page_icon = $page_icon ?? 'dashicons-admin-generic';
 $page_class = $page_class ?? 'header-vereine';
 $nav_items = $nav_items ?? [];
 $current_page = $_GET['page'] ?? '';
+
+/**
+ * Prueft, ob ein Navigationsziel fuer die aktuelle Rolle sichtbar sein soll.
+ * Optional kann pro Item direkt 'capability' gesetzt werden.
+ */
+$can_show_nav_item = function($item) {
+    if (!is_array($item)) {
+        return false;
+    }
+
+    // Explizite Capability am Item hat Vorrang.
+    if (!empty($item['capability'])) {
+        return current_user_can('manage_options') || current_user_can($item['capability']);
+    }
+
+    if (empty($item['url'])) {
+        return true;
+    }
+
+    $parts = wp_parse_url($item['url']);
+    if (empty($parts['query'])) {
+        return true;
+    }
+
+    parse_str($parts['query'], $query_vars);
+    $target_page = isset($query_vars['page']) ? sanitize_text_field($query_vars['page']) : '';
+
+    if (empty($target_page)) {
+        return true;
+    }
+
+    $required_capabilities = array(
+        'dienstplan-vereine' => Dienstplan_Roles::CAP_MANAGE_CLUBS,
+        'dienstplan-veranstaltungen' => Dienstplan_Roles::CAP_MANAGE_EVENTS,
+        'dienstplan-bereiche' => Dienstplan_Roles::CAP_MANAGE_EVENTS,
+        'dienstplan-mitarbeiter' => Dienstplan_Roles::CAP_MANAGE_EVENTS,
+        'dienstplan-dienste' => Dienstplan_Roles::CAP_MANAGE_EVENTS,
+        'dienstplan-overview' => Dienstplan_Roles::CAP_MANAGE_EVENTS,
+        'dienstplan-einstellungen' => Dienstplan_Roles::CAP_MANAGE_SETTINGS,
+        'dienstplan-import-export' => Dienstplan_Roles::CAP_MANAGE_SETTINGS,
+        'dienstplan-benutzer' => Dienstplan_Roles::CAP_MANAGE_USERS,
+        'dienstplan-dokumentation' => 'read',
+        'dienstplan-updates' => 'manage_options',
+        'dienstplan-portal' => 'manage_options',
+        'dienstplan-debug' => 'manage_options',
+    );
+
+    if (!isset($required_capabilities[$target_page])) {
+        return true;
+    }
+
+    $capability = $required_capabilities[$target_page];
+    return current_user_can('manage_options') || current_user_can($capability);
+};
 ?>
 
 <div class="dienstplan-page-header <?php echo esc_attr($page_class); ?>">
@@ -44,6 +98,11 @@ $current_page = $_GET['page'] ?? '';
         foreach ($nav_items as $item):
             // Skip auf aktueller Seite, falls hide_on gesetzt
             if (isset($item['hide_on']) && $item['hide_on'] === $current_page) {
+                continue;
+            }
+
+            // Links je Rolle/Berechtigung ausblenden
+            if (!$can_show_nav_item($item)) {
                 continue;
             }
             
