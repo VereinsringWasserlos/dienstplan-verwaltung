@@ -36,12 +36,11 @@ class Dienstplan_Admin {
     }
 
     /**
-     * Prüft, ob der aktuelle Benutzer ein eingeschränkter Vereins-Admin ist.
-     * Eingeschränkt = Club-Admin ohne WP-Admin/General-Admin/Event-Admin-Sonderrechte.
+     * Prüft, ob der aktuelle Benutzer uneingeschränkten Vereinszugriff hat.
      */
-    private function is_restricted_club_admin() {
+    private function has_unrestricted_club_access() {
         if (current_user_can('manage_options')) {
-            return false;
+            return true;
         }
 
         $user = wp_get_current_user();
@@ -49,20 +48,14 @@ class Dienstplan_Admin {
             return false;
         }
 
-        $roles = (array) $user->roles;
+        return in_array(Dienstplan_Roles::ROLE_GENERAL_ADMIN, (array) $user->roles, true);
+    }
 
-        if (!in_array(Dienstplan_Roles::ROLE_CLUB_ADMIN, $roles, true)) {
-            return false;
-        }
-
-        if (
-            in_array(Dienstplan_Roles::ROLE_GENERAL_ADMIN, $roles, true) ||
-            in_array(Dienstplan_Roles::ROLE_EVENT_ADMIN, $roles, true)
-        ) {
-            return false;
-        }
-
-        return true;
+    /**
+     * Prüft, ob der aktuelle Benutzer ein eingeschränkter Vereins-Admin ist.
+     */
+    private function is_restricted_club_admin() {
+        return Dienstplan_Roles::can_manage_clubs() && !$this->has_unrestricted_club_access();
     }
 
     /**
@@ -72,14 +65,49 @@ class Dienstplan_Admin {
      * @return int[]
      */
     private function get_current_user_verein_ids($db) {
-        $rows = $db->get_user_vereine(get_current_user_id());
-        if (empty($rows)) {
-            return array();
+        $user_id = get_current_user_id();
+        $verein_ids = array();
+
+        // 1) Direkte Zuordnung aus dp_user_vereine
+        $rows = $db->get_user_vereine($user_id);
+        if (!empty($rows)) {
+            foreach ($rows as $row) {
+                $verein_ids[] = intval($row->verein_id);
+            }
         }
 
-        return array_values(array_unique(array_map(function($row) {
-            return intval($row->verein_id);
-        }, $rows)));
+        // 2) Fallback: Zuordnung als Vereins-Verantwortlicher
+        global $wpdb;
+        $vv_table = $wpdb->prefix . $this->db_prefix . 'verein_verantwortliche';
+        $vv_ids = $wpdb->get_col($wpdb->prepare(
+            "SELECT DISTINCT verein_id FROM {$vv_table} WHERE user_id = %d",
+            $user_id
+        ));
+        if (!empty($vv_ids)) {
+            foreach ($vv_ids as $vid) {
+                $verein_ids[] = intval($vid);
+            }
+        }
+
+        // 3) Fallback: Kontakt-E-Mail entspricht User-E-Mail
+        $user = wp_get_current_user();
+        if ($user && !empty($user->user_email)) {
+            $vereine_table = $wpdb->prefix . $this->db_prefix . 'vereine';
+            $mail_ids = $wpdb->get_col($wpdb->prepare(
+                "SELECT id FROM {$vereine_table} WHERE kontakt_email = %s",
+                $user->user_email
+            ));
+            if (!empty($mail_ids)) {
+                foreach ($mail_ids as $vid) {
+                    $verein_ids[] = intval($vid);
+                }
+            }
+        }
+
+        $verein_ids = array_values(array_unique(array_filter($verein_ids)));
+        sort($verein_ids);
+
+        return $verein_ids;
     }
 
     /**

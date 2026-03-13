@@ -7,6 +7,20 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ---
 
+## [0.9.5.15] - 2026-03-13 🔒 Vereinsfilter-Hotfix
+
+### 🐛 Bugfixes
+
+- **Vereinsadmin sah weiterhin alle Vereine:** Filterlogik serverseitig verschärft.
+- Einschränkung greift nun über effektive Berechtigung (nicht nur Rollenname).
+- Fallback-Zuordnungen ergänzt:
+  - `dp_user_vereine`
+  - `dp_verein_verantwortliche`
+  - `vereine.kontakt_email = user_email`
+- Dadurch werden für eingeschränkte Vereinsadmins nur die eigenen Vereine angezeigt/bearbeitet.
+
+---
+
 ## [0.9.5.14] - 2026-03-12 🔐 Rechte-Fix Vereinsadmin
 
 ### 🐛 Bugfixes
