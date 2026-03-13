@@ -7,6 +7,18 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ---
 
+## [0.9.5.26] - 2026-03-13 🎛️ Veranstaltungs-Admin Rechte erweitert
+
+### ✨ Verbesserungen
+
+- Veranstaltungs-Admins koennen wieder capability-basiert arbeiten (`dpv2_manage_events`).
+- Veranstaltungs-Admins duerfen jetzt auch:
+  - Mitarbeiter verwalten (ueber Events-Recht)
+  - Veranstaltungsseiten anlegen und aktualisieren (`ajax_create_event_page`, `ajax_update_event_page`)
+- `user_can()` prueft wieder korrekt auf `manage_options` ODER die jeweilige Plugin-Capability.
+
+---
+
 ## [0.9.5.25] - 2026-03-13 🩹 Fatal bei Rollenmigration behoben
 
 ### 🐛 Bugfixes

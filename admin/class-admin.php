@@ -2181,7 +2181,7 @@ class Dienstplan_Admin {
     public function ajax_create_event_page() {
         check_ajax_referer('dp_ajax_nonce', 'nonce');
         
-        if (!current_user_can('manage_options')) {
+        if (!Dienstplan_Roles::can_manage_events() && !current_user_can('manage_options')) {
             wp_send_json_error(array('message' => 'Keine Berechtigung'));
         }
         
@@ -2228,7 +2228,7 @@ class Dienstplan_Admin {
     public function ajax_update_event_page() {
         check_ajax_referer('dp_ajax_nonce', 'nonce');
         
-        if (!current_user_can('manage_options')) {
+        if (!Dienstplan_Roles::can_manage_events() && !current_user_can('manage_options')) {
             wp_send_json_error(array('message' => 'Keine Berechtigung'));
         }
         

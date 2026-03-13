@@ -35,11 +35,11 @@ Hinweis:
 
 ## Aktueller Betriebsmodus (wichtig)
 
-Wegen Hard-Reset ist die Rechtepruefung aktuell bewusst vereinfacht:
+Stand 0.9.5.26:
 
-- Backend-Berechtigungen laufen derzeit nur ueber `manage_options`.
-- Das bedeutet praktisch: volle Admin-Funktionen aktuell nur fuer WordPress-Administratoren.
-- Die v2-Rollen und v2-Capabilities sind bereits eingefuehrt und werden bereinigt/migriert, die fachliche Feinlogik wird im naechsten Schritt wieder aufgebaut.
+- Rechtepruefung laeuft wieder capability-basiert (`manage_options` ODER jeweilige `dpv2_*`-Capability).
+- Veranstaltungs-Admin darf Mitarbeiter verwalten und Veranstaltungsseiten erstellen/aktualisieren.
+- v2-Rollen und v2-Capabilities sind aktiv; Legacy-Rollen/-Caps werden weiterhin bereinigt/migriert.
 
 ---
 
@@ -76,8 +76,8 @@ Wegen Hard-Reset ist die Rechtepruefung aktuell bewusst vereinfacht:
 | Veranstaltungen/Dienste | Ja | Ja | Teilweise | Nein |
 | Vereine | Ja | Teilweise | Ja | Nein |
 | Frontend Portal | Optional | Optional | Optional | Ja |
-| **Aktuell 0.9.5.24 (Baseline)** ||||| 
-| Backend-Zugriff | Nur mit `manage_options` | Nur mit `manage_options` | Nur mit `manage_options` | Nein |
+| **Aktuell 0.9.5.26** ||||| 
+| Backend-Zugriff | Ja | Ja (eventbezogen) | Ja (vereins-/eventbezogen) | Nein |
 
 ---
 
