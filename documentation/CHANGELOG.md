@@ -7,6 +7,20 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ---
 
+## [0.9.5.28] - 2026-03-13 🧭 Vereins-Admin Scope reaktiviert
+
+### ✨ Verbesserungen
+
+- Vereins-Admin kann Mitarbeiter des eigenen Vereins bearbeiten.
+- Vereins-Admin sieht nur Veranstaltungen, an denen sein Verein beteiligt ist.
+- Scope-Ermittlung fuer Vereins-Admin wieder aktiv:
+  - direkte Zuordnung aus `dp_user_vereine`
+  - Fallback ueber `verein_verantwortliche`
+  - Fallback ueber passende `kontakt_email`
+- Haupt-Admin (`dpv2_manage_settings`) bleibt uneingeschraenkt.
+
+---
+
 ## [0.9.5.27] - 2026-03-13 🧰 Veranstaltungs-Admin: Bereiche und Dienste
 
 ### ✨ Verbesserungen
