@@ -7,6 +7,19 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ---
 
+## [0.9.5.27] - 2026-03-13 🧰 Veranstaltungs-Admin: Bereiche und Dienste
+
+### ✨ Verbesserungen
+
+- Veranstaltungs-Admin kann jetzt auch Arbeitsbereiche und Taetigkeiten verwalten.
+- Entsprechende AJAX-Handler wurden von nur `manage_options` auf `can_manage_events` erweitert:
+  - Bereich: laden, speichern, loeschen
+  - Taetigkeit: laden, speichern, loeschen, Status umschalten
+  - Bulk-Aktionen fuer Taetigkeiten
+- Dienste fuer Veranstaltungen bleiben wie gewuenscht ueber `can_manage_events` verwaltbar.
+
+---
+
 ## [0.9.5.26] - 2026-03-13 🎛️ Veranstaltungs-Admin Rechte erweitert
 
 ### ✨ Verbesserungen

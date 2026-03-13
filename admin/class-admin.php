@@ -3606,7 +3606,7 @@ class Dienstplan_Admin {
     public function ajax_get_bereich() {
         check_ajax_referer('dienstplan-nonce', 'nonce');
         
-        if (!current_user_can('manage_options')) {
+        if (!Dienstplan_Roles::can_manage_events() && !current_user_can('manage_options')) {
             wp_send_json_error(array('message' => 'Keine Berechtigung'));
             return;
         }
@@ -3635,7 +3635,7 @@ class Dienstplan_Admin {
     public function ajax_save_bereich() {
         check_ajax_referer('dienstplan-nonce', 'nonce');
         
-        if (!current_user_can('manage_options')) {
+        if (!Dienstplan_Roles::can_manage_events() && !current_user_can('manage_options')) {
             wp_send_json_error(array('message' => 'Keine Berechtigung'));
             return;
         }
@@ -3676,7 +3676,7 @@ class Dienstplan_Admin {
     public function ajax_delete_bereich() {
         check_ajax_referer('dienstplan-nonce', 'nonce');
         
-        if (!current_user_can('manage_options')) {
+        if (!Dienstplan_Roles::can_manage_events() && !current_user_can('manage_options')) {
             wp_send_json_error(array('message' => 'Keine Berechtigung'));
             return;
         }
@@ -3703,7 +3703,7 @@ class Dienstplan_Admin {
     public function ajax_get_taetigkeit() {
         check_ajax_referer('dienstplan-nonce', 'nonce');
         
-        if (!current_user_can('manage_options')) {
+        if (!Dienstplan_Roles::can_manage_events() && !current_user_can('manage_options')) {
             wp_send_json_error(array('message' => 'Keine Berechtigung'));
             return;
         }
@@ -3732,7 +3732,7 @@ class Dienstplan_Admin {
     public function ajax_save_taetigkeit() {
         check_ajax_referer('dienstplan-nonce', 'nonce');
         
-        if (!current_user_can('manage_options')) {
+        if (!Dienstplan_Roles::can_manage_events() && !current_user_can('manage_options')) {
             wp_send_json_error(array('message' => 'Keine Berechtigung'));
             return;
         }
@@ -3777,7 +3777,7 @@ class Dienstplan_Admin {
     public function ajax_delete_taetigkeit() {
         check_ajax_referer('dienstplan-nonce', 'nonce');
         
-        if (!current_user_can('manage_options')) {
+        if (!Dienstplan_Roles::can_manage_events() && !current_user_can('manage_options')) {
             wp_send_json_error(array('message' => 'Keine Berechtigung'));
             return;
         }
@@ -3804,7 +3804,7 @@ class Dienstplan_Admin {
     public function ajax_toggle_taetigkeit_status() {
         check_ajax_referer('dienstplan-nonce', 'nonce');
         
-        if (!current_user_can('manage_options')) {
+        if (!Dienstplan_Roles::can_manage_events() && !current_user_can('manage_options')) {
             wp_send_json_error(array('message' => 'Keine Berechtigung'));
             return;
         }
@@ -3832,7 +3832,7 @@ class Dienstplan_Admin {
     public function ajax_bulk_delete_taetigkeiten() {
         check_ajax_referer('dienstplan-nonce', 'nonce');
         
-        if (!current_user_can('manage_options')) {
+        if (!Dienstplan_Roles::can_manage_events() && !current_user_can('manage_options')) {
             wp_send_json_error(array('message' => 'Keine Berechtigung'));
             return;
         }
@@ -3869,7 +3869,7 @@ class Dienstplan_Admin {
     public function ajax_bulk_update_taetigkeiten() {
         check_ajax_referer('dienstplan-nonce', 'nonce');
         
-        if (!current_user_can('manage_options')) {
+        if (!Dienstplan_Roles::can_manage_events() && !current_user_can('manage_options')) {
             wp_send_json_error(array('message' => 'Keine Berechtigung'));
             return;
         }
