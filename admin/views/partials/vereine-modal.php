@@ -36,6 +36,21 @@ if (!defined('ABSPATH')) exit;
                         </td>
                     </tr>
                     <tr>
+                        <th><label for="farbe"><?php _e('Vereinsfarbe', 'dienstplan-verwaltung'); ?></label></th>
+                        <td>
+                            <input type="hidden" id="farbe" name="farbe" value="#3b82f6">
+                            <div class="dp-cl-swatches"><?php
+                                foreach (['#ef4444','#dc2626','#f97316','#ea580c','#eab308','#22c55e','#16a34a','#10b981','#0ea5e9','#3b82f6','#2563eb','#0284c7','#8b5cf6','#7c3aed','#ec4899','#db2777','#f59e0b','#1e293b'] as $dp_c): ?>
+                                <button type="button" class="dp-cl-swatch" data-color="<?php echo esc_attr($dp_c); ?>" style="background:<?php echo esc_attr($dp_c); ?>" title="<?php echo esc_attr($dp_c); ?>"></button>
+                                <?php endforeach; ?>
+                            </div>
+                            <div class="dp-cl-preview">
+                                <span class="dp-cl-dot" id="dp-cl-dot" style="background:#3b82f6"></span>
+                                <input type="text" id="dp-cl-hex" value="#3b82f6" maxlength="7" placeholder="#rrggbb">
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
                         <th><label for="beschreibung"><?php _e('Beschreibung', 'dienstplan-verwaltung'); ?></label></th>
                         <td>
                             <textarea id="beschreibung" name="beschreibung" class="large-text" rows="3"></textarea>

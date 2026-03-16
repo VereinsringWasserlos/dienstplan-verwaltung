@@ -750,11 +750,16 @@ class Dienstplan_Admin {
         );
         
         // Vereine-Modal Script (für Vereine-Verwaltung)
+        $dp_vereine_modal_path = DIENSTPLAN_PLUGIN_PATH . 'assets/js/dp-vereine-modal.js';
+        $dp_vereine_modal_version = $this->version;
+        if (file_exists($dp_vereine_modal_path)) {
+            $dp_vereine_modal_version .= '.' . filemtime($dp_vereine_modal_path);
+        }
         wp_enqueue_script(
             'dp-vereine-modal',
             DIENSTPLAN_PLUGIN_URL . 'assets/js/dp-vereine-modal.js',
             array('jquery', 'dp-admin-scripts'),
-            $this->version,
+            $dp_vereine_modal_version,
             true
         );
         
@@ -1054,6 +1059,8 @@ class Dienstplan_Admin {
             
             require_once DIENSTPLAN_PLUGIN_PATH . 'includes/class-database.php';
             $db = new Dienstplan_Database($this->db_prefix);
+            // Bestehende Installationen: neue Spalte farbe vor Save sicherstellen
+            $db->migrate_vereine_add_farbe();
 
             $seite_id = !empty($_POST['seite_id']) ? intval($_POST['seite_id']) : null;
             if (!empty($seite_id)) {
@@ -1073,6 +1080,7 @@ class Dienstplan_Admin {
             $data = array(
                 'name' => sanitize_text_field($_POST['name']),
                 'kuerzel' => strtoupper(sanitize_text_field($_POST['kuerzel'])),
+                'farbe' => sanitize_hex_color($_POST['farbe'] ?? '#3b82f6') ?: '#3b82f6',
                 'beschreibung' => sanitize_textarea_field($_POST['beschreibung'] ?? ''),
                 'logo_id' => !empty($_POST['logo_id']) ? intval($_POST['logo_id']) : null,
                 'kontakt_name' => sanitize_text_field($_POST['kontakt_name'] ?? ''),

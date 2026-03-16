@@ -144,6 +144,21 @@ if ($verein_id == 0) {
     asort($alle_vereine_in_services);
 }
 
+// Vereinsfarbe pro Dienst (mit Cache) für Buttons/Balken
+$dp_verein_color_cache = [];
+$dp_get_verein_color = function($dienst) use ($db, &$dp_verein_color_cache) {
+    $vid = intval($dienst->verein_id ?? 0);
+    if ($vid > 0) {
+        if (!isset($dp_verein_color_cache[$vid])) {
+            $v_obj = $db->get_verein($vid);
+            $vc = (!empty($v_obj) && !empty($v_obj->farbe)) ? sanitize_hex_color($v_obj->farbe) : '';
+            $dp_verein_color_cache[$vid] = !empty($vc) ? $vc : '#3b82f6';
+        }
+        return $dp_verein_color_cache[$vid];
+    }
+    return '#3b82f6';
+};
+
 // View-Modus
 $view_mode = isset($_GET['view']) ? sanitize_text_field($_GET['view']) : 'kachel';
 if ($view_mode === 'list') {
@@ -160,6 +175,20 @@ $anmeldung_aktiv = ($veranstaltung->status === 'geplant');
 $status_message = '';
 $status_style = '';
 $status_icon = '';
+
+$dp_hex_to_rgba = function($hex, $alpha) {
+    $hex = ltrim((string) $hex, '#');
+    if (strlen($hex) === 3) {
+        $hex = $hex[0] . $hex[0] . $hex[1] . $hex[1] . $hex[2] . $hex[2];
+    }
+    if (strlen($hex) !== 6) {
+        return 'rgba(14,165,233,' . floatval($alpha) . ')';
+    }
+    $r = hexdec(substr($hex, 0, 2));
+    $g = hexdec(substr($hex, 2, 2));
+    $b = hexdec(substr($hex, 4, 2));
+    return 'rgba(' . $r . ',' . $g . ',' . $b . ',' . floatval($alpha) . ')';
+};
 
 switch($veranstaltung->status) {
     case 'in_planung':
@@ -274,13 +303,30 @@ if ($dienst_start_dt !== null && $dienst_end_dt !== null) {
                 </div>
                 <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
                     <?php if ($verein_id > 0 && isset($verein)): ?>
-                        <div class="dp-header-chip" style="background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%); border-color: #0ea5e9; color: #0369a1;">
+                        <?php
+                        $verein_color = !empty($verein->farbe) ? sanitize_hex_color($verein->farbe) : '#0ea5e9';
+                        if (empty($verein_color)) {
+                            $verein_color = '#0ea5e9';
+                        }
+                        $verein_bg_start = $dp_hex_to_rgba($verein_color, 0.18);
+                        $verein_bg_end = $dp_hex_to_rgba($verein_color, 0.35);
+                        ?>
+                        <div class="dp-header-chip" style="background: linear-gradient(135deg, <?php echo esc_attr($verein_bg_start); ?> 0%, <?php echo esc_attr($verein_bg_end); ?> 100%); border-color: <?php echo esc_attr($verein_color); ?>; color: #0f172a;">
                             <span class="dashicons dashicons-groups" style="font-size: 16px;"></span>
                             <span><?php echo esc_html($verein->name); ?></span>
                         </div>
                     <?php elseif ($verein_id == 0 && !empty($alle_vereine_in_services)): ?>
                         <?php foreach ($alle_vereine_in_services as $vid => $vname): ?>
-                            <div class="dp-header-chip" style="background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%); border-color: #0ea5e9; color: #0369a1;">
+                            <?php
+                            $v_obj = $db->get_verein($vid);
+                            $v_color = (!empty($v_obj) && !empty($v_obj->farbe)) ? sanitize_hex_color($v_obj->farbe) : '#0ea5e9';
+                            if (empty($v_color)) {
+                                $v_color = '#0ea5e9';
+                            }
+                            $v_bg_start = $dp_hex_to_rgba($v_color, 0.18);
+                            $v_bg_end = $dp_hex_to_rgba($v_color, 0.35);
+                            ?>
+                            <div class="dp-header-chip" style="background: linear-gradient(135deg, <?php echo esc_attr($v_bg_start); ?> 0%, <?php echo esc_attr($v_bg_end); ?> 100%); border-color: <?php echo esc_attr($v_color); ?>; color: #0f172a;">
                                 <span class="dashicons dashicons-groups" style="font-size: 14px;"></span>
                                 <span><?php echo esc_html($vname); ?></span>
                             </div>
@@ -433,6 +479,63 @@ if ($dienst_start_dt !== null && $dienst_end_dt !== null) {
     }
     ?>
 
+    <style>
+    .dp-frontend-filterbar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.9rem;
+        margin: 0 0 1.25rem 0;
+        padding: 0.9rem;
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+    }
+
+    .dp-filter-group {
+        display: flex;
+        flex-direction: column;
+        gap: 0.35rem;
+        min-width: 180px;
+    }
+
+    .dp-filter-group label {
+        font-size: 0.8rem;
+        color: #475569;
+        font-weight: 600;
+    }
+
+    .dp-filter-group select {
+        padding: 0.45rem 0.55rem;
+        border: 1px solid #cbd5e1;
+        border-radius: 6px;
+        font-size: 0.9rem;
+        font-weight: 500;
+        background: #fff;
+        color: #0f172a;
+        min-width: 180px;
+    }
+
+    .dp-day-section {
+        margin-bottom: 2rem;
+    }
+
+    .dp-day-title {
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: #334155;
+        margin-bottom: 1rem;
+        padding-left: 0.5rem;
+        border-left: 4px solid #0ea5e9;
+    }
+
+    .dp-dienste-cards,
+    .dp-dienste-kompakt-list {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+        gap: 1.5rem;
+    }
+    </style>
+
     <!-- View-Toggle im Header rechts -->
 
     <div class="dp-frontend-filterbar">
@@ -489,191 +592,257 @@ if ($dienst_start_dt !== null && $dienst_end_dt !== null) {
     <?php else: ?>
         
         <?php if ($view_mode === 'timeline'): ?>
-            <!-- Timeline-Ansicht -->
-            <div class="dp-timeline-container">
-                <?php
-                $timeline_tag_ids = array_keys($dienste_nach_tagen);
+            <!-- Timeline (Schichtplan): horizontal, je Dienst eine schmale Zeile -->
+
+            <?php
+
+            $tl_min = 1440; $tl_max = 60;
+
+            foreach ($dienste_nach_tagen as $_tl_tag) {
+
+                foreach ($_tl_tag as $_tl_d) {
+
+                    $_von = $_tl_d->von_zeit ?? ($_tl_d->zeit_von ?? '00:00');
+
+                    $_bis = $_tl_d->bis_zeit ?? ($_tl_d->zeit_bis ?? $_von);
+
+                    $_s = intval(substr($_von,0,2))*60 + intval(substr($_von,3,2));
+
+                    $_e = intval(substr($_bis,0,2))*60 + intval(substr($_bis,3,2));
+
+                    if ($_e <= $_s) $_e += 1440;
+
+                    if ($_s < $tl_min) $tl_min = $_s;
+
+                    if ($_e > $tl_max) $tl_max = $_e;
+
+                }
+
+            }
+
+            $tl_from   = max(0, (intval(floor($tl_min / 60)) * 60) - 30);
+
+            $tl_to     = min(2879, (intval(ceil($tl_max / 60)) * 60) + 30);
+
+            $tl_span   = max(60, $tl_to - $tl_from);
+
+            $tl_hstart = intval(floor($tl_from / 60));
+
+            $tl_hend   = intval(ceil($tl_to / 60));
+
+            $tl_hcount = max(1, $tl_hend - $tl_hstart);
+
+            $tl_hw_pct = round((60 / $tl_span) * 100, 4);
+
+            $tl_fh_pct = round((($tl_hstart * 60 - $tl_from) / $tl_span) * 100, 4);
+
+            $tl_wday   = ['Monday'=>'Mo','Tuesday'=>'Di','Wednesday'=>'Mi','Thursday'=>'Do','Friday'=>'Fr','Saturday'=>'Sa','Sunday'=>'So'];
+
+            /* Breite einer Tag-Spalte: Stundenbereich + Label */
+            $tl_day_col_w = max(700, $tl_hcount * 80 + 220);
+
+            ?>
+
+            <div class="dp-tl-wrap" style="--dp-tl-h-w:<?php echo $tl_hw_pct; ?>%;--dp-tl-first-h:<?php echo $tl_fh_pct; ?>;opacity:0;transition:opacity 0.15s ease;">
+
+                <div class="dp-tl-edge-hint is-left" aria-hidden="true">&#x2039;</div>
+                <div class="dp-tl-edge-hint is-right" aria-hidden="true">&#x203A;</div>
+
+                <div class="dp-tl-canvas" style="--dp-tl-day-w:<?php echo intval($tl_day_col_w); ?>px">
+
+                <?php foreach ($dienste_nach_tagen as $tl_tag_id => $tl_tag_dienste):
+
+                    $tl_tag = null;
+
+                    foreach ($tage as $t) { if ($t->id == $tl_tag_id) { $tl_tag = $t; break; } }
+
+                    $tl_traw  = $tl_tag->tag_datum ?? ($tl_tag->datum ?? null);
+
+                    $tl_tdate = $tl_traw ? date('d.m.Y', strtotime($tl_traw)) : 'Unbekannt';
+
+                    $tl_tdow  = $tl_traw ? ($tl_wday[date('l', strtotime($tl_traw))] ?? '') : '';
+
                 ?>
 
-                <?php if (!empty($timeline_tag_ids)): ?>
-                    <div class="dp-timeline-day-tabs">
-                        <?php foreach ($timeline_tag_ids as $tab_index => $tab_tag_id):
-                            $tab_tag = null;
-                            foreach ($tage as $timeline_tag_item) {
-                                if ($timeline_tag_item->id == $tab_tag_id) {
-                                    $tab_tag = $timeline_tag_item;
-                                    break;
+                <div class="dp-tl-day-block" data-tag-id="<?php echo intval($tl_tag_id); ?>">
+
+                    <div class="dp-tl-day-title">
+
+                        <?php if ($tl_tdow): ?><span class="dp-tl-dow"><?php echo esc_html($tl_tdow); ?></span><?php endif; ?>
+
+                        <span><?php echo esc_html($tl_tdate); ?></span>
+
+                    </div>
+
+                    <div class="dp-tl-day-hd">
+
+                        <div class="dp-tl-label-col">Dienst</div>
+
+                        <div class="dp-tl-hours">
+
+                            <?php for ($tl_h = $tl_hstart; $tl_h <= $tl_hend; $tl_h++):
+
+                                $tl_p = round((($tl_h * 60 - $tl_from) / $tl_span) * 100, 2);
+
+                                if ($tl_p < -1 || $tl_p > 101) continue;
+
+                            ?>
+
+                            <span class="dp-tl-hlabel" style="left:<?php echo $tl_p; ?>%"><?php printf('%02d:00', $tl_h % 24); ?></span>
+
+                            <?php endfor; ?>
+
+                        </div>
+
+                    </div>
+
+                    <?php foreach ($tl_tag_dienste as $dienst):
+
+                        $slots          = $db->get_dienst_slots($dienst->id);
+
+                        $bereich        = $db->get_bereich($dienst->bereich_id);
+
+                        $taetigkeit     = $db->get_taetigkeit($dienst->taetigkeit_id);
+
+                        $freie_slots    = count(array_filter($slots, function($s) { return empty($s->mitarbeiter_id); }));
+
+                        $besetzte_slots = count($slots) - $freie_slots;
+
+                        $tl_assigned_names = [];
+                        if ($can_manage_dienste) {
+                            foreach ($slots as $slot_name_row) {
+                                if (empty($slot_name_row->mitarbeiter_id)) {
+                                    continue;
+                                }
+                                $m_obj = $db->get_mitarbeiter($slot_name_row->mitarbeiter_id);
+                                if ($m_obj) {
+                                    $tl_assigned_names[] = trim(($m_obj->vorname ?? '') . ' ' . substr(($m_obj->nachname ?? ''), 0, 1) . '.');
                                 }
                             }
-                            $tab_tag_raw = $tab_tag->tag_datum ?? ($tab_tag->datum ?? null);
-                            $tab_label_date = $tab_tag_raw ? date('d.m.', strtotime($tab_tag_raw)) : '—';
-                        ?>
-                            <button type="button" class="dp-timeline-day-tab <?php echo $tab_index === 0 ? 'active' : ''; ?>" data-tag-id="<?php echo intval($tab_tag_id); ?>">
-                                <span class="dp-tab-title">Tag <?php echo intval($tab_index + 1); ?></span>
-                                <span class="dp-tab-date"><?php echo esc_html($tab_label_date); ?></span>
-                            </button>
-                        <?php endforeach; ?>
-                    </div>
-                <?php endif; ?>
-
-                <?php foreach ($dienste_nach_tagen as $tag_index => $tag_dienste): 
-                    $tag = null;
-                    foreach ($tage as $t) {
-                        if ($t->id == $tag_index) {
-                            $tag = $t;
-                            break;
-                        }
-                    }
-                    $tag_raw = $tag->tag_datum ?? ($tag->datum ?? null);
-                    $tag_datum = $tag_raw ? date('d.m.Y', strtotime($tag_raw)) : 'Unbekannt';
-
-                    $timeline_min_minutes = null;
-                    $timeline_max_minutes = null;
-                    foreach ($tag_dienste as $dienst_window) {
-                        $dienst_von_raw = $dienst_window->von_zeit ?? ($dienst_window->zeit_von ?? '00:00:00');
-                        $dienst_bis_raw = $dienst_window->bis_zeit ?? ($dienst_window->zeit_bis ?? $dienst_von_raw);
-
-                        $start_h = intval(substr($dienst_von_raw, 0, 2));
-                        $start_m = intval(substr($dienst_von_raw, 3, 2));
-                        $end_h = intval(substr($dienst_bis_raw, 0, 2));
-                        $end_m = intval(substr($dienst_bis_raw, 3, 2));
-
-                        $start_minutes = ($start_h * 60) + $start_m;
-                        $end_minutes = ($end_h * 60) + $end_m;
-                        if ($end_minutes <= $start_minutes) {
-                            $end_minutes += 24 * 60;
                         }
 
-                        if ($timeline_min_minutes === null || $start_minutes < $timeline_min_minutes) {
-                            $timeline_min_minutes = $start_minutes;
+                        $has_my_slot    = ($current_mitarbeiter_id > 0) ? count(array_filter($slots, function($s) use ($current_mitarbeiter_id) {
+
+                            return intval($s->mitarbeiter_id ?? 0) === intval($current_mitarbeiter_id);
+
+                        })) > 0 : false;
+
+                        $first_free_slot_id = 0;
+
+                        $first_own_slot_id  = 0;
+
+                        foreach ($slots as $slot_r) {
+
+                            if ($first_free_slot_id === 0 && empty($slot_r->mitarbeiter_id)) $first_free_slot_id = intval($slot_r->id);
+
+                            if ($first_own_slot_id  === 0 && $current_mitarbeiter_id > 0 && intval($slot_r->mitarbeiter_id) === intval($current_mitarbeiter_id)) $first_own_slot_id = intval($slot_r->id);
+
+                            if ($first_free_slot_id && $first_own_slot_id) break;
+
                         }
-                        if ($timeline_max_minutes === null || $end_minutes > $timeline_max_minutes) {
-                            $timeline_max_minutes = $end_minutes;
-                        }
-                    }
 
-                    if ($timeline_min_minutes === null) {
-                        $timeline_min_minutes = 9 * 60;
-                    }
-                    if ($timeline_max_minutes === null) {
-                        $timeline_max_minutes = 18 * 60;
-                    }
+                        $tl_von  = $dienst->von_zeit ?? ($dienst->zeit_von ?? '00:00:00');
 
-                    $timeline_start_hour = max(0, intval(floor($timeline_min_minutes / 60)));
-                    $timeline_end_hour = min(30, intval(ceil($timeline_max_minutes / 60)));
-                    if ($timeline_end_hour <= $timeline_start_hour) {
-                        $timeline_end_hour = $timeline_start_hour + 1;
-                    }
-                    $timeline_total_minutes = max(60, ($timeline_end_hour - $timeline_start_hour) * 60);
+                        $tl_bis  = $dienst->bis_zeit ?? ($dienst->zeit_bis ?? $tl_von);
 
-                    $timeline_hour_labels = array();
-                    for ($hour_step = $timeline_start_hour; $hour_step <= $timeline_end_hour; $hour_step++) {
-                        $display_hour = $hour_step % 24;
-                        $timeline_hour_labels[] = sprintf('%02d:00', $display_hour);
-                    }
+                        $tl_vm   = intval(substr($tl_von,0,2))*60 + intval(substr($tl_von,3,2));
+
+                        $tl_bm   = intval(substr($tl_bis,0,2))*60 + intval(substr($tl_bis,3,2));
+
+                        if ($tl_bm <= $tl_vm) $tl_bm += 1440;
+
+                        $tl_bl   = round(max(0, min(100, (($tl_vm - $tl_from) / $tl_span) * 100)), 2);
+
+                        $tl_bw   = round(max(0.5, min(100 - $tl_bl, (($tl_bm - $tl_vm) / $tl_span) * 100)), 2);
+
+                        $tl_bclr = $dp_get_verein_color($dienst);
+                        $tl_is_split = !empty($dienst->splittbar) && intval($dienst->splittbar) === 1;
+
                     ?>
-                    
-                    <div class="dp-timeline-day <?php echo array_key_first($dienste_nach_tagen) === $tag_index ? 'active' : ''; ?>" data-tag-id="<?php echo intval($tag_index); ?>">
-                        <h3 class="dp-timeline-day-title"><?php echo esc_html($tag_datum); ?></h3>
-                        <div class="dp-timeline-grid-head">
-                            <div class="dp-timeline-grid-service-head">Dienste</div>
-                            <div class="dp-timeline-grid-hours" style="--dp-hour-cols: <?php echo intval(count($timeline_hour_labels)); ?>;">
-                                <?php foreach ($timeline_hour_labels as $timeline_hour_label): ?>
-                                    <span class="dp-timeline-hour"><?php echo esc_html($timeline_hour_label); ?></span>
-                                <?php endforeach; ?>
+
+                    <div class="dp-tl-row"
+
+                         data-tag-id="<?php echo intval($tl_tag_id); ?>"
+
+                         data-bereich-id="<?php echo intval($dienst->bereich_id); ?>"
+
+                         data-taetigkeit-id="<?php echo intval($dienst->taetigkeit_id); ?>"
+
+                         data-has-free="<?php echo $freie_slots > 0 ? '1' : '0'; ?>"
+
+                         data-has-mine="<?php echo $has_my_slot ? '1' : '0'; ?>"
+
+                         data-start-minutes="<?php echo intval($tl_vm); ?>">
+
+                        <div class="dp-tl-label">
+
+                            <div class="dp-tl-svc-name"><?php echo esc_html($taetigkeit->name ?? 'Unbekannt'); ?></div>
+
+                            <div class="dp-tl-svc-meta">
+
+                                <span class="dp-tl-svc-bereich" style="color:<?php echo esc_attr($tl_bclr); ?>"><?php echo esc_html($bereich->name ?? ''); ?></span>
+
+                                <span class="dp-tl-occ <?php echo $freie_slots > 0 ? 'is-open' : 'is-full'; ?>"><?php echo intval($besetzte_slots); ?>/<?php echo intval(count($slots)); ?></span>
+
                             </div>
+
+                            <?php if ($can_manage_dienste && !empty($tl_assigned_names)): ?>
+                                <div class="dp-tl-assignees"><?php echo esc_html(implode(', ', $tl_assigned_names)); ?></div>
+                            <?php endif; ?>
+
                         </div>
-                        
-                        <div class="dp-timeline-slots">
-                            <?php foreach ($tag_dienste as $dienst): 
-                                $slots = $db->get_dienst_slots($dienst->id);
-                                $bereich = $db->get_bereich($dienst->bereich_id);
-                                $taetigkeit = $db->get_taetigkeit($dienst->taetigkeit_id);
-                                $freie_slots = count(array_filter($slots, function($s) { return empty($s->mitarbeiter_id); }));
-                                $besetzte_slots = count($slots) - $freie_slots;
-                                $has_my_slot = ($current_mitarbeiter_id > 0) ? count(array_filter($slots, function($s) use ($current_mitarbeiter_id) {
-                                    return intval($s->mitarbeiter_id ?? 0) === intval($current_mitarbeiter_id);
-                                })) > 0 : false;
-                                $first_free_slot_id = 0;
-                                $first_own_slot_id = 0;
-                                foreach ($slots as $slot_row_timeline) {
-                                    if (empty($slot_row_timeline->mitarbeiter_id)) {
-                                        $first_free_slot_id = intval($slot_row_timeline->id);
-                                    }
 
-                                    if ($first_own_slot_id === 0 && $current_mitarbeiter_id > 0 && intval($slot_row_timeline->mitarbeiter_id) === intval($current_mitarbeiter_id)) {
-                                        $first_own_slot_id = intval($slot_row_timeline->id);
-                                    }
+                        <div class="dp-tl-track">
 
-                                    if ($first_free_slot_id > 0 && $first_own_slot_id > 0) {
-                                        break;
-                                    }
-                                }
+                            <div class="dp-tl-bar<?php echo $tl_is_split ? ' is-split' : ''; ?>" style="left:<?php echo $tl_bl; ?>%;width:<?php echo $tl_bw; ?>%;background:<?php echo esc_attr($tl_bclr); ?>;">
 
-                                $dienst_von = $dienst->von_zeit ?? ($dienst->zeit_von ?? '00:00:00');
-                                $dienst_bis = $dienst->bis_zeit ?? ($dienst->zeit_bis ?? $dienst_von);
+                                <?php if ($tl_is_split): ?><span class="dp-tl-split-marker" title="Splittbar"></span><?php endif; ?>
 
-                                $dienst_start_minutes = (intval(substr($dienst_von, 0, 2)) * 60) + intval(substr($dienst_von, 3, 2));
-                                $dienst_end_minutes = (intval(substr($dienst_bis, 0, 2)) * 60) + intval(substr($dienst_bis, 3, 2));
-                                if ($dienst_end_minutes <= $dienst_start_minutes) {
-                                    $dienst_end_minutes += 24 * 60;
-                                }
+                                <span class="dp-tl-bar-time"><?php echo esc_html($taetigkeit->name ?? 'Unbekannt'); ?></span>
 
-                                $start_offset_minutes = max(0, $dienst_start_minutes - ($timeline_start_hour * 60));
-                                $end_offset_minutes = min($timeline_total_minutes, $dienst_end_minutes - ($timeline_start_hour * 60));
-                                $bar_left_percent = max(0, min(100, ($start_offset_minutes / $timeline_total_minutes) * 100));
-                                $bar_width_percent = max(4, min(100 - $bar_left_percent, (($end_offset_minutes - $start_offset_minutes) / $timeline_total_minutes) * 100));
-                                ?>
-                                
-                                <div class="dp-timeline-dienst" data-tag-id="<?php echo intval($tag_index); ?>" data-dienst-id="<?php echo $dienst->id; ?>" data-bereich-id="<?php echo intval($dienst->bereich_id); ?>" data-taetigkeit-id="<?php echo intval($dienst->taetigkeit_id); ?>" data-has-free="<?php echo $freie_slots > 0 ? '1' : '0'; ?>" data-has-mine="<?php echo $has_my_slot ? '1' : '0'; ?>">
-                                    <div class="dp-dienst-info-compact">
-                                        <div class="dp-dienst-time">von <?php echo esc_html(substr($dienst_von, 0, 5)); ?> bis <?php echo esc_html(substr($dienst_bis, 0, 5)); ?></div>
-                                        <div class="dp-dienst-details-compact">
-                                            <strong><?php echo esc_html($taetigkeit->name ?? 'Unbekannt'); ?></strong>
-                                            <em><?php echo esc_html($bereich->name ?? ''); ?></em>
-                                        </div>
-                                    </div>
-                                    
-                                    <div class="dp-timeline-track-wrap" style="--dp-hour-cols: <?php echo intval(count($timeline_hour_labels)); ?>;">
-                                        <div class="dp-timeline-track-grid"></div>
-                                        <div class="dp-timeline-track-bar" style="left: <?php echo esc_attr(number_format($bar_left_percent, 3, '.', '')); ?>%; width: <?php echo esc_attr(number_format($bar_width_percent, 3, '.', '')); ?>%;">
-                                            <span class="dp-track-title"><?php echo esc_html($taetigkeit->name ?? 'Unbekannt'); ?></span>
-                                            <span class="dp-track-occupancy <?php echo $freie_slots > 0 ? 'is-open' : 'is-full'; ?>"><?php echo intval($besetzte_slots); ?>/<?php echo intval(count($slots)); ?></span>
+                                <?php if ($has_my_slot && $first_own_slot_id > 0): ?>
 
-                                            <?php if ($has_my_slot && $first_own_slot_id > 0): ?>
-                                                <button type="button" class="dp-track-own" onclick="dpCancelDienst(<?php echo intval($first_own_slot_id); ?>, this)">Dienst absagen</button>
-                                            <?php endif; ?>
+                                <button type="button" class="dp-tl-bar-btn" onclick="dpCancelDienst(<?php echo intval($first_own_slot_id); ?>, this)">Absagen</button>
 
-                                            <?php if ($anmeldung_aktiv && $first_free_slot_id > 0): ?>
-                                                <button type="button" class="dp-track-action" onclick="return dpOpenTakeoverModal(<?php echo intval($first_free_slot_id); ?>, <?php echo intval($dienst->id); ?>, event);">Übernehmen</button>
-                                            <?php endif; ?>
-                                        </div>
-                                    </div>
+                                <?php endif; ?>
 
-                                    <?php if ($can_manage_dienste): ?>
-                                        <div class="dp-timeline-admin-actions">
-                                            <?php foreach ($slots as $slot):
-                                                if (empty($slot->mitarbeiter_id)) {
-                                                    continue;
-                                                }
-                                                ?>
-                                                <button type="button" class="dp-btn-admin-remove" onclick="dpAdminRemoveSlot(<?php echo intval($slot->id); ?>, this)">Zuweisung löschen</button>
-                                            <?php endforeach; ?>
-                                        </div>
-                                    <?php endif; ?>
+                                <?php if ($anmeldung_aktiv && $first_free_slot_id > 0): ?>
 
-                                    <?php if (!$anmeldung_aktiv && $freie_slots > 0): ?>
-                                        <div class="dp-timeline-locked-note">
-                                            <span class="dashicons dashicons-lock"></span> Anmeldung aktuell gesperrt
-                                        </div>
-                                    <?php endif; ?>
-                                </div>
-                            <?php endforeach; ?>
+                                <button type="button" class="dp-tl-bar-btn dp-tl-bar-btn--takeover" style="--dp-btn-accent:<?php echo esc_attr($tl_bclr); ?>;" onclick="return dpOpenTakeoverModal(<?php echo intval($first_free_slot_id); ?>, <?php echo intval($dienst->id); ?>, event);">Anmelden</button>
+
+                                <?php endif; ?>
+
+                                <?php if ($can_manage_dienste): ?>
+
+                                    <?php foreach ($slots as $slot_rm): if (empty($slot_rm->mitarbeiter_id)) continue; ?>
+
+                                    <button type="button" class="dp-tl-bar-btn dp-tl-bar-btn-rm" onclick="dpAdminRemoveSlot(<?php echo intval($slot_rm->id); ?>, this)" title="Zuweisung l&ouml;schen">&#x2715;</button>
+
+                                    <?php endforeach; ?>
+
+                                <?php endif; ?>
+
+                                <?php if (!$anmeldung_aktiv && $freie_slots > 0): ?>
+
+                                <span class="dp-tl-locked" title="Anmeldung gesperrt">&#x1F512;</span>
+
+                                <?php endif; ?>
+
+                            </div>
+
                         </div>
+
                     </div>
+
+                    <?php endforeach; ?>
+
+                </div>
+
                 <?php endforeach; ?>
-            </div>
-            
+
+                </div><!-- .dp-tl-canvas -->
+
+            </div><!-- .dp-tl-wrap -->
         <?php elseif ($view_mode === 'kompakt'): ?>
             <!-- Kompakte Listen-Ansicht -->
             <div class="dp-dienste-kompakt-list">
@@ -697,6 +866,20 @@ if ($dienst_start_dt !== null && $dienst_end_dt !== null) {
                                 $bereich = $db->get_bereich($dienst->bereich_id);
                                 $taetigkeit = $db->get_taetigkeit($dienst->taetigkeit_id);
                                 $freie_slots = count(array_filter($slots, function($s) { return empty($s->mitarbeiter_id); }));
+
+                                $kp_assigned_names = [];
+                                if ($can_manage_dienste) {
+                                    foreach ($slots as $kp_slot_row) {
+                                        if (empty($kp_slot_row->mitarbeiter_id)) {
+                                            continue;
+                                        }
+                                        $kp_m_obj = $db->get_mitarbeiter($kp_slot_row->mitarbeiter_id);
+                                        if ($kp_m_obj) {
+                                            $kp_assigned_names[] = trim(($kp_m_obj->vorname ?? '') . ' ' . substr(($kp_m_obj->nachname ?? ''), 0, 1) . '.');
+                                        }
+                                    }
+                                }
+
                                 $has_my_slot = ($current_mitarbeiter_id > 0) ? count(array_filter($slots, function($s) use ($current_mitarbeiter_id) {
                                     return intval($s->mitarbeiter_id ?? 0) === intval($current_mitarbeiter_id);
                                 })) > 0 : false;
@@ -721,13 +904,17 @@ if ($dienst_start_dt !== null && $dienst_end_dt !== null) {
                                         <?php if (!empty($dienst_beschreibung)): ?>
                                             <span class="dp-dienst-row-hint"><?php echo esc_html($dienst_beschreibung); ?></span>
                                         <?php endif; ?>
+                                        <?php if ($can_manage_dienste && !empty($kp_assigned_names)): ?>
+                                            <span class="dp-dienst-row-assignees"><?php echo esc_html(implode(', ', $kp_assigned_names)); ?></span>
+                                        <?php endif; ?>
                                     </div>
                                     <div class="dp-dienst-row-actions">
                                         <span class="dp-row-status <?php echo $freie_slots > 0 ? 'open' : 'full'; ?>">
                                             <?php echo $freie_slots > 0 ? ($freie_slots . ' frei') : 'Voll'; ?>
                                         </span>
                                         <?php if ($anmeldung_aktiv && $first_free_slot_id > 0): ?>
-                                            <button type="button" class="dp-slot-offen-label" onclick="return dpOpenTakeoverModal(<?php echo $first_free_slot_id; ?>, <?php echo intval($dienst->id); ?>, event);">Übernehmen</button>
+                                            <?php $dienst_btn_color = $dp_get_verein_color($dienst); ?>
+                                            <button type="button" class="dp-slot-offen-label" style="--dp-btn-accent:<?php echo esc_attr($dienst_btn_color); ?>;" onclick="return dpOpenTakeoverModal(<?php echo $first_free_slot_id; ?>, <?php echo intval($dienst->id); ?>, event);">Übernehmen</button>
                                         <?php endif; ?>
                                     </div>
                                 </div>
@@ -821,7 +1008,8 @@ if ($dienst_start_dt !== null && $dienst_end_dt !== null) {
                                                     <?php endif; ?>
                                                 <?php else: ?>
                                                     <?php if ($anmeldung_aktiv): ?>
-                                                        <span class="dp-slot-offen-label" onclick="return dpOpenTakeoverModal(<?php echo intval($slot->id); ?>, <?php echo intval($dienst->id); ?>, event);">
+                                                        <?php $dienst_btn_color = $dp_get_verein_color($dienst); ?>
+                                                        <span class="dp-slot-offen-label" style="--dp-btn-accent:<?php echo esc_attr($dienst_btn_color); ?>;" onclick="return dpOpenTakeoverModal(<?php echo intval($slot->id); ?>, <?php echo intval($dienst->id); ?>, event);">
                                                             <span class="dashicons dashicons-unlock"></span>
                                                             Übernehmen
                                                         </span>
@@ -951,6 +1139,25 @@ window.dpOpenTakeoverModal = function(slotId, dienstId, event) {
         computedDisplay: window.getComputedStyle(modal).display
     });
     return false;
+};
+
+window.closeAnmeldeModal = function() {
+    var modal = document.getElementById('dp-anmelde-modal');
+    if (modal) {
+        modal.classList.remove('dp-modal-force-open');
+    }
+    jQuery('#dp-anmelde-modal').stop(true, true).fadeOut(200, function() {
+        if (modal) {
+            modal.style.setProperty('display', 'none', 'important');
+            modal.style.removeProperty('visibility');
+            modal.style.removeProperty('opacity');
+        }
+    });
+    jQuery('body').css('overflow', 'auto');
+    var form = jQuery('#dp-anmelde-form')[0];
+    if (form) {
+        form.reset();
+    }
 };
 
 window.dpOpenLoggedInModal = function(slotId, dienstId, event) {
@@ -1171,7 +1378,7 @@ function dpApplyFrontendFilters() {
     var bereich = dpGetActiveFilterValue('bereich');
     var dienst = dpGetActiveFilterValue('dienst');
 
-    var items = document.querySelectorAll('.dp-dienst-card, .dp-dienst-row, .dp-timeline-dienst');
+    var items = document.querySelectorAll('.dp-dienst-card, .dp-dienst-row, .dp-tl-row');
     items.forEach(function(item) {
         var itemTag = item.getAttribute('data-tag-id') || '';
         var itemBereich = item.getAttribute('data-bereich-id') || '';
@@ -1213,31 +1420,21 @@ function dpApplyFrontendFilters() {
         section.style.display = (tagMatches && visibleRows > 0) ? '' : 'none';
     });
 
-    document.querySelectorAll('.dp-timeline-day').forEach(function(day) {
-        var dayTag = day.getAttribute('data-tag-id') || '';
-        var visibleCards = day.querySelectorAll('.dp-timeline-dienst:not([style*="display: none"])').length;
-        var tagMatches = (tag === 'all' || dayTag === tag);
-        day.style.display = (tagMatches && visibleCards > 0) ? '' : 'none';
+    document.querySelectorAll('.dp-tl-day-block').forEach(function(block) {
+        var blockTag = block.getAttribute('data-tag-id') || '';
+        var tagMatches = (tag === 'all' || blockTag === tag);
+        var visibleRows = block.querySelectorAll('.dp-tl-row:not([style*="display: none"])').length;
+        block.style.display = (tagMatches && visibleRows > 0) ? '' : 'none';
     });
 
-    document.querySelectorAll('.dp-timeline-day-tab').forEach(function(tab) {
-        var tabTag = tab.getAttribute('data-tag-id') || '';
-        tab.style.display = (tag === 'all' || tabTag === tag) ? '' : 'none';
-    });
-
-    var activeTab = document.querySelector('.dp-timeline-day-tab.active');
-    var visibleActiveDay = activeTab ? document.querySelector('.dp-timeline-day[data-tag-id="' + activeTab.getAttribute('data-tag-id') + '"]') : null;
-    if (!visibleActiveDay || visibleActiveDay.style.display === 'none') {
-        var firstVisibleDay = document.querySelector('.dp-timeline-day:not([style*="display: none"])');
-        var firstVisibleTagId = firstVisibleDay ? firstVisibleDay.getAttribute('data-tag-id') : null;
-        if (firstVisibleTagId) {
-            document.querySelectorAll('.dp-timeline-day-tab').forEach(function(tab) {
-                tab.classList.toggle('active', tab.getAttribute('data-tag-id') === firstVisibleTagId);
-            });
-        }
+    if (typeof window.dpUpdateTimelineEdgeHints === 'function') {
+        window.dpUpdateTimelineEdgeHints();
     }
 
-    dpActivateTimelineDayByTab();
+    /* Flash-Fix: Content erst nach Filter-Lauf einblenden */
+    document.querySelectorAll('.dp-tl-wrap, .dp-dienste-kompakt-list, .dp-dienste-kachel-outer').forEach(function(el) {
+        el.style.opacity = '1';
+    });
 }
 
 function dpResetFilters() {
@@ -1355,7 +1552,7 @@ function dpEnsureVisibleActiveFilterOption(filterName) {
 }
 
 function dpUpdateFilterOptionVisibility() {
-    var items = Array.prototype.slice.call(document.querySelectorAll('.dp-dienst-card, .dp-dienst-row, .dp-timeline-dienst'));
+    var items = Array.prototype.slice.call(document.querySelectorAll('.dp-dienst-card, .dp-dienst-row, .dp-tl-row'));
     if (!items.length) {
         return;
     }
@@ -1416,23 +1613,6 @@ function dpSetFilterSelectValue(filterName, value) {
 
     select.value = hasOption ? value : 'all';
 }
-
-function dpActivateTimelineDayByTab() {
-    var activeTab = document.querySelector('.dp-timeline-day-tab.active');
-    var activeTagId = activeTab ? activeTab.getAttribute('data-tag-id') : null;
-
-    document.querySelectorAll('.dp-timeline-day').forEach(function(day) {
-        if (!activeTagId) {
-            day.classList.remove('active');
-            return;
-        }
-
-        var matches = day.getAttribute('data-tag-id') === activeTagId;
-        var isHiddenByFilter = day.style.display === 'none';
-        day.classList.toggle('active', matches && !isHiddenByFilter);
-    });
-}
-
 document.addEventListener('DOMContentLoaded', function() {
         window.dpToggleCreateUserConsent = function() {
             var selected = jQuery('input[name="create_user_account"]:checked').val() || '0';
@@ -1455,7 +1635,7 @@ document.addEventListener('DOMContentLoaded', function() {
         window.dpToggleCreateUserConsent();
 
     window.dpTrace('DOMContentLoaded erreicht');
-    window.dpTrace('jQuery verfügbar', { hasJQuery: typeof window.jQuery !== 'undefined' });
+    window.dpTrace('jQuery verf├╝gbar', { hasJQuery: typeof window.jQuery !== 'undefined' });
     var dpDebug = function() {};
 
     ['dpFilterAvailability', 'dpFilterTag', 'dpFilterBereich', 'dpFilterDienst'].forEach(function(id) {
@@ -1465,16 +1645,25 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    document.querySelectorAll('.dp-timeline-day-tab').forEach(function(tab) {
-        tab.addEventListener('click', function() {
-            var tabTagId = tab.getAttribute('data-tag-id');
-            if (!tabTagId) {
-                return;
-            }
-            dpSetFilterSelectValue('tag', tabTagId);
-            dpApplyFrontendFilters();
-        });
-    });
+    window.dpUpdateTimelineEdgeHints = function() {
+        var wrap = document.querySelector('.dp-tl-wrap');
+        if (!wrap) return;
+        var leftHint = wrap.querySelector('.dp-tl-edge-hint.is-left');
+        var rightHint = wrap.querySelector('.dp-tl-edge-hint.is-right');
+        if (!leftHint || !rightHint) return;
+
+        var maxScroll = Math.max(0, wrap.scrollWidth - wrap.clientWidth);
+        var sl = wrap.scrollLeft || 0;
+        leftHint.classList.toggle('is-visible', sl > 8);
+        rightHint.classList.toggle('is-visible', sl < (maxScroll - 8));
+    };
+
+    var tlWrap = document.querySelector('.dp-tl-wrap');
+    if (tlWrap) {
+        tlWrap.addEventListener('scroll', window.dpUpdateTimelineEdgeHints, { passive: true });
+        window.addEventListener('resize', window.dpUpdateTimelineEdgeHints);
+        setTimeout(window.dpUpdateTimelineEdgeHints, 60);
+    }
 
     try {
         var params = new URLSearchParams(window.location.search);
@@ -1573,13 +1762,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
             if (!formData.vorname || !formData.nachname || !formData.email) {
                 window.dpTrace('Submit Abbruch: Pflichtfelder fehlen', formData);
-                alert('Bitte alle Pflichtfelder ausfüllen.');
+                alert('Bitte alle Pflichtfelder ausf├╝llen.');
                 dpDebug('Submit Abbruch: Pflichtfelder fehlen');
                 return;
             }
 
             if (formData.create_user_account === '1' && formData.create_user_datenschutz !== '1') {
-                alert('Bitte bestätige die Datenschutzerklärung für die Kontoerstellung.');
+                alert('Bitte best├ñtige die Datenschutzerkl├ñrung f├╝r die Kontoerstellung.');
                 return;
             }
 
@@ -2035,281 +2224,587 @@ document.addEventListener('DOMContentLoaded', function() {
         margin-bottom: 2rem;
     }
 
-    .dp-timeline-container {
+
+
+    .dp-tl-wrap {
+
+        --dp-tl-label-w: 200px;
+
+        --dp-tl-row-h: 42px;
+
         border: 1px solid #dbe2ea;
+
         border-radius: 12px;
-        overflow: hidden;
+
         background: #ffffff;
-    }
 
-    .dp-timeline-day-tabs {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.55rem;
-        padding: 0.75rem 1rem;
-        border-bottom: 1px solid #e2e8f0;
-        background: #f8fafc;
-    }
-
-    .dp-timeline-day-tab {
-        border: 1px solid #cbd5e1;
-        background: #ffffff;
-        border-radius: 12px;
-        padding: 0.5rem 1rem;
-        display: inline-flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 0.05rem;
-        cursor: pointer;
-        min-width: 96px;
-        transition: all 0.2s ease;
-    }
-
-    .dp-timeline-day-tab .dp-tab-title {
-        font-size: 0.78rem;
-        font-weight: 700;
-        color: #1e293b;
-    }
-
-    .dp-timeline-day-tab .dp-tab-date {
-        font-size: 0.78rem;
-        color: #64748b;
-    }
-
-    .dp-timeline-day-tab.active {
-        background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
-        border-color: #6366f1;
-        box-shadow: 0 8px 20px rgba(79, 70, 229, 0.25);
-    }
-
-    .dp-timeline-day-tab.active .dp-tab-title,
-    .dp-timeline-day-tab.active .dp-tab-date {
-        color: #ffffff;
-    }
-
-    .dp-timeline-day {
-        display: none;
-        padding: 0;
-    }
-
-    .dp-timeline-day.active {
-        display: block;
-    }
-
-    .dp-timeline-day-title {
-        margin: 0;
-        padding: 0.85rem 1rem;
-        font-size: 1rem;
-        font-weight: 700;
-        color: #0f172a;
-        border-bottom: 1px solid #e2e8f0;
-        background: #ffffff;
-    }
-
-    .dp-timeline-grid-head {
-        display: grid;
-        grid-template-columns: 260px 1fr;
-        border-bottom: 1px solid #dbe2ea;
-        background: #f8fafc;
-    }
-
-    .dp-timeline-grid-service-head {
-        padding: 0.8rem 1rem;
-        font-size: 1.02rem;
-        font-weight: 700;
-        color: #0f172a;
-        border-right: 1px solid #dbe2ea;
-    }
-
-    .dp-timeline-grid-hours {
-        display: grid;
-        grid-template-columns: repeat(var(--dp-hour-cols, 10), minmax(58px, 1fr));
-    }
-
-    .dp-timeline-hour {
-        border-left: 1px solid #dbe2ea;
-        text-align: center;
-        font-size: 0.86rem;
-        font-weight: 700;
-        color: #334155;
-        padding: 0.8rem 0.2rem;
-    }
-
-    .dp-timeline-slots {
-        display: flex;
-        flex-direction: column;
-    }
-
-    .dp-timeline-dienst {
-        display: grid;
-        grid-template-columns: 260px 1fr;
-        border-bottom: 1px solid #e2e8f0;
-        background: #ffffff;
-    }
-
-    .dp-dienst-info-compact {
-        padding: 0.7rem 1rem;
-        border-right: 1px solid #dbe2ea;
-        display: flex;
-        flex-direction: column;
-        gap: 0.35rem;
-    }
-
-    .dp-dienst-time {
-        font-size: 1.05rem;
-        font-weight: 700;
-        color: #2563eb;
-        line-height: 1.2;
-    }
-
-    .dp-dienst-details-compact {
-        display: flex;
-        align-items: center;
-        gap: 0.45rem;
-        flex-wrap: wrap;
-        color: #334155;
-        font-size: 0.98rem;
-    }
-
-    .dp-dienst-details-compact em {
-        color: #475569;
-        font-style: italic;
-        font-size: 0.93rem;
-    }
-
-    .dp-timeline-track-wrap {
         position: relative;
-        min-height: 52px;
-        padding: 0;
-        background: #f8fafc;
+
+        overflow-x: auto;
+
+        overflow-y: auto;
+
+        max-height: 80vh;
+
     }
 
-    .dp-timeline-track-grid {
+
+    .dp-tl-edge-hint {
+
         position: absolute;
-        inset: 0;
-        display: grid;
-        grid-template-columns: repeat(var(--dp-hour-cols, 10), minmax(58px, 1fr));
-        pointer-events: none;
-    }
 
-    .dp-timeline-track-grid::before,
-    .dp-timeline-track-grid::after {
-        content: '';
-        position: absolute;
-        left: 0;
-        right: 0;
-        height: 1px;
-        background: #e2e8f0;
-    }
-
-    .dp-timeline-track-grid::before { top: 0; }
-    .dp-timeline-track-grid::after { bottom: 0; }
-
-    .dp-timeline-track-grid > span,
-    .dp-timeline-track-grid div {
-        border-left: 1px solid #e2e8f0;
-    }
-
-    .dp-timeline-track-wrap::before {
-        content: '';
-        position: absolute;
-        inset: 0;
-        background-image: repeating-linear-gradient(
-            to right,
-            transparent,
-            transparent calc((100% / var(--dp-hour-cols, 10)) - 1px),
-            #e2e8f0 calc((100% / var(--dp-hour-cols, 10)) - 1px),
-            #e2e8f0 calc(100% / var(--dp-hour-cols, 10))
-        );
-        pointer-events: none;
-    }
-
-    .dp-timeline-track-bar {
-        position: absolute;
         top: 8px;
+
+        width: 22px;
+
+        height: 22px;
+
+        border-radius: 999px;
+
+        background: rgba(15, 23, 42, 0.72);
+
+        color: #ffffff;
+
+        display: inline-flex;
+
+        align-items: center;
+
+        justify-content: center;
+
+        font-size: 16px;
+
+        font-weight: 700;
+
+        z-index: 35;
+
+        pointer-events: none;
+
+        opacity: 0;
+
+        transform: scale(0.92);
+
+        transition: opacity 0.14s ease, transform 0.14s ease;
+
+    }
+
+    .dp-tl-edge-hint.is-left {
+        left: 8px;
+    }
+
+    .dp-tl-edge-hint.is-right {
+        right: 8px;
+    }
+
+    .dp-tl-edge-hint.is-visible {
+        opacity: 0.95;
+        transform: scale(1);
+    }
+
+
+
+    .dp-tl-canvas {
+
+        display: flex;
+
+        flex-direction: row;
+
+        align-items: flex-start;
+
+    }
+
+
+
+    /* Sub-Header pro Tag-Spalte (ersetzt den gemeinsamen .dp-tl-header) */
+    .dp-tl-day-hd {
+
+        display: flex;
+
+        align-items: stretch;
+
+        position: sticky;
+
+        top: 37px;
+
+        z-index: 10;
+
+        background: #f1f5f9;
+
+        border-bottom: 2px solid #c7d2e0;
+
+    }
+
+
+
+    .dp-tl-label-col {
+
+        flex: 0 0 var(--dp-tl-label-w);
+
+        width: var(--dp-tl-label-w);
+
+        padding: 0.5rem 0.75rem;
+
+        font-size: 0.75rem;
+
+        font-weight: 700;
+
+        color: #475569;
+
+        border-right: 2px solid #c7d2e0;
+
+        display: flex;
+
+        align-items: center;
+
+        background: #f1f5f9;
+
+    }
+
+
+
+    .dp-tl-hours {
+
+        flex: 1;
+
+        position: relative;
+
         height: 34px;
-        border-radius: 10px;
-        background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-        color: #ffffff;
-        display: inline-flex;
-        align-items: center;
-        gap: 0.45rem;
-        padding: 0 0.6rem;
-        box-shadow: 0 3px 10px rgba(37, 99, 235, 0.3);
-        min-width: 130px;
-        z-index: 2;
+
     }
 
-    .dp-track-title {
+
+
+    .dp-tl-hlabel {
+
+        position: absolute;
+
+        transform: translateX(-50%);
+
+        font-size: 0.72rem;
+
         font-weight: 700;
-        font-size: 0.9rem;
+
+        color: #334155;
+
+        top: 50%;
+
+        transform: translateX(-50%) translateY(-50%);
+
         white-space: nowrap;
+
+        user-select: none;
+
     }
 
-    .dp-track-occupancy {
-        margin-left: auto;
-        border-radius: 8px;
-        font-size: 0.84rem;
-        font-weight: 700;
-        padding: 0.12rem 0.45rem;
+
+
+    .dp-tl-day-block {
+
+        flex: 0 0 var(--dp-tl-day-w, 900px);
+
+        width: var(--dp-tl-day-w, 900px);
+
+        border-right: 2px solid #dbe2ea;
+
+        min-width: 0;
+
     }
 
-    .dp-track-occupancy.is-open {
-        background: rgba(248, 113, 113, 0.25);
-        color: #fee2e2;
+
+
+    .dp-tl-day-block:last-child {
+
+        border-right: none;
+
     }
 
-    .dp-track-occupancy.is-full {
-        background: rgba(134, 239, 172, 0.25);
-        color: #dcfce7;
-    }
 
-    .dp-track-own {
-        background: rgba(255, 255, 255, 0.22);
-        color: #ffffff;
-        border-radius: 8px;
-        padding: 0.1rem 0.4rem;
-        font-size: 0.76rem;
-        font-weight: 700;
-        border: 1px solid rgba(255, 255, 255, 0.45);
-        cursor: pointer;
-        line-height: 1.2;
-    }
 
-    .dp-track-own:hover {
-        background: rgba(255, 255, 255, 0.32);
-    }
+    .dp-tl-day-title {
 
-    .dp-track-action {
-        border: 1px solid rgba(255, 255, 255, 0.45);
-        background: rgba(255, 255, 255, 0.18);
-        color: #ffffff;
-        border-radius: 8px;
-        padding: 0.15rem 0.45rem;
-        font-size: 0.78rem;
-        font-weight: 700;
-        cursor: pointer;
-    }
+        display: flex;
 
-    .dp-track-action:hover {
-        background: rgba(255, 255, 255, 0.28);
-    }
-
-    .dp-timeline-own-actions,
-    .dp-timeline-admin-actions,
-    .dp-timeline-locked-note {
-        grid-column: 2;
-        padding: 0.45rem 0.65rem 0.55rem;
-        display: inline-flex;
-        flex-wrap: wrap;
-        gap: 0.45rem;
         align-items: center;
-        background: #ffffff;
+
+        gap: 0.5rem;
+
+        padding: 0.35rem 0.75rem;
+
+        background: linear-gradient(90deg, #1e3a5f 0%, #1d4ed8 100%);
+
+        color: #ffffff;
+
+        font-size: 0.82rem;
+
+        font-weight: 700;
+
+        position: sticky;
+
+        top: 0;
+
+        z-index: 15;
+
     }
 
-    .dp-timeline-locked-note {
+
+
+    .dp-tl-dow {
+
+        background: rgba(255,255,255,0.2);
+
+        border-radius: 4px;
+
+        padding: 0.08rem 0.35rem;
+
+        font-size: 0.75rem;
+
+        font-weight: 700;
+
+    }
+
+
+
+    .dp-tl-row {
+
+        display: flex;
+
+        align-items: center;
+
+        height: var(--dp-tl-row-h);
+
+        border-bottom: 1px solid #eef2f7;
+
+        width: 100%;
+
+    }
+
+
+
+    .dp-tl-row:last-child {
+
+        border-bottom: none;
+
+    }
+
+
+
+    .dp-tl-label {
+
+        flex: 0 0 var(--dp-tl-label-w);
+
+        width: var(--dp-tl-label-w);
+
+        padding: 0 0.65rem;
+
+        border-right: 1px solid #dbe2ea;
+
+        height: 100%;
+
+        display: flex;
+
+        flex-direction: column;
+
+        justify-content: center;
+
+        gap: 0.15rem;
+
+        overflow: hidden;
+
+        background: #ffffff;
+
+    }
+
+
+
+    .dp-tl-svc-name {
+
+        font-size: 0.8rem;
+
+        font-weight: 700;
+
+        color: #0f172a;
+
+        white-space: nowrap;
+
+        overflow: hidden;
+
+        text-overflow: ellipsis;
+
+    }
+
+
+
+    .dp-tl-svc-meta {
+
+        display: flex;
+
+        align-items: center;
+
+        gap: 0.3rem;
+
+        overflow: hidden;
+
+    }
+
+    .dp-tl-assignees {
+        font-size: 0.66rem;
         color: #64748b;
-        font-size: 0.84rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+
+
+    .dp-tl-svc-bereich {
+
+        font-size: 0.7rem;
+
+        font-weight: 600;
+
+        white-space: nowrap;
+
+        overflow: hidden;
+
+        text-overflow: ellipsis;
+
+        flex: 1;
+
+        min-width: 0;
+
+    }
+
+
+
+    .dp-tl-occ {
+
+        flex-shrink: 0;
+
+        border-radius: 4px;
+
+        font-size: 0.68rem;
+
+        font-weight: 700;
+
+        padding: 0.08rem 0.28rem;
+
+    }
+
+
+
+    .dp-tl-occ.is-open {
+
+        background: #fee2e2;
+
+        color: #991b1b;
+
+    }
+
+
+
+    .dp-tl-occ.is-full {
+
+        background: #dcfce7;
+
+        color: #166534;
+
+    }
+
+
+
+    .dp-tl-track {
+
+        flex: 1;
+
+        position: relative;
+
+        height: 100%;
+
+        min-width: 500px;
+
+        background-image: linear-gradient(to right, transparent calc(100% - 1px), #dbe2ea 100%);
+
+        background-size: var(--dp-tl-h-w) 100%;
+
+        background-position: var(--dp-tl-first-h) 0;
+
+        background-repeat: repeat-x;
+
+        background-color: #fafbfc;
+
+    }
+
+
+
+    .dp-tl-row:nth-child(even) .dp-tl-track {
+
+        background-color: #f6f8fb;
+
+    }
+
+
+
+    .dp-tl-bar {
+
+        position: absolute;
+
+        top: 6px;
+
+        bottom: 6px;
+
+        border-radius: 7px;
+
+        display: inline-flex;
+
+        align-items: center;
+
+        gap: 0.28rem;
+
+        padding: 0 0.45rem;
+
+        overflow: hidden;
+
+        color: #ffffff;
+
+        box-shadow: 0 2px 7px rgba(0,0,0,0.22);
+
+        min-width: 4px;
+
+        white-space: nowrap;
+
+    }
+
+    .dp-tl-bar.is-split::after {
+        content: '';
+        position: absolute;
+        top: 2px;
+        bottom: 2px;
+        left: 50%;
+        width: 2px;
+        margin-left: -1px;
+        border-radius: 1px;
+        background: rgba(255,255,255,0.92);
+        box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.15);
+        pointer-events: none;
+    }
+
+    .dp-tl-split-marker {
+        position: absolute;
+        left: 50%;
+        top: 3px;
+        transform: translateX(-50%);
+        width: 7px;
+        height: 7px;
+        border-radius: 999px;
+        background: #ffffff;
+        box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.2);
+        pointer-events: none;
+    }
+
+
+
+    .dp-tl-bar-time {
+
+        font-size: 0.72rem;
+
+        font-weight: 700;
+
+        opacity: 0.96;
+
+        flex-shrink: 0;
+
+    }
+
+
+
+    .dp-tl-day-block {
+
+        display: block;
+
+        border-bottom: 2px solid #dbe2ea;
+
+    }
+
+
+
+    .dp-tl-day-block:last-child {
+
+        border-bottom: none;
+
+    }
+
+    .dp-tl-bar-btn {
+
+        border: 0;
+
+        background: rgba(255,255,255,0.18);
+
+        color: #ffffff;
+
+        border-radius: 6px;
+
+        padding: 0.12rem 0.38rem;
+
+        font-size: 0.7rem;
+
+        font-weight: 700;
+
+        cursor: pointer;
+
+        line-height: 1.3;
+
+    }
+
+
+
+    .dp-tl-bar-btn:hover {
+
+        background: rgba(255,255,255,0.30);
+
+    }
+
+    .dp-tl-bar-btn--takeover {
+        background: #ffffff;
+        color: var(--dp-btn-accent, #1d4ed8);
+        border: 1px solid #ffffff;
+    }
+
+    .dp-tl-bar-btn--takeover:hover {
+        background: #f8fafc;
+        color: var(--dp-btn-accent, #1d4ed8);
+    }
+
+
+
+    .dp-tl-label {
+
+        flex: 0 0 var(--dp-tl-label-w);
+
+        width: var(--dp-tl-label-w);
+
+        padding: 0 0.65rem;
+
+        border-right: 1px solid #dbe2ea;
+
+        height: 100%;
+
+        display: flex;
+
+        flex-direction: column;
+
+        justify-content: center;
+
+        gap: 0.15rem;
+
+        overflow: hidden;
+
+        background: #ffffff;
+
+        position: sticky;
+
+        left: 0;
+
+        z-index: 5;
+
     }
 
     .dp-frontend-filterbar {
@@ -2386,7 +2881,7 @@ document.addEventListener('DOMContentLoaded', function() {
         outline: 2px solid #93c5fd;
         outline-offset: 2px;
     }
-    
+
     .dp-day-title {
         font-size: 1.5rem;
         font-weight: 600;
@@ -2395,7 +2890,57 @@ document.addEventListener('DOMContentLoaded', function() {
         padding-left: 0.5rem;
         border-left: 4px solid #0ea5e9;
     }
-    
+
+    .dp-tl-label-col {
+
+        flex: 0 0 var(--dp-tl-label-w);
+
+        width: var(--dp-tl-label-w);
+
+        padding: 0.5rem 0.75rem;
+
+        font-size: 0.75rem;
+
+        font-weight: 700;
+
+        color: #475569;
+
+        border-right: 2px solid #c7d2e0;
+
+        display: flex;
+
+        align-items: center;
+
+        background: #f1f5f9;
+
+        position: sticky;
+
+        left: 0;
+
+        z-index: 25;
+
+    }
+
+
+
+    .dp-tl-hours {
+
+        flex: 1;
+
+        position: relative;
+
+        height: 34px;
+
+        min-width: 500px;
+
+    }
+
+    .dp-dienste-kompakt-list {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+        gap: 1.5rem;
+    }
+
     .dp-dienste-cards {
         display: grid;
         grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
@@ -2444,6 +2989,15 @@ document.addEventListener('DOMContentLoaded', function() {
         color: #64748b;
         font-size: 0.88rem;
         font-style: italic;
+    }
+
+    .dp-dienst-row-assignees {
+        color: #475569;
+        font-size: 0.82rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 100%;
     }
 
     .dp-dienst-row-actions {
@@ -2646,9 +3200,9 @@ document.addEventListener('DOMContentLoaded', function() {
         display: inline-flex;
         align-items: center;
         gap: 0.35rem;
-        color: #991b1b;
-        background: #fee2e2;
-        border: 1px solid #fca5a5;
+        color: #ffffff;
+        background: var(--dp-btn-accent, #0ea5e9);
+        border: 1px solid rgba(15, 23, 42, 0.15);
         border-radius: 6px;
         padding: 0.25rem 0.55rem;
         font-size: 0.82rem;
@@ -2657,7 +3211,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     .dp-slot-offen-label:hover {
-        background: #fecaca;
+        filter: brightness(0.9);
     }
     
     /* Modal-Styles */
@@ -2929,18 +3483,39 @@ document.addEventListener('DOMContentLoaded', function() {
             align-self: flex-start;
         }
 
-        .dp-timeline-grid-head,
-        .dp-timeline-dienst {
-            grid-template-columns: 1fr;
+        .dp-tl-wrap {
+
+            --dp-tl-label-w: 160px;
+
+            --dp-tl-row-h: 46px;
+
         }
 
-        .dp-dienst-info-compact,
-        .dp-timeline-grid-service-head {
-            border-right: none;
+
+
+        .dp-tl-hours {
+
+            min-width: 300px;
+
         }
 
-        .dp-timeline-track-bar {
-            min-width: 110px;
+
+
+        .dp-tl-track {
+
+            min-width: 300px;
+
+        }
+
+
+
+        .dp-timeline-v-day-head {
+            min-height: 52px;
+            padding: 0.45rem 0.55rem;
+        }
+
+        .dp-tv-title {
+            font-size: 0.82rem;
         }
     }
 </style>

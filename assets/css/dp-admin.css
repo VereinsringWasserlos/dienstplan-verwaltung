@@ -540,6 +540,58 @@ body {
     font-style: italic;
 }
 
+.dp-cl-swatches {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-bottom: 8px;
+}
+
+.dp-cl-swatch {
+    width: 28px;
+    height: 28px;
+    border-radius: 5px;
+    border: 2px solid transparent;
+    cursor: pointer;
+    padding: 0;
+    transition: transform .1s, box-shadow .1s;
+}
+
+.dp-cl-swatch:hover {
+    transform: scale(1.2);
+}
+
+.dp-cl-swatch.dp-cl-selected {
+    border-color: #1e293b;
+    box-shadow: 0 0 0 2px #fff inset;
+}
+
+.dp-cl-preview {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 4px;
+}
+
+.dp-cl-dot {
+    display: inline-block;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: 1px solid #ccc;
+    flex-shrink: 0;
+    transition: background .15s;
+}
+
+#dp-cl-hex {
+    width: 90px;
+    font-family: monospace;
+    font-size: 13px;
+    border: 1px solid #c3c4c7;
+    border-radius: 4px;
+    padding: 3px 6px;
+}
+
 /* Status Badges mit Glow */
 .status-badge {
     display: inline-flex;

@@ -261,9 +261,21 @@ window.openAnmeldeModal = function(slotId, dienstId) {
 };
 
 window.closeAnmeldeModal = function() {
-    jQuery('#dp-anmelde-modal').fadeOut(300);
+    var modal = document.getElementById('dp-anmelde-modal');
+    if (modal) {
+        modal.classList.remove('dp-modal-force-open');
+    }
+    jQuery('#dp-anmelde-modal').stop(true, true).fadeOut(300, function() {
+        if (modal) {
+            modal.style.setProperty('display', 'none', 'important');
+            modal.style.removeProperty('visibility');
+            modal.style.removeProperty('opacity');
+        }
+    });
     jQuery('body').css('overflow', 'auto');
-    jQuery('#dp-anmelde-form')[0].reset();
+    if (jQuery('#dp-anmelde-form')[0]) {
+        jQuery('#dp-anmelde-form')[0].reset();
+    }
 };
 
 // Anmelde-Formular Handler

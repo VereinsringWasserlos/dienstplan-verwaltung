@@ -140,6 +140,11 @@ if (!defined('ABSPATH')) exit;
                             </td>
                             <td>
                                 <code><?php echo esc_html($verein->kuerzel); ?></code>
+                                <br>
+                                <span style="display: inline-flex; align-items: center; gap: 0.35rem; margin-top: 0.35rem;">
+                                    <span style="width: 14px; height: 14px; border-radius: 50%; border: 1px solid #cbd5e1; background: <?php echo esc_attr(!empty($verein->farbe) ? $verein->farbe : '#3b82f6'); ?>;"></span>
+                                    <small style="color: #64748b;"><?php echo esc_html(!empty($verein->farbe) ? $verein->farbe : '#3b82f6'); ?></small>
+                                </span>
                             </td>
                             <td>
                                 <?php
@@ -196,36 +201,25 @@ if (!defined('ABSPATH')) exit;
                                 <?php endif; ?>
                             </td>
                             <td style="position: relative; overflow: visible;">
-                                <div class="dropdown-actions">
-                                    <button class="action-button" onclick="toggleActionDropdown(this, event)">
-                                        <span class="dashicons dashicons-menu" style="font-size: 16px;"></span>
-                                        <?php _e('Aktionen', 'dienstplan-verwaltung'); ?>
-                                    </button>
-                                    <div class="action-dropdown-menu">
-                                        <a href="#" onclick="editVerein(<?php echo $verein->id; ?>); return false;">
-                                            <span class="dashicons dashicons-edit"></span>
-                                            <?php _e('Bearbeiten', 'dienstplan-verwaltung'); ?>
+                                <div class="dp-inline-action-buttons">
+                                    <a href="#" class="button button-small dp-inline-action-button js-edit-verein" data-verein-id="<?php echo intval($verein->id); ?>" onclick="editVerein(<?php echo $verein->id; ?>); return false;" title="<?php esc_attr_e('Bearbeiten', 'dienstplan-verwaltung'); ?>">
+                                        <span class="dashicons dashicons-edit"></span>
+                                    </a>
+                                    <?php if ($verein_page): ?>
+                                        <a href="<?php echo esc_url(get_permalink($verein_page->ID)); ?>" target="_blank" rel="noopener noreferrer" class="button button-small dp-inline-action-button" title="<?php esc_attr_e('Seite öffnen', 'dienstplan-verwaltung'); ?>">
+                                            <span class="dashicons dashicons-external"></span>
                                         </a>
-                                        <?php if ($verein_page): ?>
-                                            <a href="<?php echo esc_url(get_permalink($verein_page->ID)); ?>" target="_blank" rel="noopener noreferrer">
-                                                <span class="dashicons dashicons-external"></span>
-                                                <?php _e('Seite öffnen', 'dienstplan-verwaltung'); ?>
-                                            </a>
-                                            <a href="#" onclick="shareVereinPageLink('<?php echo esc_js(wp_get_shortlink($verein_page->ID) ?: add_query_arg('p', intval($verein_page->ID), home_url('/'))); ?>', '<?php echo esc_js($verein->name); ?>'); return false;">
-                                                <span class="dashicons dashicons-share"></span>
-                                                <?php _e('Teilen', 'dienstplan-verwaltung'); ?>
-                                            </a>
-                                        <?php else: ?>
-                                            <a href="#" onclick="createSingleVereinOverviewPage(<?php echo intval($verein->id); ?>, this); return false;">
-                                                <span class="dashicons dashicons-plus-alt"></span>
-                                                <?php _e('Seite erstellen', 'dienstplan-verwaltung'); ?>
-                                            </a>
-                                        <?php endif; ?>
-                                        <a href="#" onclick="deleteVerein(<?php echo $verein->id; ?>); return false;">
-                                            <span class="dashicons dashicons-trash"></span>
-                                            <?php _e('Löschen', 'dienstplan-verwaltung'); ?>
+                                        <a href="#" class="button button-small dp-inline-action-button" onclick="shareVereinPageLink('<?php echo esc_js(wp_get_shortlink($verein_page->ID) ?: add_query_arg('p', intval($verein_page->ID), home_url('/'))); ?>', '<?php echo esc_js($verein->name); ?>'); return false;" title="<?php esc_attr_e('Teilen', 'dienstplan-verwaltung'); ?>">
+                                            <span class="dashicons dashicons-share"></span>
                                         </a>
-                                    </div>
+                                    <?php else: ?>
+                                        <a href="#" class="button button-small dp-inline-action-button" onclick="createSingleVereinOverviewPage(<?php echo intval($verein->id); ?>, this); return false;" title="<?php esc_attr_e('Seite erstellen', 'dienstplan-verwaltung'); ?>">
+                                            <span class="dashicons dashicons-plus-alt"></span>
+                                        </a>
+                                    <?php endif; ?>
+                                    <a href="#" class="button button-small dp-inline-action-button is-danger" onclick="deleteVerein(<?php echo $verein->id; ?>); return false;" title="<?php esc_attr_e('Löschen', 'dienstplan-verwaltung'); ?>">
+                                        <span class="dashicons dashicons-trash"></span>
+                                    </a>
                                 </div>
                             </td>
                         </tr>

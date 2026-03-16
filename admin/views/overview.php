@@ -58,12 +58,12 @@ if ($selected_veranstaltung > 0) {
         }
     }
     
-    // Runde auf 10-Minuten-Schritte
+    // Runde auf 30-Minuten-Schritte
     if ($timeline_start !== null) {
-        $timeline_start = floor($timeline_start / 600) * 600; // 600s = 10min
+        $timeline_start = floor($timeline_start / 1800) * 1800; // 1800s = 30min
     }
     if ($timeline_end !== null) {
-        $timeline_end = ceil($timeline_end / 600) * 600;
+        $timeline_end = ceil($timeline_end / 1800) * 1800;
     }
     
     // Sammle alle einzigartigen Zeitslots (Spalten) - nur volle Stunden
@@ -217,7 +217,13 @@ $bereiche = $db->get_bereiche();
                 </label>
                 <select id="filter-tag" name="tag" class="regular-text" style="width: 100%;">
                     <option value=""><?php _e('-- Alle Tage --', 'dienstplan-verwaltung'); ?></option>
-                    <?php foreach ($veranstaltung_tage as $tag): ?>
+                    <?php 
+                    $seen_tag_dates = array();
+                    foreach ($veranstaltung_tage as $tag):
+                        $tag_date_key = $tag->tag_datum ?? '';
+                        if (in_array($tag_date_key, $seen_tag_dates, true)) continue;
+                        $seen_tag_dates[] = $tag_date_key;
+                    ?>
                         <option value="<?php echo $tag->id; ?>" <?php selected($selected_tag, $tag->id); ?>>
                             Tag <?php echo $tag->tag_nummer; ?>: <?php echo date_i18n('d.m.Y', strtotime($tag->tag_datum)); ?>
                         </option>
@@ -282,19 +288,19 @@ $bereiche = $db->get_bereiche();
                                         Zeit
                                     </th>
                                     
-                                    <!-- Zeitslots (10-Minuten-Schritte) -->
+                                    <!-- Zeitslots (30-Minuten-Schritte) -->
                                     <?php
                                     $current_time = $timeline_start;
-                                    $slot_width = 30; // Pixel pro 10-Minuten-Slot
+                                    $slot_width = 60; // Pixel pro 30-Minuten-Slot
                                     while ($current_time < $timeline_end):
                                         $time_label = date('H:i', $current_time);
-                                        $is_hour = date('i', $current_time) === '00';
+                                        $is_full_hour = date('i', $current_time) === '00';
                                     ?>
-                                        <th style="min-width: <?php echo $slot_width; ?>px; max-width: <?php echo $slot_width; ?>px; padding: 8px 2px; font-size: 9px; font-weight: <?php echo $is_hour ? '700' : '400'; ?>; border-right: 1px solid <?php echo $is_hour ? '#999' : '#ddd'; ?>; text-align: center; background: <?php echo $is_hour ? '#e5e7eb' : '#f6f7f7'; ?>;">
-                                            <?php echo $is_hour ? $time_label : ''; ?>
+                                        <th style="min-width: <?php echo $slot_width; ?>px; max-width: <?php echo $slot_width; ?>px; padding: 8px 2px; font-size: 10px; font-weight: <?php echo $is_full_hour ? '700' : '400'; ?>; border-right: 1px solid <?php echo $is_full_hour ? '#999' : '#ddd'; ?>; text-align: center; background: <?php echo $is_full_hour ? '#e5e7eb' : '#f6f7f7'; ?>;">
+                                            <?php echo $time_label; ?>
                                         </th>
                                     <?php
-                                        $current_time += 600; // +10 Minuten
+                                        $current_time += 1800; // +30 Minuten
                                     endwhile;
                                     ?>
                                 </tr>
@@ -339,9 +345,9 @@ $bereiche = $db->get_bereiche();
                                         $dienst_start = strtotime($dienst->von_zeit);
                                         $dienst_end = strtotime($dienst->bis_zeit);
                                         
-                                        // Position in Slots (0-basiert)
-                                        $start_slot = floor(($dienst_start - $timeline_start) / 600);
-                                        $end_slot = ceil(($dienst_end - $timeline_start) / 600);
+                                        // Position in Slots (0-basiert, 30-Min-Raster)
+                                        $start_slot = floor(($dienst_start - $timeline_start) / 1800);
+                                        $end_slot = ceil(($dienst_end - $timeline_start) / 1800);
                                         $slot_count = $end_slot - $start_slot;
                                         
                                         $row_bg = $tag_index % 2 ? '#fafafa' : '#fff';
@@ -372,9 +378,9 @@ $bereiche = $db->get_bereiche();
                                             while ($current_time < $timeline_end):
                                                 $in_dienst = ($slot_index >= $start_slot && $slot_index < $end_slot);
                                                 $is_first = ($slot_index == $start_slot);
-                                                $is_last = ($slot_index == $end_slot - 1);
+                                                $is_full_hour_cell = date('i', $current_time) === '00';
                                             ?>
-                                                <td style="min-width: <?php echo $slot_width; ?>px; max-width: <?php echo $slot_width; ?>px; padding: 0; border-right: 1px solid #e5e7eb; background: <?php echo $in_dienst ? esc_attr($dienst->bereich_farbe) : 'transparent'; ?>; position: relative; height: 40px;">
+                                                <td style="min-width: <?php echo $slot_width; ?>px; max-width: <?php echo $slot_width; ?>px; padding: 0; border-right: 1px solid <?php echo $is_full_hour_cell ? '#c3c4c7' : '#e5e7eb'; ?>; background: <?php echo $in_dienst ? esc_attr($dienst->bereich_farbe) : 'transparent'; ?>; position: relative; height: 40px;">
                                                     <?php if ($is_first && !empty($mitarbeiter_namen)): ?>
                                                         <div style="position: absolute; left: 2px; right: 0; top: 6px; bottom: 6px; display: flex; align-items: center; padding: 0 4px; overflow: hidden; white-space: nowrap;">
                                                             <span style="color: #fff; font-size: 10px; font-weight: 600; text-overflow: ellipsis; overflow: hidden;">
@@ -384,7 +390,7 @@ $bereiche = $db->get_bereiche();
                                                     <?php endif; ?>
                                                 </td>
                                             <?php
-                                                $current_time += 600;
+                                                $current_time += 1800;
                                                 $slot_index++;
                                             endwhile;
                                             ?>

@@ -49,6 +49,7 @@ Eine moderne, benutzerfreundliche Dienstplan-Verwaltung für Vereine und Veranst
 - [ ] Email-Benachrichtigungen testen und korrigieren
 - [ ] Mobile-Darstellung optimieren
 - [ ] Browser-Kompatibilität sicherstellen (Chrome, Firefox, Safari, Edge)
+- [ ] Statistik: Dienste pro Tag, pro Bereich und pro Verein auswerten
 
 **Neue Features (optional):**
 - [ ] Export-Funktion für Besetzungs-Liste (PDF)

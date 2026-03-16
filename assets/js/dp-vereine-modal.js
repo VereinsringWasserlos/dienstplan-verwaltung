@@ -19,6 +19,41 @@
         
         console.log('Verein-Modal gefunden und bereit');
 
+        /* ---- Vereinsfarbe-Picker ---- */
+        window.dpSetVereinFarbe = function(color) {
+            color = color || '#3b82f6';
+            $('#farbe').val(color);
+            $('#dp-cl-dot').css('background', color);
+            $('#dp-cl-hex').val(color);
+            $('.dp-cl-swatch').each(function() {
+                $(this).toggleClass('dp-cl-selected', $(this).data('color').toLowerCase() === color.toLowerCase());
+            });
+        };
+
+        window.dpShowVereinModal = function() {
+            $('#verein-modal').css('display', 'flex');
+        };
+
+        window.dpHideVereinModal = function() {
+            $('#verein-modal').hide();
+        };
+
+        $(document).on('click', '.dp-cl-swatch', function() { window.dpSetVereinFarbe($(this).data('color')); });
+        $('#dp-cl-hex').on('input', function() {
+            var v = $(this).val().trim();
+            if (/^#[0-9a-fA-F]{6}$/.test(v)) { window.dpSetVereinFarbe(v); }
+        });
+
+        // Stabiler Fallback für Bearbeiten-Buttons in der Vereine-Tabelle
+        $(document).on('click', '.js-edit-verein', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            var vereinId = parseInt($(this).data('verein-id') || '0', 10);
+            if (vereinId > 0 && typeof window.editVerein === 'function') {
+                window.editVerein(vereinId);
+            }
+        });
+
         // Test-Funktion zum direkten Öffnen
         window.testModal = function() {
             console.log('TEST: Modal öffnen');
@@ -303,6 +338,7 @@
             $('#verein-form')[0].reset();
             $('#verein_id').val('');
             $('#seite_id').val('');
+            window.dpSetVereinFarbe('#3b82f6');
             $('#logo_id').val('');
             $('#logo-preview').html('');
             $('#remove-logo-btn').hide();
@@ -312,7 +348,7 @@
             // Lade alle Benutzer für die Checkbox-Auswahl
             reloadVerantwortlicheCheckboxes('#verantwortliche-checkboxes');
 
-            $('#verein-modal').css('display', 'flex');
+            window.dpShowVereinModal();
             console.log('Modal Display nach Öffnen:', $('#verein-modal').css('display'));
         } catch(e) {
             console.error('Fehler in openVereinModal:', e);
@@ -325,7 +361,7 @@
      */
     window.closeVereinModal = function() {
         console.log('closeVereinModal called');
-        $('#verein-modal').hide();
+        window.dpHideVereinModal();
         if(typeof dpCheckPendingReload === 'function') {
             dpCheckPendingReload();
         }
@@ -342,6 +378,11 @@
             alert('FEHLER: dpAjax ist nicht definiert!');
             return;
         }
+
+        $('#verein_id').val(id || '');
+        $('#modal-title').text('Verein wird geladen...');
+        $('#verantwortliche-checkboxes').html('<p style="color: #666; margin: 0;">Lädt...</p>');
+        window.dpShowVereinModal();
 
         console.log('Sende AJAX Request...');
         $.ajax({
@@ -365,7 +406,10 @@
                     $('#seite_id').val(v.seite_id || '');
                     $('#name').val(v.name);
                     $('#kuerzel').val(v.kuerzel);
+                    window.dpSetVereinFarbe(v.farbe || '#3b82f6');
                     $('#beschreibung').val(v.beschreibung || '');
+
+                    $('#modal-title').text('Verein bearbeiten');
 
                     console.log('Basis-Felder gesetzt');
 
@@ -429,8 +473,6 @@
                     $('#kontakt_email').val(v.kontakt_email || '');
                     $('#kontakt_telefon').val(v.kontakt_telefon || '');
                     $('#aktiv').prop('checked', v.aktiv == 1);
-                    $('#modal-title').text('Verein bearbeiten');
-                    $('#verein-modal').css('display', 'flex');
                     console.log('Modal sollte jetzt sichtbar sein');
                 } else {
                     console.error('Response Error:', response);
@@ -440,6 +482,7 @@
             error: function(xhr, status, error) {
                 console.error('AJAX Error:', {xhr: xhr, status: status, error: error});
                 console.error('Response Text:', xhr.responseText);
+                window.dpHideVereinModal();
                 alert('AJAX Fehler: ' + error);
             }
         });
@@ -468,6 +511,7 @@
             verein_id: $('#verein_id').val(),
             name: $('#name').val(),
             kuerzel: $('#kuerzel').val(),
+            farbe: $('#farbe').val(),
             beschreibung: $('#beschreibung').val(),
             logo_id: $('#logo_id').val(),
             kontakt_name: $('#kontakt_name').val(),

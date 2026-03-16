@@ -7,6 +7,22 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ---
 
+## [0.9.5.43] - 2026-03-16 🧭 Frontend Timeline & Vereins-UX Release
+
+### ✨ Verbesserungen
+
+- Timeline-Balken zeigen jetzt den Dienstnamen statt der Uhrzeit.
+- Admins sehen zugewiesene Namen konsistent in mehreren Frontend-Ansichten (u. a. Timeline/Kompakt).
+- Vereinsfarben werden in Frontend-Elementen durchgaengiger genutzt (Balken/Buttons).
+
+### 🐛 Bugfixes
+
+- Modal-Handling im Frontend stabilisiert (oeffnen/schliessen robuster bei Uebernehmen/Abbrechen).
+- Vereins-Bearbeiten im Adminbereich abgesichert (JS-Handler und Cache-Busting fuer Modal-Script).
+- Layout-/Filter-Regressions auf der Veranstaltungs-Vereinsseite korrigiert.
+
+---
+
 ## [0.9.5.42] - 2026-03-13 🚀 Rollen-, Modal- und Zuweisungs-Release
 
 ### ✨ Verbesserungen

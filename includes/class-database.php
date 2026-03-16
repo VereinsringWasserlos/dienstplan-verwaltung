@@ -45,6 +45,7 @@ class Dienstplan_Database {
             id mediumint(9) NOT NULL AUTO_INCREMENT,
             name varchar(255) NOT NULL,
             kuerzel varchar(10) NOT NULL,
+            farbe varchar(7) DEFAULT '#3b82f6',
             beschreibung text,
             logo_id bigint(20) UNSIGNED DEFAULT NULL,
             kontakt_name varchar(255),
@@ -95,6 +96,18 @@ class Dienstplan_Database {
                 "ALTER TABLE {$this->prefix}vereine 
                 ADD COLUMN seite_id bigint(20) UNSIGNED DEFAULT NULL AFTER kontakt_telefon,
                 ADD KEY seite_id (seite_id)"
+            );
+        }
+
+        // Prüfe ob farbe Spalte existiert, falls nicht hinzufügen (für Updates)
+        $farbe_exists = $this->wpdb->get_results(
+            "SHOW COLUMNS FROM {$this->prefix}vereine LIKE 'farbe'"
+        );
+
+        if (empty($farbe_exists)) {
+            $this->wpdb->query(
+                "ALTER TABLE {$this->prefix}vereine 
+                ADD COLUMN farbe varchar(7) DEFAULT '#3b82f6' AFTER kuerzel"
             );
         }
         
@@ -432,6 +445,7 @@ class Dienstplan_Database {
         $this->migrate_taetigkeiten_add_bereich();
         $this->migrate_veranstaltungen_add_seite_id();
         $this->migrate_vereine_add_seite_id();
+        $this->migrate_vereine_add_farbe();
     }
     
     /**
@@ -475,6 +489,26 @@ class Dienstplan_Database {
             );
 
             error_log('Dienstplan Migration: seite_id Spalte für Vereine erfolgreich hinzugefügt');
+        }
+    }
+
+    /**
+     * Migration: Fügt farbe zur Vereine-Tabelle hinzu
+     */
+    public function migrate_vereine_add_farbe() {
+        $column_exists = $this->wpdb->get_results(
+            "SHOW COLUMNS FROM {$this->prefix}vereine LIKE 'farbe'"
+        );
+
+        if (empty($column_exists)) {
+            error_log('Dienstplan Migration: Füge farbe zur Vereine-Tabelle hinzu');
+
+            $this->wpdb->query(
+                "ALTER TABLE {$this->prefix}vereine 
+                ADD COLUMN farbe varchar(7) DEFAULT '#3b82f6' AFTER kuerzel"
+            );
+
+            error_log('Dienstplan Migration: farbe Spalte für Vereine erfolgreich hinzugefügt');
         }
     }
     
