@@ -1204,6 +1204,19 @@ class Dienstplan_Public {
             wp_send_json_error(array('message' => 'Dienst nicht gefunden.'));
             return;
         }
+
+        // Prüfe ob die Tätigkeit admin-only ist
+        $taetigkeit = $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM {$prefix}taetigkeiten WHERE id = %d",
+            $dienst->taetigkeit_id
+        ));
+
+        if ($taetigkeit && !empty($taetigkeit->admin_only) && !$can_manage_frontend_assignments) {
+            wp_send_json_error(array(
+                'message' => '⛔ Diese Tätigkeit ist für spezielle Anforderungen reserviert und kann nur durch Administratoren zugewiesen werden.'
+            ));
+            return;
+        }
         
         if ($dienst->veranstaltung_status !== 'geplant') {
             $status_messages = array(

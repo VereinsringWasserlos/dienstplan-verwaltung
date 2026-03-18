@@ -128,9 +128,18 @@ if (!defined('ABSPATH')) exit;
                                 <br><small style="margin-left: 3rem; display: inline-flex; gap: 0.5rem; align-items: center;">
                                     <span style="color: #6b7280;"><?php _e('Seite:', 'dienstplan-verwaltung'); ?></span>
                                     <?php if ($verein_page): ?>
+                                        <?php
+                                        $verein_share_url = get_permalink($verein_page->ID);
+                                        if (empty($verein_share_url)) {
+                                            $verein_share_url = wp_get_shortlink($verein_page->ID);
+                                        }
+                                        if (empty($verein_share_url)) {
+                                            $verein_share_url = add_query_arg('page_id', intval($verein_page->ID), home_url('/'));
+                                        }
+                                        ?>
                                         <a href="<?php echo esc_url(get_permalink($verein_page->ID)); ?>" target="_blank" rel="noopener noreferrer"><?php _e('Öffnen', 'dienstplan-verwaltung'); ?></a>
                                         <span style="color: #9ca3af;">|</span>
-                                        <button type="button" class="button-link" style="padding: 0; min-height: auto; line-height: 1.4;" onclick="shareVereinPageLink('<?php echo esc_js(wp_get_shortlink($verein_page->ID) ?: add_query_arg('p', intval($verein_page->ID), home_url('/'))); ?>', '<?php echo esc_js($verein->name); ?>');"><?php _e('Teilen', 'dienstplan-verwaltung'); ?></button>
+                                        <button type="button" class="button-link" style="padding: 0; min-height: auto; line-height: 1.4;" onclick="shareVereinPageLink('<?php echo esc_js($verein_share_url); ?>', '<?php echo esc_js($verein->name); ?>');"><?php _e('Teilen', 'dienstplan-verwaltung'); ?></button>
                                     <?php else: ?>
                                         <span style="color: #9ca3af;"><?php _e('Keine Seite', 'dienstplan-verwaltung'); ?></span>
                                         <span style="color: #9ca3af;">|</span>
@@ -203,22 +212,31 @@ if (!defined('ABSPATH')) exit;
                             <td style="position: relative; overflow: visible;">
                                 <div class="dp-inline-action-buttons">
                                     <a href="#" class="button button-small dp-inline-action-button js-edit-verein" data-verein-id="<?php echo intval($verein->id); ?>" onclick="editVerein(<?php echo $verein->id; ?>); return false;" title="<?php esc_attr_e('Bearbeiten', 'dienstplan-verwaltung'); ?>">
-                                        <span class="dashicons dashicons-edit"></span>
+                                        <span class="dp-inline-action-emoji" aria-hidden="true">✏️</span>
                                     </a>
                                     <?php if ($verein_page): ?>
+                                        <?php
+                                        $verein_share_url = get_permalink($verein_page->ID);
+                                        if (empty($verein_share_url)) {
+                                            $verein_share_url = wp_get_shortlink($verein_page->ID);
+                                        }
+                                        if (empty($verein_share_url)) {
+                                            $verein_share_url = add_query_arg('page_id', intval($verein_page->ID), home_url('/'));
+                                        }
+                                        ?>
                                         <a href="<?php echo esc_url(get_permalink($verein_page->ID)); ?>" target="_blank" rel="noopener noreferrer" class="button button-small dp-inline-action-button" title="<?php esc_attr_e('Seite öffnen', 'dienstplan-verwaltung'); ?>">
-                                            <span class="dashicons dashicons-external"></span>
+                                            <span class="dp-inline-action-emoji" aria-hidden="true">🌐</span>
                                         </a>
-                                        <a href="#" class="button button-small dp-inline-action-button" onclick="shareVereinPageLink('<?php echo esc_js(wp_get_shortlink($verein_page->ID) ?: add_query_arg('p', intval($verein_page->ID), home_url('/'))); ?>', '<?php echo esc_js($verein->name); ?>'); return false;" title="<?php esc_attr_e('Teilen', 'dienstplan-verwaltung'); ?>">
-                                            <span class="dashicons dashicons-share"></span>
+                                        <a href="#" class="button button-small dp-inline-action-button" onclick="shareVereinPageLink('<?php echo esc_js($verein_share_url); ?>', '<?php echo esc_js($verein->name); ?>'); return false;" title="<?php esc_attr_e('Teilen', 'dienstplan-verwaltung'); ?>">
+                                            <span class="dp-inline-action-emoji" aria-hidden="true">📤</span>
                                         </a>
                                     <?php else: ?>
                                         <a href="#" class="button button-small dp-inline-action-button" onclick="createSingleVereinOverviewPage(<?php echo intval($verein->id); ?>, this); return false;" title="<?php esc_attr_e('Seite erstellen', 'dienstplan-verwaltung'); ?>">
-                                            <span class="dashicons dashicons-plus-alt"></span>
+                                            <span class="dp-inline-action-emoji" aria-hidden="true">➕</span>
                                         </a>
                                     <?php endif; ?>
                                     <a href="#" class="button button-small dp-inline-action-button is-danger" onclick="deleteVerein(<?php echo $verein->id; ?>); return false;" title="<?php esc_attr_e('Löschen', 'dienstplan-verwaltung'); ?>">
-                                        <span class="dashicons dashicons-trash"></span>
+                                        <span class="dp-inline-action-emoji" aria-hidden="true">🗑️</span>
                                     </a>
                                 </div>
                             </td>

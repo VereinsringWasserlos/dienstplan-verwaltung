@@ -138,51 +138,45 @@ if (!defined('ABSPATH')) exit;
                                 </select>
                             </td>
                             <td style="position: relative; overflow: visible;">
-                                <div class="dropdown-actions">
-                                    <button class="action-button" onclick="toggleActionDropdown(this, event)">
-                                        <span class="dashicons dashicons-menu" style="font-size: 16px;"></span>
-                                        <?php _e('Aktionen', 'dienstplan-verwaltung'); ?>
-                                    </button>
-                                    <div class="action-dropdown-menu">
-                                        <a href="#" onclick="editVeranstaltung(<?php echo $v->id; ?>); return false;">
-                                            <span class="dashicons dashicons-edit"></span>
-                                            <span><?php _e('Bearbeiten', 'dienstplan-verwaltung'); ?></span>
-                                        </a>
-                                        <?php if (!empty($v->seite_id)): ?>
-                                            <?php
-                                            $page = get_post($v->seite_id);
-                                            if ($page && $page->post_status === 'publish'):
-                                                $page_url = get_permalink($v->seite_id);
+                                <div class="dp-inline-action-buttons">
+                                    <a href="#" class="button button-small dp-inline-action-button" onclick="editVeranstaltung(<?php echo $v->id; ?>); return false;" title="<?php esc_attr_e('Bearbeiten', 'dienstplan-verwaltung'); ?>" aria-label="<?php esc_attr_e('Bearbeiten', 'dienstplan-verwaltung'); ?>">
+                                        <span class="dp-inline-action-emoji" aria-hidden="true">✏️</span>
+                                    </a>
+                                    <a href="<?php echo esc_url(admin_url('admin.php?page=dienstplan-statistik&veranstaltung_id=' . intval($v->id))); ?>" class="button button-small dp-inline-action-button" title="<?php esc_attr_e('Statistik', 'dienstplan-verwaltung'); ?>" aria-label="<?php esc_attr_e('Statistik', 'dienstplan-verwaltung'); ?>">
+                                        <span class="dp-inline-action-emoji" aria-hidden="true">📊</span>
+                                    </a>
+                                    <?php if (!empty($v->seite_id)): ?>
+                                        <?php
+                                        $page = get_post($v->seite_id);
+                                        if ($page && $page->post_status === 'publish'):
+                                            $page_url = get_permalink($v->seite_id);
+                                            $share_url = $page_url;
+                                            if (empty($share_url)) {
                                                 $share_url = wp_get_shortlink($v->seite_id);
-                                                if (empty($share_url)) {
-                                                    $share_url = add_query_arg('p', intval($v->seite_id), home_url('/'));
-                                                }
-                                            ?>
-                                                <a href="<?php echo esc_url($page_url); ?>" target="_blank">
-                                                    <span class="dashicons dashicons-external"></span>
-                                                    <span><?php _e('Seite öffnen', 'dienstplan-verwaltung'); ?></span>
-                                                </a>
-                                                <a href="#" onclick="sharePageLink('<?php echo esc_js($share_url); ?>', '<?php echo esc_js($v->name); ?>'); return false;">
-                                                    <span class="dashicons dashicons-share"></span>
-                                                    <span><?php _e('Teilen', 'dienstplan-verwaltung'); ?></span>
-                                                </a>
-                                            <?php else: ?>
-                                                <a href="#" onclick="createPageForEvent(<?php echo $v->id; ?>); return false;">
-                                                    <span class="dashicons dashicons-plus-alt"></span>
-                                                    <span><?php _e('Seite neu erstellen', 'dienstplan-verwaltung'); ?></span>
-                                                </a>
-                                            <?php endif; ?>
+                                            }
+                                            if (empty($share_url)) {
+                                                $share_url = add_query_arg('page_id', intval($v->seite_id), home_url('/'));
+                                            }
+                                        ?>
+                                            <a href="<?php echo esc_url($page_url); ?>" target="_blank" class="button button-small dp-inline-action-button" title="<?php esc_attr_e('Seite öffnen', 'dienstplan-verwaltung'); ?>" aria-label="<?php esc_attr_e('Seite öffnen', 'dienstplan-verwaltung'); ?>">
+                                                <span class="dp-inline-action-emoji" aria-hidden="true">🌐</span>
+                                            </a>
+                                            <a href="#" class="button button-small dp-inline-action-button" onclick="sharePageLink('<?php echo esc_js($share_url); ?>', '<?php echo esc_js($v->name); ?>'); return false;" title="<?php esc_attr_e('Teilen', 'dienstplan-verwaltung'); ?>" aria-label="<?php esc_attr_e('Teilen', 'dienstplan-verwaltung'); ?>">
+                                                <span class="dp-inline-action-emoji" aria-hidden="true">📤</span>
+                                            </a>
                                         <?php else: ?>
-                                            <a href="#" onclick="createPageForEvent(<?php echo $v->id; ?>); return false;">
-                                                <span class="dashicons dashicons-plus-alt"></span>
-                                                <span><?php _e('Seite erstellen', 'dienstplan-verwaltung'); ?></span>
+                                            <a href="#" class="button button-small dp-inline-action-button" onclick="createPageForEvent(<?php echo $v->id; ?>); return false;" title="<?php esc_attr_e('Seite neu erstellen', 'dienstplan-verwaltung'); ?>" aria-label="<?php esc_attr_e('Seite neu erstellen', 'dienstplan-verwaltung'); ?>">
+                                                <span class="dp-inline-action-emoji" aria-hidden="true">➕</span>
                                             </a>
                                         <?php endif; ?>
-                                        <a href="#" onclick="deleteVeranstaltung(<?php echo $v->id; ?>); return false;">
-                                            <span class="dashicons dashicons-trash"></span>
-                                            <span><?php _e('Löschen', 'dienstplan-verwaltung'); ?></span>
+                                    <?php else: ?>
+                                        <a href="#" class="button button-small dp-inline-action-button" onclick="createPageForEvent(<?php echo $v->id; ?>); return false;" title="<?php esc_attr_e('Seite erstellen', 'dienstplan-verwaltung'); ?>" aria-label="<?php esc_attr_e('Seite erstellen', 'dienstplan-verwaltung'); ?>">
+                                            <span class="dp-inline-action-emoji" aria-hidden="true">➕</span>
                                         </a>
-                                    </div>
+                                    <?php endif; ?>
+                                    <a href="#" class="button button-small dp-inline-action-button is-danger" onclick="deleteVeranstaltung(<?php echo $v->id; ?>); return false;" title="<?php esc_attr_e('Löschen', 'dienstplan-verwaltung'); ?>" aria-label="<?php esc_attr_e('Löschen', 'dienstplan-verwaltung'); ?>">
+                                        <span class="dp-inline-action-emoji" aria-hidden="true">🗑️</span>
+                                    </a>
                                 </div>
                             </td>
                         </tr>
@@ -204,20 +198,21 @@ if (!defined('ABSPATH')) exit;
                                             <div style="display: flex; gap: 0.5rem;">
                                                 <?php if ($kann_seiten_erstellen): ?>
                                                     <button type="button" 
-                                                            class="button button-primary" 
+                                                            class="button button-primary dp-inline-action-button" 
                                                             onclick="createVereinspezifischeSeiten(<?php echo $v->id; ?>)"
+                                                            title="Alle Verein-Seiten erstellen"
+                                                            aria-label="Alle Verein-Seiten erstellen"
                                                             style="background: #0ea5e9; border-color: #0284c7;">
-                                                        <span class="dashicons dashicons-admin-page" style="font-size: 16px; vertical-align: middle;"></span>
-                                                        Alle Verein-Seiten erstellen
+                                                        <span class="dp-inline-action-emoji" aria-hidden="true">📄</span>
                                                     </button>
                                                 <?php else: ?>
                                                     <button type="button" 
-                                                            class="button button-primary" 
+                                                            class="button button-primary dp-inline-action-button" 
                                                             disabled
                                                             title="Seiten können erst erstellt werden, wenn die Veranstaltung nicht mehr in Planung ist"
+                                                            aria-label="Seiten noch nicht verfügbar"
                                                             style="background: #9ca3af; border-color: #6b7280; cursor: not-allowed;">
-                                                        <span class="dashicons dashicons-lock" style="font-size: 16px; vertical-align: middle;"></span>
-                                                        Seiten noch nicht verfügbar
+                                                        <span class="dp-inline-action-emoji" aria-hidden="true">🔒</span>
                                                     </button>
                                                 <?php endif; ?>
                                                 <?php 
@@ -239,17 +234,18 @@ if (!defined('ABSPATH')) exit;
                                                 }
                                                 if ($has_pages): ?>
                                                     <button type="button" 
-                                                            class="button" 
+                                                            class="button dp-inline-action-button is-danger" 
                                                             onclick="deleteAllVereinSeiten(<?php echo $v->id; ?>)"
+                                                            title="Alle Seiten löschen"
+                                                            aria-label="Alle Seiten löschen"
                                                             style="background: #ef4444; border-color: #dc2626; color: white;">
-                                                        <span class="dashicons dashicons-trash" style="font-size: 16px; vertical-align: middle;"></span>
-                                                        Alle Seiten löschen
+                                                        <span class="dp-inline-action-emoji" aria-hidden="true">🗑️</span>
                                                     </button>
                                                 <?php endif; ?>
                                             </div>
                                         <?php endif; ?>
                                     </div>
-                                    
+
                                     <?php if (!$kann_seiten_erstellen): ?>
                                         <div style="background: #dbeafe; border: 2px solid #3b82f6; border-radius: 6px; padding: 1rem; margin-bottom: 1rem; color: #1e40af;">
                                             <p style="margin: 0; display: flex; align-items: center; gap: 0.5rem;">
@@ -309,50 +305,51 @@ if (!defined('ABSPATH')) exit;
                                                     <div style="display: flex; gap: 0.5rem;">
                                                         <?php if ($page_exists): ?>
                                                             <?php
-                                                            $verein_share_url = wp_get_shortlink($page->ID);
+                                                            $verein_share_url = get_permalink($page->ID);
                                                             if (empty($verein_share_url)) {
-                                                                $verein_share_url = add_query_arg('p', intval($page->ID), home_url('/'));
+                                                                $verein_share_url = wp_get_shortlink($page->ID);
+                                                            }
+                                                            if (empty($verein_share_url)) {
+                                                                $verein_share_url = add_query_arg('page_id', intval($page->ID), home_url('/'));
                                                             }
                                                             ?>
                                                             <a href="<?php echo get_permalink($page->ID); ?>" 
-                                                               class="button button-small" 
+                                                               class="button button-small dp-inline-action-button" 
                                                                target="_blank"
                                                                title="Seite im Frontend öffnen">
-                                                                <span class="dashicons dashicons-external" style="font-size: 14px; vertical-align: middle;"></span>
-                                                                Öffnen
+                                                                <span class="dp-inline-action-emoji" aria-hidden="true">🌐</span>
                                                             </a>
                                                             <button type="button"
-                                                                    class="button button-small"
+                                                                    class="button button-small dp-inline-action-button"
                                                                     onclick="sharePageLink('<?php echo esc_js($verein_share_url); ?>', '<?php echo esc_js($verein->verein_name); ?>')"
                                                                     title="Link teilen">
-                                                                <span class="dashicons dashicons-share" style="font-size: 14px; vertical-align: middle;"></span>
-                                                                Teilen
+                                                                <span class="dp-inline-action-emoji" aria-hidden="true">📤</span>
                                                             </button>
                                                             <button type="button" 
-                                                                    class="button button-small" 
+                                                                    class="button button-small dp-inline-action-button is-danger" 
                                                                     onclick="deleteVereinSeite(<?php echo $page->ID; ?>, '<?php echo esc_js($verein->name); ?>')"
                                                                     style="background: #ef4444; border-color: #dc2626; color: white;"
                                                                     title="Seite löschen">
-                                                                <span class="dashicons dashicons-trash" style="font-size: 14px; vertical-align: middle;"></span>
-                                                                Löschen
+                                                                <span class="dp-inline-action-emoji" aria-hidden="true">🗑️</span>
                                                             </button>
                                                         <?php else: ?>
                                                             <?php if ($kann_seiten_erstellen): ?>
                                                                 <button type="button" 
-                                                                        class="button button-small button-primary" 
+                                                                        class="button button-small dp-inline-action-button" 
                                                                         onclick="createSingleVereinSeite(<?php echo $v->id; ?>, <?php echo $verein->verein_id; ?>)"
-                                                                        style="background: #16a34a; border-color: #15803d;">
-                                                                    <span class="dashicons dashicons-plus-alt" style="font-size: 14px; vertical-align: middle;"></span>
-                                                                    Seite erstellen
+                                                                        title="Seite erstellen"
+                                                                        aria-label="Seite erstellen"
+                                                                        style="background: #16a34a; border-color: #15803d; color: #fff; min-width: 40px; height: 30px; display: inline-flex; align-items: center; justify-content: center;">
+                                                                    <span class="dp-inline-action-emoji" aria-hidden="true">📄</span>
                                                                 </button>
                                                             <?php else: ?>
                                                                 <button type="button" 
-                                                                        class="button button-small" 
+                                                                        class="button button-small dp-inline-action-button" 
                                                                         disabled
                                                                         title="Seiten können erst erstellt werden, wenn die Veranstaltung nicht mehr in Planung ist"
+                                                                        aria-label="Gesperrt"
                                                                         style="background: #e5e7eb; color: #9ca3af; border-color: #d1d5db; cursor: not-allowed;">
-                                                                    <span class="dashicons dashicons-lock" style="font-size: 14px; vertical-align: middle;"></span>
-                                                                    Gesperrt
+                                                                    <span class="dp-inline-action-emoji" aria-hidden="true">🔒</span>
                                                                 </button>
                                                             <?php endif; ?>
                                                         <?php endif; ?>

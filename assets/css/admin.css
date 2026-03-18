@@ -18,3 +18,26 @@
 }
 /* Hover States vereinheitlichen */
 .action-dropdown-menu a:hover, .dienst-action-dropdown a:hover { background: #f3f4f6 !important; }
+
+/* Crew/Mitarbeiter: Buttons immer in einer Zeile halten */
+.mitarbeiter-list .bulk-actions-toolbar > div {
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+	flex-wrap: nowrap;
+	width: 100%;
+}
+
+.mitarbeiter-list .dp-bulk-button,
+.mitarbeiter-list .action-button,
+.mitarbeiter-list .button.button-small {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.35rem;
+	white-space: nowrap;
+}
+
+.mitarbeiter-list td:last-child,
+.mitarbeiter-list .dropdown-actions {
+	white-space: nowrap;
+}

@@ -280,7 +280,7 @@ ksort($mitarbeiter_nach_vereinen);
                         
                         <!-- Mitarbeiter Tabelle -->
                         <div style="overflow: visible;">
-                            <table class="wp-list-table widefat fixed striped" style="border: none; margin: 0;">
+                            <table class="wp-list-table widefat striped" style="border: none; margin: 0; table-layout: auto;">
                                 <thead>
                                     <tr>
                                         <th style="width: 40px; padding-left: 10px;">
@@ -291,7 +291,7 @@ ksort($mitarbeiter_nach_vereinen);
                                         <th><?php _e('Kontakt', 'dienstplan-verwaltung'); ?></th>
                                         <th style="width: 120px; text-align: center;"><?php _e('Portal', 'dienstplan-verwaltung'); ?></th>
                                         <th style="width: 100px; text-align: center;"><?php _e('Dienste', 'dienstplan-verwaltung'); ?></th>
-                                        <th style="width: 150px; text-align: center;"><?php _e('Aktionen', 'dienstplan-verwaltung'); ?></th>
+                                        <th style="width: 220px; text-align: center;"><?php _e('Aktionen', 'dienstplan-verwaltung'); ?></th>
                                     </tr>
                                 </thead>
                                 <tbody style="overflow: visible;">
@@ -356,38 +356,32 @@ ksort($mitarbeiter_nach_vereinen);
                                                     <?php echo $ma->dienst_count ?? 0; ?>
                                                 </span>
                                             </td>
-                                            <td style="text-align: center; position: relative;">
+                                            <td style="text-align: center; position: relative; white-space: nowrap; min-width: 220px;">
                                                 <div class="dropdown-actions">
-                                                    <button class="action-button" onclick="toggleMitarbeiterActionDropdown(event, <?php echo $ma->id; ?>)">
-                                                        <span class="dashicons dashicons-menu"></span>
-                                                        <?php _e('Aktionen', 'dienstplan-verwaltung'); ?>
+                                                    <button class="action-button dp-icon-only" onclick="toggleMitarbeiterActionDropdown(event, <?php echo $ma->id; ?>)" title="<?php esc_attr_e('Aktionen', 'dienstplan-verwaltung'); ?>" aria-label="<?php esc_attr_e('Aktionen', 'dienstplan-verwaltung'); ?>">
+                                                        <span class="dp-action-emoji" aria-hidden="true">📋</span>
                                                     </button>
                                                     
                                                     <!-- Dropdown-Menü -->
-                                                    <div id="mitarbeiter-action-dropdown-<?php echo $ma->id; ?>" class="mitarbeiter-action-dropdown">
-                                                        <a href="#" onclick="openMitarbeiterModal(<?php echo $ma->id; ?>); return false;">
-                                                            <span class="dashicons dashicons-edit"></span>
-                                                            <?php _e('Bearbeiten', 'dienstplan-verwaltung'); ?>
+                                                    <div id="mitarbeiter-action-dropdown-<?php echo $ma->id; ?>" class="mitarbeiter-action-dropdown" style="display: none;">
+                                                        <a href="#" class="dp-icon-only" title="<?php esc_attr_e('Bearbeiten', 'dienstplan-verwaltung'); ?>" aria-label="<?php esc_attr_e('Bearbeiten', 'dienstplan-verwaltung'); ?>" onclick="openMitarbeiterModal(<?php echo $ma->id; ?>); return false;">
+                                                            <span class="dp-action-emoji" aria-hidden="true">✏️</span>
                                                         </a>
-                                                        <a href="#" onclick="openMitarbeiterDiensteModal(<?php echo $ma->id; ?>); return false;">
-                                                            <span class="dashicons dashicons-calendar-alt"></span>
-                                                            <?php _e('Dienste anzeigen', 'dienstplan-verwaltung'); ?>
+                                                        <a href="#" class="dp-icon-only" title="<?php esc_attr_e('Dienste anzeigen', 'dienstplan-verwaltung'); ?>" aria-label="<?php esc_attr_e('Dienste anzeigen', 'dienstplan-verwaltung'); ?>" onclick="openMitarbeiterDiensteModal(<?php echo $ma->id; ?>); return false;">
+                                                            <span class="dp-action-emoji" aria-hidden="true">📅</span>
                                                         </a>
                                                         <?php if (!empty($ma->email)): ?>
-                                                            <a href="#" onclick="resendDiensteEmail(<?php echo $ma->id; ?>); return false;">
-                                                                <span class="dashicons dashicons-calendar-alt"></span>
-                                                                <?php _e('Dienste-Mail senden', 'dienstplan-verwaltung'); ?>
+                                                            <a href="#" class="dp-icon-only" title="<?php esc_attr_e('Dienste-Mail senden', 'dienstplan-verwaltung'); ?>" aria-label="<?php esc_attr_e('Dienste-Mail senden', 'dienstplan-verwaltung'); ?>" onclick="resendDiensteEmail(<?php echo $ma->id; ?>); return false;">
+                                                                <span class="dp-action-emoji" aria-hidden="true">📨</span>
                                                             </a>
                                                         <?php endif; ?>
                                                         <?php if (!empty($ma->user_id) && !empty($ma->email)): ?>
-                                                            <a href="#" onclick="resendCredentials(<?php echo $ma->id; ?>); return false;">
-                                                                <span class="dashicons dashicons-email"></span>
-                                                                <?php _e('Zugangsdaten erneut senden', 'dienstplan-verwaltung'); ?>
+                                                            <a href="#" class="dp-icon-only" title="<?php esc_attr_e('Zugangsdaten erneut senden', 'dienstplan-verwaltung'); ?>" aria-label="<?php esc_attr_e('Zugangsdaten erneut senden', 'dienstplan-verwaltung'); ?>" onclick="resendCredentials(<?php echo $ma->id; ?>); return false;">
+                                                                <span class="dp-action-emoji" aria-hidden="true">🔐</span>
                                                             </a>
                                                         <?php endif; ?>
-                                                        <a href="#" onclick="deleteMitarbeiter(<?php echo $ma->id; ?>); return false;">
-                                                            <span class="dashicons dashicons-trash"></span>
-                                                            <?php _e('Löschen', 'dienstplan-verwaltung'); ?>
+                                                        <a href="#" class="dp-icon-only" title="<?php esc_attr_e('Löschen', 'dienstplan-verwaltung'); ?>" aria-label="<?php esc_attr_e('Löschen', 'dienstplan-verwaltung'); ?>" onclick="deleteMitarbeiter(<?php echo $ma->id; ?>); return false;">
+                                                            <span class="dp-action-emoji" aria-hidden="true">🗑️</span>
                                                         </a>
                                                     </div>
                                                 </div>
@@ -413,7 +407,7 @@ ksort($mitarbeiter_nach_vereinen);
                     </h3>
                     
                     <div style="overflow: visible;">
-                        <table class="wp-list-table widefat fixed striped" style="border: none; margin: 0;">
+                        <table class="wp-list-table widefat striped" style="border: none; margin: 0; table-layout: auto;">
                             <thead>
                                 <tr>
                                     <th style="width: 40px; padding-left: 10px;">
@@ -423,7 +417,7 @@ ksort($mitarbeiter_nach_vereinen);
                                     <th><?php _e('Name', 'dienstplan-verwaltung'); ?></th>
                                     <th><?php _e('Kontakt', 'dienstplan-verwaltung'); ?></th>
                                     <th style="width: 100px; text-align: center;"><?php _e('Dienste', 'dienstplan-verwaltung'); ?></th>
-                                    <th style="width: 150px; text-align: center;"><?php _e('Aktionen', 'dienstplan-verwaltung'); ?></th>
+                                    <th style="width: 220px; text-align: center;"><?php _e('Aktionen', 'dienstplan-verwaltung'); ?></th>
                                 </tr>
                             </thead>
                             <tbody style="overflow: visible;">
@@ -465,37 +459,31 @@ ksort($mitarbeiter_nach_vereinen);
                                                 <?php echo $ma->dienst_count ?? 0; ?>
                                             </span>
                                         </td>
-                                        <td style="text-align: center; position: relative;">
-                                            <div class="dropdown-actions" style="position: relative; z-index: 1;">
-                                                <button class="button button-primary" onclick="toggleMitarbeiterActionDropdown(event, <?php echo $ma->id; ?>)" style="display: flex; align-items: center; gap: 6px; padding: 6px 12px; white-space: nowrap;">
-                                                    <span class="dashicons dashicons-menu" style="font-size: 16px; margin: 0;"></span>
-                                                    <?php _e('Aktionen', 'dienstplan-verwaltung'); ?>
+                                        <td style="text-align: center; position: relative; white-space: nowrap; min-width: 220px;">
+                                            <div class="dropdown-actions">
+                                                <button class="action-button dp-icon-only" onclick="toggleMitarbeiterActionDropdown(event, <?php echo $ma->id; ?>)" title="<?php esc_attr_e('Aktionen', 'dienstplan-verwaltung'); ?>" aria-label="<?php esc_attr_e('Aktionen', 'dienstplan-verwaltung'); ?>">
+                                                    <span class="dp-action-emoji" aria-hidden="true">📋</span>
                                                 </button>
                                                 
-                                                <div id="mitarbeiter-action-dropdown-<?php echo $ma->id; ?>" class="mitarbeiter-action-dropdown" style="display: none; position: absolute; right: 0; top: 100%; background: white; border: 1px solid #c3c4c7; border-radius: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.15); z-index: 100001 !important; min-width: 180px; margin-top: 4px;">
-                                                    <a href="#" onclick="openMitarbeiterModal(<?php echo $ma->id; ?>); return false;" style="display: flex; align-items: center; gap: 8px; padding: 10px 14px; text-decoration: none; color: #2271b1; border-bottom: 1px solid #f0f0f1; transition: none;">
-                                                        <span class="dashicons dashicons-edit" style="font-size: 18px;"></span>
-                                                        <?php _e('Bearbeiten', 'dienstplan-verwaltung'); ?>
+                                                <div id="mitarbeiter-action-dropdown-<?php echo $ma->id; ?>" class="mitarbeiter-action-dropdown" style="display: none;">
+                                                    <a href="#" class="dp-icon-only" title="<?php esc_attr_e('Bearbeiten', 'dienstplan-verwaltung'); ?>" aria-label="<?php esc_attr_e('Bearbeiten', 'dienstplan-verwaltung'); ?>" onclick="openMitarbeiterModal(<?php echo $ma->id; ?>); return false;">
+                                                        <span class="dp-action-emoji" aria-hidden="true">✏️</span>
                                                     </a>
-                                                    <a href="#" onclick="openMitarbeiterDiensteModal(<?php echo $ma->id; ?>); return false;" style="display: flex; align-items: center; gap: 8px; padding: 10px 14px; text-decoration: none; color: #2271b1; border-bottom: 1px solid #f0f0f1; transition: none;">
-                                                        <span class="dashicons dashicons-calendar-alt" style="font-size: 18px;"></span>
-                                                        <?php _e('Dienste anzeigen', 'dienstplan-verwaltung'); ?>
+                                                    <a href="#" class="dp-icon-only" title="<?php esc_attr_e('Dienste anzeigen', 'dienstplan-verwaltung'); ?>" aria-label="<?php esc_attr_e('Dienste anzeigen', 'dienstplan-verwaltung'); ?>" onclick="openMitarbeiterDiensteModal(<?php echo $ma->id; ?>); return false;">
+                                                        <span class="dp-action-emoji" aria-hidden="true">📅</span>
                                                     </a>
                                                     <?php if (!empty($ma->email)): ?>
-                                                        <a href="#" onclick="resendDiensteEmail(<?php echo $ma->id; ?>); return false;" style="display: flex; align-items: center; gap: 8px; padding: 10px 14px; text-decoration: none; color: #2271b1; border-bottom: 1px solid #f0f0f1; transition: none;">
-                                                            <span class="dashicons dashicons-calendar-alt" style="font-size: 18px;"></span>
-                                                            <?php _e('Dienste-Mail senden', 'dienstplan-verwaltung'); ?>
+                                                        <a href="#" class="dp-icon-only" title="<?php esc_attr_e('Dienste-Mail senden', 'dienstplan-verwaltung'); ?>" aria-label="<?php esc_attr_e('Dienste-Mail senden', 'dienstplan-verwaltung'); ?>" onclick="resendDiensteEmail(<?php echo $ma->id; ?>); return false;">
+                                                            <span class="dp-action-emoji" aria-hidden="true">📨</span>
                                                         </a>
                                                     <?php endif; ?>
                                                     <?php if (!empty($ma->user_id) && !empty($ma->email)): ?>
-                                                        <a href="#" onclick="resendCredentials(<?php echo $ma->id; ?>); return false;" style="display: flex; align-items: center; gap: 8px; padding: 10px 14px; text-decoration: none; color: #2271b1; border-bottom: 1px solid #f0f0f1; transition: none;">
-                                                            <span class="dashicons dashicons-email" style="font-size: 18px;"></span>
-                                                            <?php _e('Zugangsdaten erneut senden', 'dienstplan-verwaltung'); ?>
+                                                        <a href="#" class="dp-icon-only" title="<?php esc_attr_e('Zugangsdaten erneut senden', 'dienstplan-verwaltung'); ?>" aria-label="<?php esc_attr_e('Zugangsdaten erneut senden', 'dienstplan-verwaltung'); ?>" onclick="resendCredentials(<?php echo $ma->id; ?>); return false;">
+                                                            <span class="dp-action-emoji" aria-hidden="true">🔐</span>
                                                         </a>
                                                     <?php endif; ?>
-                                                    <a href="#" onclick="deleteMitarbeiter(<?php echo $ma->id; ?>); return false;" style="display: flex; align-items: center; gap: 8px; padding: 10px 14px; text-decoration: none; color: #dc3232; transition: none;">
-                                                        <span class="dashicons dashicons-trash" style="font-size: 18px;"></span>
-                                                        <?php _e('Löschen', 'dienstplan-verwaltung'); ?>
+                                                    <a href="#" class="dp-icon-only" title="<?php esc_attr_e('Löschen', 'dienstplan-verwaltung'); ?>" aria-label="<?php esc_attr_e('Löschen', 'dienstplan-verwaltung'); ?>" onclick="deleteMitarbeiter(<?php echo $ma->id; ?>); return false;">
+                                                        <span class="dp-action-emoji" aria-hidden="true">🗑️</span>
                                                     </a>
                                                 </div>
                                             </div>
@@ -534,7 +522,7 @@ function toggleMitarbeiterActionDropdown(event, mitarbeiterId) {
     event.stopPropagation();
     const dropdown = document.getElementById('mitarbeiter-action-dropdown-' + mitarbeiterId);
     const dropdownContainer = dropdown?.parentElement;
-    const isOpening = dropdown.style.display === 'none';
+    const isOpening = dropdown && window.getComputedStyle(dropdown).display === 'none';
     
     // Schließe alle anderen Dropdowns und entferne active-Klasse
     document.querySelectorAll('.mitarbeiter-action-dropdown').forEach(function(d) {

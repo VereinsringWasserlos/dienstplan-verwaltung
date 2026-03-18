@@ -497,6 +497,15 @@ class Dienstplan_Admin {
                 'dienstplan-veranstaltungen',
                 array($this, 'display_veranstaltungen')
             );
+
+            add_submenu_page(
+                '',
+                __('Statistik', 'dienstplan-verwaltung'),
+                __('Statistik', 'dienstplan-verwaltung'),
+                Dienstplan_Roles::CAP_MANAGE_EVENTS,
+                'dienstplan-statistik',
+                array($this, 'display_statistik')
+            );
         }
         
         // Bereiche & Tätigkeiten
@@ -571,8 +580,8 @@ class Dienstplan_Admin {
         if (Dienstplan_Roles::can_manage_users() || current_user_can('manage_options')) {
             add_submenu_page(
                 '',
-                __('Benutzerverwaltung', 'dienstplan-verwaltung'),
-                __('Benutzerverwaltung', 'dienstplan-verwaltung'),
+                __('Admin-Benutzer', 'dienstplan-verwaltung'),
+                __('Admin-Benutzer', 'dienstplan-verwaltung'),
                 Dienstplan_Roles::CAP_MANAGE_USERS,
                 'dienstplan-benutzer',
                 array($this, 'display_users')
@@ -642,13 +651,14 @@ class Dienstplan_Admin {
         $page_titles = array(
             'dienstplan-vereine' => __('Vereine', 'dienstplan-verwaltung'),
             'dienstplan-veranstaltungen' => __('Veranstaltungen', 'dienstplan-verwaltung'),
+            'dienstplan-statistik' => __('Statistik', 'dienstplan-verwaltung'),
             'dienstplan-bereiche' => __('Bereiche & Tätigkeiten', 'dienstplan-verwaltung'),
             'dienstplan-mitarbeiter' => __('Mitarbeiter', 'dienstplan-verwaltung'),
             'dienstplan-dienste' => __('Dienste', 'dienstplan-verwaltung'),
             'dienstplan-overview' => __('Dienst-Übersicht', 'dienstplan-verwaltung'),
             'dienstplan-einstellungen' => __('Einstellungen', 'dienstplan-verwaltung'),
             'dienstplan-import-export' => __('Import/Export', 'dienstplan-verwaltung'),
-            'dienstplan-benutzer' => __('Benutzerverwaltung', 'dienstplan-verwaltung'),
+            'dienstplan-benutzer' => __('Admin-Benutzer', 'dienstplan-verwaltung'),
             'dienstplan-dokumentation' => __('Dokumentation', 'dienstplan-verwaltung'),
             'dienstplan-updates' => __('Updates', 'dienstplan-verwaltung'),
             'dienstplan-portal' => __('Portal-Verwaltung', 'dienstplan-verwaltung'),
@@ -902,10 +912,29 @@ class Dienstplan_Admin {
         $vereine = $this->get_scoped_vereine($db); // Für Checkboxen im Modal
         include_once DIENSTPLAN_PLUGIN_PATH . 'admin/views/veranstaltungen.php';
     }
+
+    public function display_statistik() {
+        require_once DIENSTPLAN_PLUGIN_PATH . 'includes/class-database.php';
+        $db = new Dienstplan_Database($this->db_prefix);
+
+        $veranstaltungen = $this->get_scoped_veranstaltungen($db);
+        $selected_veranstaltung_id = isset($_GET['veranstaltung_id']) ? intval($_GET['veranstaltung_id']) : 0;
+
+        $allowed_veranstaltung_ids = array_map(function($veranstaltung) {
+            return intval($veranstaltung->id);
+        }, $veranstaltungen);
+
+        if ($selected_veranstaltung_id > 0 && !in_array($selected_veranstaltung_id, $allowed_veranstaltung_ids, true)) {
+            $selected_veranstaltung_id = 0;
+        }
+
+        include_once DIENSTPLAN_PLUGIN_PATH . 'admin/views/statistik.php';
+    }
     
     public function display_users() {
         $all_users = get_users();
         $dp_users = Dienstplan_Roles::get_all_dp_users();
+        $user_page_type = 'admins';
         include_once DIENSTPLAN_PLUGIN_PATH . 'admin/views/benutzerverwaltung.php';
     }
     
@@ -1393,6 +1422,28 @@ class Dienstplan_Admin {
                 global $wpdb;
                 $table_dienste = $wpdb->prefix . $this->db_prefix . 'dienste';
                 $old_dienst = $wpdb->get_row($wpdb->prepare("SELECT splittbar, anzahl_personen FROM {$table_dienste} WHERE id = %d", $dienst_id));
+                $preserved_assignments = 0;
+
+                if ($old_dienst && ($old_dienst->splittbar != $data['splittbar'] || $old_dienst->anzahl_personen != $data['anzahl_personen'])) {
+                    $existing_slots = $db->get_dienst_slots($dienst_id);
+                    $assigned_mitarbeiter_ids = array();
+                    foreach ($existing_slots as $existing_slot) {
+                        $mitarbeiter_id = intval($existing_slot->mitarbeiter_id ?? 0);
+                        if ($mitarbeiter_id > 0) {
+                            $assigned_mitarbeiter_ids[] = $mitarbeiter_id;
+                        }
+                    }
+                    $assigned_mitarbeiter_ids = array_values(array_unique($assigned_mitarbeiter_ids));
+
+                    if (!empty($data['splittbar']) && count($assigned_mitarbeiter_ids) > 2) {
+                        wp_send_json_error(array('message' => 'Dienst kann nicht auf Split umgestellt werden, solange mehr als zwei Personen zugewiesen sind.'));
+                        return;
+                    }
+
+                    if (empty($data['splittbar']) && count($assigned_mitarbeiter_ids) > intval($data['anzahl_personen'])) {
+                        $data['anzahl_personen'] = count($assigned_mitarbeiter_ids);
+                    }
+                }
                 
                 $result = $db->update_dienst($dienst_id, $data);
                 $message = 'Dienst aktualisiert';
@@ -1400,6 +1451,16 @@ class Dienstplan_Admin {
                 
                 // Wenn splittbar oder anzahl_personen geändert wurde, Slots neu erstellen
                 if ($old_dienst && ($old_dienst->splittbar != $data['splittbar'] || $old_dienst->anzahl_personen != $data['anzahl_personen'])) {
+                    $existing_slots = isset($existing_slots) ? $existing_slots : $db->get_dienst_slots($dienst_id);
+                    $assigned_mitarbeiter_ids = array();
+                    foreach ($existing_slots as $existing_slot) {
+                        $mitarbeiter_id = intval($existing_slot->mitarbeiter_id ?? 0);
+                        if ($mitarbeiter_id > 0) {
+                            $assigned_mitarbeiter_ids[] = $mitarbeiter_id;
+                        }
+                    }
+                    $assigned_mitarbeiter_ids = array_values(array_unique($assigned_mitarbeiter_ids));
+
                     // Alte Slots löschen
                     $table_slots = $wpdb->prefix . $this->db_prefix . 'dienst_slots';
                     $wpdb->delete($table_slots, array('dienst_id' => $dienst_id));
@@ -1413,6 +1474,34 @@ class Dienstplan_Admin {
                         'splittbar' => $data['splittbar']
                     );
                     $this->create_dienst_slots_for_copy($dienst_id, $slots_data);
+
+                    if (!empty($assigned_mitarbeiter_ids)) {
+                        $new_slots = $db->get_dienst_slots($dienst_id);
+                        usort($new_slots, function($a, $b) {
+                            return intval($a->slot_nummer ?? 0) <=> intval($b->slot_nummer ?? 0);
+                        });
+
+                        foreach ($assigned_mitarbeiter_ids as $index => $mitarbeiter_id) {
+                            if (!isset($new_slots[$index])) {
+                                break;
+                            }
+
+                            $assign_result = $db->assign_mitarbeiter_to_slot(intval($new_slots[$index]->id), intval($mitarbeiter_id));
+                            if (is_array($assign_result) && isset($assign_result['error'])) {
+                                wp_send_json_error(array('message' => $assign_result['message']));
+                                return;
+                            }
+                            if ($assign_result === false) {
+                                wp_send_json_error(array('message' => 'Dienst wurde geändert, aber eine bestehende Zuweisung konnte nicht übernommen werden.'));
+                                return;
+                            }
+                            $preserved_assignments++;
+                        }
+                    }
+                }
+
+                if ($preserved_assignments > 0) {
+                    $message .= ' - bestehende Belegungen wurden übernommen';
                 }
             } else {
                 // Neu anlegen
@@ -1653,11 +1742,18 @@ class Dienstplan_Admin {
         }
 
         $slots = $db->get_dienst_slots($dienst_id);
+        $assigned_mitarbeiter_ids = array();
         foreach ($slots as $slot) {
-            if (!empty($slot->mitarbeiter_id)) {
-                wp_send_json_error(array('message' => 'Dienst kann nicht gesplittet werden, solange Zuweisungen bestehen'));
-                return;
+            $mid = intval($slot->mitarbeiter_id ?? 0);
+            if ($mid > 0) {
+                $assigned_mitarbeiter_ids[] = $mid;
             }
+        }
+        $assigned_mitarbeiter_ids = array_values(array_unique($assigned_mitarbeiter_ids));
+
+        if (count($assigned_mitarbeiter_ids) > 2) {
+            wp_send_json_error(array('message' => 'Dienst kann nicht gesplittet werden, solange mehr als zwei Personen zugewiesen sind'));
+            return;
         }
 
         global $wpdb;
@@ -1678,8 +1774,148 @@ class Dienstplan_Admin {
             'splittbar' => 1
         );
         $this->create_dienst_slots_for_copy($dienst_id, $slot_data);
+        $new_slots = $db->get_dienst_slots($dienst_id);
 
-        wp_send_json_success(array('message' => 'Dienst wurde erfolgreich in Halbdienste gesplittet'));
+        if (!empty($assigned_mitarbeiter_ids)) {
+            usort($new_slots, function($a, $b) {
+                return intval($a->slot_nummer ?? 0) <=> intval($b->slot_nummer ?? 0);
+            });
+
+            foreach ($assigned_mitarbeiter_ids as $index => $mitarbeiter_id) {
+                if (!isset($new_slots[$index])) {
+                    break;
+                }
+
+                $assign_result = $db->assign_mitarbeiter_to_slot(intval($new_slots[$index]->id), intval($mitarbeiter_id));
+                if (is_array($assign_result) && isset($assign_result['error'])) {
+                    wp_send_json_error(array('message' => $assign_result['message']));
+                    return;
+                }
+                if ($assign_result === false) {
+                    wp_send_json_error(array('message' => 'Dienst wurde gesplittet, aber eine bestehende Zuweisung konnte nicht übernommen werden'));
+                    return;
+                }
+            }
+        }
+
+        wp_send_json_success(array(
+            'message' => !empty($assigned_mitarbeiter_ids)
+                ? 'Dienst wurde erfolgreich in Halbdienste gesplittet und bestehende Zuweisungen wurden übernommen'
+                : 'Dienst wurde erfolgreich in Halbdienste gesplittet',
+            'is_split' => true,
+            'slot_count' => count($new_slots),
+            'assigned_count' => count($assigned_mitarbeiter_ids)
+        ));
+    }
+
+    /**
+     * AJAX: Dienst-Split aufheben (Halbdienste zurück zu normalem Dienst)
+     */
+    public function ajax_unsplit_dienst() {
+        check_ajax_referer('dp_ajax_nonce', 'nonce');
+
+        if (!Dienstplan_Roles::can_manage_events()) {
+            wp_send_json_error(array('message' => 'Keine Berechtigung zum Aufheben von Splits'));
+            return;
+        }
+
+        $dienst_id = isset($_POST['dienst_id']) ? intval($_POST['dienst_id']) : 0;
+        if ($dienst_id <= 0) {
+            wp_send_json_error(array('message' => 'Keine Dienst-ID angegeben'));
+            return;
+        }
+
+        require_once DIENSTPLAN_PLUGIN_PATH . 'includes/class-database.php';
+        $db = new Dienstplan_Database($this->db_prefix);
+
+        if (!$this->current_user_can_access_dienst($db, $dienst_id)) {
+            wp_send_json_error(array('message' => 'Keine Berechtigung für diesen Dienst'));
+            return;
+        }
+
+        $dienst = $db->get_dienst($dienst_id);
+        if (!$dienst) {
+            wp_send_json_error(array('message' => 'Dienst nicht gefunden'));
+            return;
+        }
+
+        $slots = $db->get_dienst_slots($dienst_id);
+        $is_split_dienst = (intval($dienst->splittbar ?? 0) === 1) || (count($slots) >= 2);
+
+        if (!$is_split_dienst) {
+            wp_send_json_error(array('message' => 'Dienst ist nicht gesplittet'));
+            return;
+        }
+
+        $assigned_mitarbeiter_ids = array();
+        foreach ($slots as $slot) {
+            $mid = intval($slot->mitarbeiter_id ?? 0);
+            if ($mid > 0) {
+                $assigned_mitarbeiter_ids[] = $mid;
+            }
+        }
+        $assigned_mitarbeiter_ids = array_values(array_unique($assigned_mitarbeiter_ids));
+
+        global $wpdb;
+        $table_slots = $wpdb->prefix . $this->db_prefix . 'dienst_slots';
+        $wpdb->delete($table_slots, array('dienst_id' => $dienst_id), array('%d'));
+
+        $new_anzahl_personen = max(intval($dienst->anzahl_personen), count($assigned_mitarbeiter_ids));
+
+        // Setze splittbar zurück auf 0 und passe Personenanzahl ggf. an,
+        // damit bestehende Zuweisungen beim Zusammenführen erhalten bleiben.
+        $update_result = $db->update_dienst($dienst_id, array(
+            'splittbar' => 0,
+            'anzahl_personen' => $new_anzahl_personen
+        ));
+        if ($update_result === false) {
+            wp_send_json_error(array('message' => 'Fehler beim Aktualisieren des Dienstes'));
+            return;
+        }
+
+        // Erstelle neue Slots mit splittbar = 0
+        $slot_data = array(
+            'von_zeit' => $dienst->von_zeit,
+            'bis_zeit' => $dienst->bis_zeit,
+            'bis_datum' => $dienst->bis_datum,
+            'anzahl_personen' => $new_anzahl_personen,
+            'splittbar' => 0
+        );
+        $this->create_dienst_slots_for_copy($dienst_id, $slot_data);
+
+        if (!empty($assigned_mitarbeiter_ids)) {
+            $new_slots = $db->get_dienst_slots($dienst_id);
+            usort($new_slots, function($a, $b) {
+                return intval($a->slot_nummer ?? 0) <=> intval($b->slot_nummer ?? 0);
+            });
+
+            foreach ($assigned_mitarbeiter_ids as $index => $mitarbeiter_id) {
+                if (!isset($new_slots[$index])) {
+                    break;
+                }
+
+                $assign_result = $db->assign_mitarbeiter_to_slot(intval($new_slots[$index]->id), intval($mitarbeiter_id));
+                if (is_array($assign_result) && isset($assign_result['error'])) {
+                    wp_send_json_error(array('message' => $assign_result['message']));
+                    return;
+                }
+                if ($assign_result === false) {
+                    wp_send_json_error(array('message' => 'Split wurde aufgehoben, aber eine Zuweisung konnte nicht übernommen werden'));
+                    return;
+                }
+            }
+        }
+
+        $msg = 'Split wurde erfolgreich aufgehoben';
+        if (!empty($assigned_mitarbeiter_ids)) {
+            $msg .= ' und bestehende Zuweisungen wurden übernommen';
+        }
+        wp_send_json_success(array(
+            'message' => $msg,
+            'is_split' => false,
+            'slot_count' => $new_anzahl_personen,
+            'assigned_count' => count($assigned_mitarbeiter_ids)
+        ));
     }
     
     public function ajax_create_bereich() {
@@ -3909,8 +4145,9 @@ class Dienstplan_Admin {
         }
         
         $bereich_id = isset($_POST['bereich_id']) ? intval($_POST['bereich_id']) : 0;
-        $name = isset($_POST['name']) ? sanitize_text_field($_POST['name']) : '';
-        $farbe = isset($_POST['farbe']) ? sanitize_text_field($_POST['farbe']) : '#3b82f6';
+        $name = isset($_POST['bereich_name']) ? sanitize_text_field($_POST['bereich_name']) : (isset($_POST['name']) ? sanitize_text_field($_POST['name']) : '');
+        $farbe = isset($_POST['bereich_farbe']) ? sanitize_text_field($_POST['bereich_farbe']) : (isset($_POST['farbe']) ? sanitize_text_field($_POST['farbe']) : '#3b82f6');
+        $admin_only = isset($_POST['bereich_admin_only']) ? intval($_POST['bereich_admin_only']) : 0;
         
         if (empty($name)) {
             wp_send_json_error(array('message' => 'Name ist erforderlich'));
@@ -3920,7 +4157,8 @@ class Dienstplan_Admin {
         $db = new Dienstplan_Database();
         $data = array(
             'name' => $name,
-            'farbe' => $farbe
+            'farbe' => $farbe,
+            'admin_only' => $admin_only
         );
         
         if ($bereich_id) {
@@ -4011,10 +4249,11 @@ class Dienstplan_Admin {
         }
         
         $taetigkeit_id = isset($_POST['taetigkeit_id']) ? intval($_POST['taetigkeit_id']) : 0;
-        $bereich_id = isset($_POST['bereich_id']) ? intval($_POST['bereich_id']) : 0;
-        $name = isset($_POST['name']) ? sanitize_text_field($_POST['name']) : '';
-        $beschreibung = isset($_POST['beschreibung']) ? sanitize_textarea_field($_POST['beschreibung']) : '';
-        $aktiv = isset($_POST['aktiv']) ? intval($_POST['aktiv']) : 1;
+        $bereich_id = isset($_POST['taetigkeit_bereich_id']) ? intval($_POST['taetigkeit_bereich_id']) : (isset($_POST['bereich_id']) ? intval($_POST['bereich_id']) : 0);
+        $name = isset($_POST['taetigkeit_name']) ? sanitize_text_field($_POST['taetigkeit_name']) : (isset($_POST['name']) ? sanitize_text_field($_POST['name']) : '');
+        $beschreibung = isset($_POST['taetigkeit_beschreibung']) ? sanitize_textarea_field($_POST['taetigkeit_beschreibung']) : (isset($_POST['beschreibung']) ? sanitize_textarea_field($_POST['beschreibung']) : '');
+        $aktiv = isset($_POST['taetigkeit_status']) ? (sanitize_text_field($_POST['taetigkeit_status']) === 'aktiv' ? 1 : 0) : (isset($_POST['aktiv']) ? intval($_POST['aktiv']) : 1);
+        $admin_only = isset($_POST['taetigkeit_admin_only']) ? intval($_POST['taetigkeit_admin_only']) : 0;
         
         if (empty($name) || !$bereich_id) {
             wp_send_json_error(array('message' => 'Name und Bereich sind erforderlich'));
@@ -4026,7 +4265,8 @@ class Dienstplan_Admin {
             'bereich_id' => $bereich_id,
             'name' => $name,
             'beschreibung' => $beschreibung,
-            'aktiv' => $aktiv
+            'aktiv' => $aktiv,
+            'admin_only' => $admin_only
         );
         
         if ($taetigkeit_id) {

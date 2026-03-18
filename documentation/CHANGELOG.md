@@ -7,6 +7,45 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ---
 
+## [0.9.5.45] - 2026-03-18 🔒 Admin-only Services & Bereiche Release
+
+### ✨ Neue Features
+
+- **Admin-only Dienste / Bereiche / Tätigkeiten**: Neue Flaggung möglich, um bestimmte Dienste (z.B. Nachtwache, Kuchenbacken) nur durch Administratoren zuweisen zu können.
+- Datenbank-Migration: `bereiche.admin_only` und `taetigkeiten.admin_only` Spalten hinzugefügt.
+- Admin-UI: Checkbox in Bereiche- und Tätigkeiten-Formularen zum Setzen des Admin-only-Flags.
+- Frontend-Validierung: Lock-Button (🔒) für Normal-Nutzer bei Admin-only Diensten mit erklärendem Tooltip.
+- Backend-Sicherheit: Doppelte AJAX-Validierung gegen unauthorized Zugriffe auf Admin-only Dienste.
+
+### 🐛 Bugfixes
+
+- Admin-only Checkbox lädt korrektes Flag beim Bearbeiten existierender Bereiche/Tätigkeiten.
+
+---
+
+## [0.9.5.44] - 2026-03-18 📊 Statistik-Seite & Admin-UX Cleanup Release
+
+### ✨ Verbesserungen
+
+- Neue versteckte Admin-Seite `dienstplan-statistik` eingefuehrt: pro Veranstaltung auswertbare Statistik mit Event-Auswahl.
+- Statistik 1 (Gleichverteilung): Pruefung pro Tag/Bereich, ob Dienste gleichmaessig ueber Vereine verteilt sind.
+- Statistik 2 (Zeitplan-Abdeckung): Pruefung pro 30-Minuten-Fenster und Bereich auf Mindestbesetzung (>= 2 Personen).
+- Direkter Statistik-Link (📊) in der Veranstaltungsliste pro Event hinzugefuegt.
+- Dashboard um Navigation zur neuen Event-Statistik erweitert.
+
+### 🧹 Bereinigung
+
+- Inline-Statistik aus der Veranstaltungs-Detailausklappung entfernt (jetzt zentrale Statistik-Seite).
+- Veraltete JS-Nachkonvertierung von Action-Dropdowns entfernt, um visuelles Flackern zu vermeiden.
+- Verbleibende Alt-Action-Menues auf direkte Emoji-Buttons mit Tooltip umgestellt.
+
+### 🐛 Bugfixes
+
+- Share-Links nutzen jetzt bevorzugt den Permalink statt numerischer `?p=`-Links.
+- Uneinheitliche Icon-Buttons in Event-/Vereinsseiten-Aktionen visuell vereinheitlicht.
+
+---
+
 ## [0.9.5.43] - 2026-03-16 🧭 Frontend Timeline & Vereins-UX Release
 
 ### ✨ Verbesserungen

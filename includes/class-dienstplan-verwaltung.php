@@ -188,6 +188,7 @@ class Dienstplan_Verwaltung {
         $this->loader->add_action('wp_ajax_dp_delete_dienst', $plugin_admin, 'ajax_delete_dienst');
         $this->loader->add_action('wp_ajax_dp_copy_dienst', $plugin_admin, 'ajax_copy_dienst');
         $this->loader->add_action('wp_ajax_dp_split_dienst', $plugin_admin, 'ajax_split_dienst');
+        $this->loader->add_action('wp_ajax_dp_unsplit_dienst', $plugin_admin, 'ajax_unsplit_dienst');
         $this->loader->add_action('wp_ajax_dp_create_bereich', $plugin_admin, 'ajax_create_bereich');
         $this->loader->add_action('wp_ajax_dp_create_taetigkeit', $plugin_admin, 'ajax_create_taetigkeit');
         $this->loader->add_action('wp_ajax_dp_create_verein', $plugin_admin, 'ajax_create_verein');

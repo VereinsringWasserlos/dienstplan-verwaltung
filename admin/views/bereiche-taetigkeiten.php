@@ -184,23 +184,13 @@ $nav_items = [
                                                     </span>
                                                 </td>
                                                 <td style="text-align: center; position: relative;">
-                                                    <div class="dropdown-actions">
-                                                        <button class="action-button" onclick="toggleTaetigkeitActionDropdown(event, <?php echo $taetigkeit->id; ?>)">
-                                                            <span class="dashicons dashicons-menu"></span>
-                                                            <?php _e('Aktionen', 'dienstplan-verwaltung'); ?>
-                                                        </button>
-                                                        
-                                                        <!-- Dropdown-Menü -->
-                                                        <div id="taetigkeit-action-dropdown-<?php echo $taetigkeit->id; ?>" class="taetigkeit-action-dropdown">
-                                                            <a href="#" onclick="openTaetigkeitModal(<?php echo $bereich->id; ?>, <?php echo $taetigkeit->id; ?>); return false;">
-                                                                <span class="dashicons dashicons-edit"></span>
-                                                                <?php _e('Bearbeiten', 'dienstplan-verwaltung'); ?>
-                                                            </a>
-                                                            <a href="#" onclick="deleteTaetigkeit(<?php echo $taetigkeit->id; ?>); return false;">
-                                                                <span class="dashicons dashicons-trash"></span>
-                                                                <?php _e('Löschen', 'dienstplan-verwaltung'); ?>
-                                                            </a>
-                                                        </div>
+                                                    <div class="dp-inline-action-buttons">
+                                                        <a href="#" class="button button-small dp-inline-action-button" onclick="openTaetigkeitModal(<?php echo $bereich->id; ?>, <?php echo $taetigkeit->id; ?>); return false;" title="<?php esc_attr_e('Bearbeiten', 'dienstplan-verwaltung'); ?>" aria-label="<?php esc_attr_e('Bearbeiten', 'dienstplan-verwaltung'); ?>">
+                                                            <span class="dp-inline-action-emoji" aria-hidden="true">✏️</span>
+                                                        </a>
+                                                        <a href="#" class="button button-small dp-inline-action-button is-danger" onclick="deleteTaetigkeit(<?php echo $taetigkeit->id; ?>); return false;" title="<?php esc_attr_e('Löschen', 'dienstplan-verwaltung'); ?>" aria-label="<?php esc_attr_e('Löschen', 'dienstplan-verwaltung'); ?>">
+                                                            <span class="dp-inline-action-emoji" aria-hidden="true">🗑️</span>
+                                                        </a>
                                                     </div>
                                                 </td>
                                             </tr>
@@ -245,6 +235,21 @@ $nav_items = [
                         <th><label for="bereich_beschreibung"><?php _e('Beschreibung', 'dienstplan-verwaltung'); ?></label></th>
                         <td>
                             <textarea id="bereich_beschreibung" name="bereich_beschreibung" class="large-text" rows="3"></textarea>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th></th>
+                        <td>
+                            <label style="display: flex; align-items: center; gap: 0.75rem; margin: 0;">
+                                <input type="checkbox" id="bereich_admin_only" name="bereich_admin_only" value="1" style="margin: 0;">
+                                <strong style="color: #d97706; display: flex; align-items: center; gap: 0.4rem;">
+                                    <span class="dashicons dashicons-lock" style="width: 18px; height: 18px; font-size: 18px;"></span>
+                                    <?php _e('Nur Admins können zuweisen', 'dienstplan-verwaltung'); ?>
+                                </strong>
+                            </label>
+                            <p style="color: #6b7280; font-size: 0.9rem; margin: 0.5rem 0 0 0;">
+                                <?php _e('z.B. für spezielle Dienste wie Nachtwache oder Kuchenbacken', 'dienstplan-verwaltung'); ?>
+                            </p>
                         </td>
                     </tr>
                 </table>
@@ -293,6 +298,21 @@ $nav_items = [
                             </select>
                         </td>
                     </tr>
+                    <tr>
+                        <th></th>
+                        <td>
+                            <label style="display: flex; align-items: center; gap: 0.75rem; margin: 0;">
+                                <input type="checkbox" id="taetigkeit_admin_only" name="taetigkeit_admin_only" value="1" style="margin: 0;">
+                                <strong style="color: #d97706; display: flex; align-items: center; gap: 0.4rem;">
+                                    <span class="dashicons dashicons-lock" style="width: 18px; height: 18px; font-size: 18px;"></span>
+                                    <?php _e('Nur Admins können zuweisen', 'dienstplan-verwaltung'); ?>
+                                </strong>
+                            </label>
+                            <p style="color: #6b7280; font-size: 0.9rem; margin: 0.5rem 0 0 0;">
+                                <?php _e('Normale Nutzer können sich selbst nicht für diese Tätigkeit anmelden', 'dienstplan-verwaltung'); ?>
+                            </p>
+                        </td>
+                    </tr>
                 </table>
             </form>
         </div>
@@ -319,38 +339,4 @@ function toggleBereichGroup(collapseId) {
         icon.classList.add('dashicons-arrow-right-alt2');
     }
 }
-
-// Dropdown Toggle
-function toggleTaetigkeitActionDropdown(event, taetigkeitId) {
-    event.stopPropagation();
-    const dropdown = document.getElementById('taetigkeit-action-dropdown-' + taetigkeitId);
-    const dropdownContainer = dropdown?.parentElement;
-    const isOpening = dropdown.style.display === 'none';
-    
-    // Schließe alle anderen Dropdowns und entferne active-Klasse
-    document.querySelectorAll('.taetigkeit-action-dropdown').forEach(function(d) {
-        if (d.id !== 'taetigkeit-action-dropdown-' + taetigkeitId) {
-            d.style.display = 'none';
-            d.parentElement?.classList.remove('active');
-        }
-    });
-    
-    if (isOpening) {
-        dropdown.style.display = 'block';
-        dropdownContainer?.classList.add('active');
-    } else {
-        dropdown.style.display = 'none';
-        dropdownContainer?.classList.remove('active');
-    }
-}
-
-// Schließe Dropdowns beim Klick außerhalb
-document.addEventListener('click', function(event) {
-    if (!event.target.closest('.dropdown-actions')) {
-        document.querySelectorAll('.taetigkeit-action-dropdown').forEach(function(d) {
-            d.style.display = 'none';
-            d.parentElement?.classList.remove('active');
-        });
-    }
-});
 </script>

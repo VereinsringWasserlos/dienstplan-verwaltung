@@ -48,6 +48,14 @@ $nav_items = [];
             </div>
             <p class="dashboard-admin-card-description"><?php _e('Events planen und organisieren', 'dienstplan-verwaltung'); ?></p>
         </a>
+
+        <a href="<?php echo admin_url('admin.php?page=dienstplan-statistik'); ?>" class="dashboard-admin-card card-timeline">
+            <div class="dashboard-admin-card-header">
+                <span class="dashicons dashicons-chart-line dashboard-admin-card-icon"></span>
+                <h3 class="dashboard-admin-card-title"><?php _e('Event-Statistik', 'dienstplan-verwaltung'); ?></h3>
+            </div>
+            <p class="dashboard-admin-card-description"><?php _e('Qualität und Verteilung pro Veranstaltung auswerten', 'dienstplan-verwaltung'); ?></p>
+        </a>
         <?php endif; ?>
         
         <!-- Dienste -->
@@ -104,6 +112,16 @@ $nav_items = [];
             </div>
             <p class="dashboard-admin-card-description"><?php _e('Anleitungen, Handbücher & technische Dokumentation', 'dienstplan-verwaltung'); ?></p>
         </a>
+
+        <?php if (Dienstplan_Roles::can_manage_users() || current_user_can('manage_options')): ?>
+        <a href="<?php echo admin_url('admin.php?page=dienstplan-benutzer'); ?>" class="dashboard-admin-card card-mitarbeiter">
+            <div class="dashboard-admin-card-header">
+                <span class="dashicons dashicons-shield dashboard-admin-card-icon"></span>
+                <h3 class="dashboard-admin-card-title"><?php _e('Admin-Benutzer', 'dienstplan-verwaltung'); ?></h3>
+            </div>
+            <p class="dashboard-admin-card-description"><?php _e('Admins in eigener Seite verwalten', 'dienstplan-verwaltung'); ?></p>
+        </a>
+        <?php endif; ?>
         
         <!-- Portal-Verwaltung (nur für Admins) -->
         <?php if (current_user_can('manage_options')): ?>

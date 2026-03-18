@@ -164,6 +164,10 @@
         $('#tag-zeitfenster-info').hide();
         $('#dienst-zeit-warnung').hide();
         
+        // Split-Buttons verstecken bei neuem Dienst
+        $('#btn-unsplit-dienst').hide();
+        $('#btn-split-dienst').hide();
+        
         // Vorauswahl Veranstaltung aus Filter (falls in dpAjax definiert)
         if (typeof dpAjax.selectedVeranstaltung !== 'undefined' && dpAjax.selectedVeranstaltung > 0) {
             $('#d_veranstaltung_id').val(dpAjax.selectedVeranstaltung).trigger('change');
@@ -320,6 +324,17 @@
                     $('#d_besonderheiten').val(d.besonderheiten || '');
                     
                     $('#dienst-modal-title').text('Dienst bearbeiten');
+                    
+                    // Zeige/verstecke Split-Buttons basierend auf Dienst-Status
+                    const isSplit = d.splittbar == 1;
+                    if (isSplit) {
+                        $('#btn-unsplit-dienst').show();
+                        $('#btn-split-dienst').hide();
+                    } else {
+                        $('#btn-unsplit-dienst').hide();
+                        $('#btn-split-dienst').show();
+                    }
+                    
                     $('#dienst-modal').css('display', 'flex');
                 } else {
                     console.error('Fehler beim Laden des Dienstes:', response);
@@ -389,6 +404,84 @@
             },
             error: function() {
                 alert('AJAX-Fehler beim Kopieren');
+            }
+        });
+    };
+
+    /**
+     * Quick Split: Teilt den Dienst schnell in 2 Halbdienste auf
+     */
+    window.quickSplitDienstFromModal = function() {
+        const dienstId = $('#dienst_id').val();
+        if (!dienstId) {
+            alert('Bitte speichern Sie zuerst den Dienst');
+            return;
+        }
+
+        if (!confirm('Möchten Sie diesen Dienst wirklich in 2 Halbdienste aufteilen?\n\nBestehende Belegungen werden, wenn möglich, in die beiden Halbdienste übernommen.')) {
+            return;
+        }
+
+        $.ajax({
+            url: dpAjax.ajaxurl,
+            type: 'POST',
+            data: {
+                action: 'dp_split_dienst',
+                nonce: dpAjax.nonce,
+                dienst_id: dienstId
+            },
+            success: function(response) {
+                console.log('Split Response:', response);
+                if (response.success) {
+                    alert(response.data.message || 'Dienst wurde erfolgreich gesplittet');
+                    // Neuladen
+                    editDienst(dienstId);
+                } else {
+                    alert('Fehler: ' + (response.data ? response.data.message : 'Unbekannt'));
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('AJAX Error:', error);
+                alert('AJAX-Fehler beim Splitten: ' + error);
+            }
+        });
+    };
+
+    /**
+     * Split aufheben: Wandelt Halbdienste zurück zu normalem Dienst
+     */
+    window.unsplitDienstFromModal = function() {
+        const dienstId = $('#dienst_id').val();
+        if (!dienstId) {
+            alert('Bitte speichern Sie zuerst den Dienst');
+            return;
+        }
+
+        if (!confirm('Möchten Sie den Split dieses Dienstes wirklich aufheben?\n\nBestehende Belegungen werden in den zusammengeführten Dienst übernommen.')) {
+            return;
+        }
+
+        $.ajax({
+            url: dpAjax.ajaxurl,
+            type: 'POST',
+            data: {
+                action: 'dp_unsplit_dienst',
+                nonce: dpAjax.nonce,
+                dienst_id: dienstId
+            },
+            success: function(response) {
+                console.log('Unsplit Response:', response);
+                if (response.success) {
+                    alert(response.data.message || 'Split wurde erfolgreich aufgehoben');
+                    // Neuladen
+                    editDienst(dienstId);
+                } else {
+                    alert('Fehler: ' + (response.data ? response.data.message : 'Unbekannt'));
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('AJAX Error:', error);
+                alert('AJAX-Fehler beim Aufheben des Splits: ' + error);
             }
         });
     };

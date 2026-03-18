@@ -266,12 +266,25 @@ class Dienstplan_Database {
             farbe varchar(7) DEFAULT '#3b82f6',
             sortierung int(3) DEFAULT 0,
             aktiv tinyint(1) DEFAULT 1,
+            admin_only tinyint(1) DEFAULT 0,
             erstellt_am datetime DEFAULT CURRENT_TIMESTAMP,
             PRIMARY KEY (id),
             UNIQUE KEY name (name)
         ) $charset;";
         
         dbDelta($sql);
+        
+        // Prüfe ob admin_only Spalte existiert, falls nicht hinzufügen (für Updates)
+        $admin_only_exists = $this->wpdb->get_results(
+            "SHOW COLUMNS FROM {$this->prefix}bereiche LIKE 'admin_only'"
+        );
+        
+        if (empty($admin_only_exists)) {
+            $this->wpdb->query(
+                "ALTER TABLE {$this->prefix}bereiche 
+                ADD COLUMN admin_only tinyint(1) DEFAULT 0 AFTER aktiv"
+            );
+        }
         
         // Tätigkeiten-Tabelle (z.B. Aufbau, Abbau, Bedienung, etc.)
         // Jede Tätigkeit gehört zu einem Bereich (1:N Beziehung)
@@ -282,6 +295,7 @@ class Dienstplan_Database {
             beschreibung text,
             sortierung int(3) DEFAULT 0,
             aktiv tinyint(1) DEFAULT 1,
+            admin_only tinyint(1) DEFAULT 0,
             erstellt_am datetime DEFAULT CURRENT_TIMESTAMP,
             PRIMARY KEY (id),
             KEY bereich_id (bereich_id),
@@ -289,6 +303,18 @@ class Dienstplan_Database {
         ) $charset;";
         
         dbDelta($sql);
+        
+        // Prüfe ob admin_only Spalte existiert, falls nicht hinzufügen (für Updates)
+        $taetigkeit_admin_only = $this->wpdb->get_results(
+            "SHOW COLUMNS FROM {$this->prefix}taetigkeiten LIKE 'admin_only'"
+        );
+        
+        if (empty($taetigkeit_admin_only)) {
+            $this->wpdb->query(
+                "ALTER TABLE {$this->prefix}taetigkeiten 
+                ADD COLUMN admin_only tinyint(1) DEFAULT 0 AFTER aktiv"
+            );
+        }
         
         // Dienste-Tabelle
         $sql = "CREATE TABLE IF NOT EXISTS {$this->prefix}dienste (

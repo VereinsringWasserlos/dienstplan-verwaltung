@@ -159,6 +159,20 @@ $dp_get_verein_color = function($dienst) use ($db, &$dp_verein_color_cache) {
     return '#3b82f6';
 };
 
+// Funktion zur Generierung von Vereins-Abkürzungen
+$dp_get_verein_abbrev = function($verein_name) {
+    if (empty($verein_name)) {
+        return '?';
+    }
+    // Nimm die ersten Buchstaben jedes Wortes (max. 3 Zeichen)
+    $words = preg_split('/\s+/', trim($verein_name), -1, PREG_SPLIT_NO_EMPTY);
+    $abbrev = '';
+    foreach (array_slice($words, 0, 3) as $word) {
+        $abbrev .= strtoupper(substr($word, 0, 1));
+    }
+    return empty($abbrev) ? '?' : $abbrev;
+};
+
 // View-Modus
 $view_mode = isset($_GET['view']) ? sanitize_text_field($_GET['view']) : 'kachel';
 if ($view_mode === 'list') {
@@ -313,7 +327,7 @@ if ($dienst_start_dt !== null && $dienst_end_dt !== null) {
                         ?>
                         <div class="dp-header-chip" style="background: linear-gradient(135deg, <?php echo esc_attr($verein_bg_start); ?> 0%, <?php echo esc_attr($verein_bg_end); ?> 100%); border-color: <?php echo esc_attr($verein_color); ?>; color: #0f172a;">
                             <span class="dashicons dashicons-groups" style="font-size: 16px;"></span>
-                            <span><?php echo esc_html($verein->name); ?></span>
+                            <span title="<?php echo esc_attr($verein->name); ?>"><?php echo esc_html($dp_get_verein_abbrev($verein->name)); ?></span>
                         </div>
                     <?php elseif ($verein_id == 0 && !empty($alle_vereine_in_services)): ?>
                         <?php foreach ($alle_vereine_in_services as $vid => $vname): ?>
@@ -328,7 +342,7 @@ if ($dienst_start_dt !== null && $dienst_end_dt !== null) {
                             ?>
                             <div class="dp-header-chip" style="background: linear-gradient(135deg, <?php echo esc_attr($v_bg_start); ?> 0%, <?php echo esc_attr($v_bg_end); ?> 100%); border-color: <?php echo esc_attr($v_color); ?>; color: #0f172a;">
                                 <span class="dashicons dashicons-groups" style="font-size: 14px;"></span>
-                                <span><?php echo esc_html($vname); ?></span>
+                                <span title="<?php echo esc_attr($vname); ?>"><?php echo esc_html($dp_get_verein_abbrev($vname)); ?></span>
                             </div>
                         <?php endforeach; ?>
                     <?php endif; ?>
@@ -489,6 +503,10 @@ if ($dienst_start_dt !== null && $dienst_end_dt !== null) {
         background: #f8fafc;
         border: 1px solid #e2e8f0;
         border-radius: 10px;
+        position: sticky;
+        top: 0;
+        z-index: 50;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
     }
 
     .dp-filter-group {
@@ -530,9 +548,161 @@ if ($dienst_start_dt !== null && $dienst_end_dt !== null) {
 
     .dp-dienste-cards,
     .dp-dienste-kompakt-list {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-        gap: 1.5rem;
+        display: flex;
+        flex-direction: column;
+        gap: 2rem;
+    }
+
+    .dp-day-section-compact {
+        background: #fff;
+        border: 1px solid #e2e8f0;
+        border-radius: 6px;
+        overflow: hidden;
+    }
+
+    .dp-day-title {
+        margin: 0;
+        padding: 1rem 1.5rem;
+        background: #f8fafc;
+        border-bottom: 2px solid #e2e8f0;
+        font-size: 1rem;
+        font-weight: 600;
+        color: #1e293b;
+    }
+
+    .dp-dienste-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.95rem;
+    }
+
+    .dp-dienste-table thead {
+        background: #f0f4f8;
+    }
+
+    .dp-dienste-table th {
+        padding: 0.75rem 1rem;
+        text-align: left;
+        font-weight: 600;
+        color: #334155;
+        border-bottom: 1px solid #cbd5e1;
+    }
+
+    .dp-dienste-table tbody tr {
+        border-bottom: 1px solid #e8ecf1;
+        transition: background-color 0.2s ease;
+    }
+
+    .dp-dienste-table tbody tr:hover {
+        background-color: #f8fafc;
+    }
+
+    .dp-dienste-table td {
+        padding: 0.875rem 1rem;
+        vertical-align: middle;
+    }
+
+    .dp-dienste-table .col-zeit {
+        font-weight: 600;
+        width: 10%;
+        min-width: 90px;
+    }
+
+    .dp-dienste-table .col-bereich {
+        width: 12%;
+        min-width: 110px;
+    }
+
+    .dp-dienste-table .col-dienst {
+        width: 18%;
+        min-width: 140px;
+    }
+
+    .dp-dienste-table .col-besonderheiten {
+        width: 20%;
+        min-width: 150px;
+        color: #64748b;
+        font-size: 0.9rem;
+    }
+
+    .dp-dienste-table .col-zugeordnet {
+        width: 18%;
+        min-width: 140px;
+        color: #64748b;
+        font-size: 0.9rem;
+    }
+
+    .dp-dienste-table .col-status {
+        width: 10%;
+        min-width: 80px;
+    }
+
+    .dp-dienste-table .col-aktion {
+        width: 12%;
+        min-width: 100px;
+        text-align: center;
+    }
+
+    .dp-status-badge {
+        display: inline-block;
+        padding: 0.35rem 0.75rem;
+        border-radius: 4px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        white-space: nowrap;
+    }
+
+    .dp-status-badge.open {
+        background: #dcfce7;
+        color: #166534;
+    }
+
+    .dp-status-badge.full {
+        background: #fecaca;
+        color: #991b1b;
+    }
+
+    .dp-btn-anmelden {
+        padding: 0.5rem 1rem;
+        background: var(--dp-btn-accent, #3b82f6);
+        color: #fff;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 0.85rem;
+        font-weight: 500;
+        transition: opacity 0.2s;
+        white-space: nowrap;
+    }
+
+    .dp-btn-anmelden:hover {
+        opacity: 0.85;
+    }
+
+    .dp-empty,
+    .dp-grey-text {
+        color: #94a3b8;
+        font-style: italic;
+    }
+
+    .dp-bereich-badge {
+        display: inline-block;
+        padding: 0.35rem 0.65rem;
+        border-radius: 4px;
+        font-size: 0.85rem;
+        font-weight: 500;
+        color: #fff;
+        white-space: nowrap;
+    }
+
+    .dp-assigned-names {
+        color: #64748b;
+        font-size: 0.9rem;
+    }
+
+    .dp-dienst-hint {
+        color: #64748b;
+        font-size: 0.9rem;
     }
     </style>
 
@@ -756,7 +926,15 @@ if ($dienst_start_dt !== null && $dienst_end_dt !== null) {
                         $tl_bw   = round(max(0.5, min(100 - $tl_bl, (($tl_bm - $tl_vm) / $tl_span) * 100)), 2);
 
                         $tl_bclr = $dp_get_verein_color($dienst);
-                        $tl_is_split = !empty($dienst->splittbar) && intval($dienst->splittbar) === 1;
+                        // Split-Ansicht im Balken immer dann, wenn der Dienst mindestens 2 Slots hat.
+                        $tl_is_split = count($slots) >= 2;
+                        $tl_bar_label = !empty($tl_assigned_names)
+                            ? implode(', ', $tl_assigned_names)
+                            : ($taetigkeit->name ?? 'Unbekannt');
+                        $tl_split_slots = array_values(array_slice($slots, 0, 2));
+                        while (count($tl_split_slots) < 2) {
+                            $tl_split_slots[] = null;
+                        }
 
                     ?>
 
@@ -786,19 +964,45 @@ if ($dienst_start_dt !== null && $dienst_end_dt !== null) {
 
                             </div>
 
-                            <?php if ($can_manage_dienste && !empty($tl_assigned_names)): ?>
-                                <div class="dp-tl-assignees"><?php echo esc_html(implode(', ', $tl_assigned_names)); ?></div>
-                            <?php endif; ?>
-
                         </div>
 
                         <div class="dp-tl-track">
 
                             <div class="dp-tl-bar<?php echo $tl_is_split ? ' is-split' : ''; ?>" style="left:<?php echo $tl_bl; ?>%;width:<?php echo $tl_bw; ?>%;background:<?php echo esc_attr($tl_bclr); ?>;">
 
-                                <?php if ($tl_is_split): ?><span class="dp-tl-split-marker" title="Splittbar"></span><?php endif; ?>
-
-                                <span class="dp-tl-bar-time"><?php echo esc_html($taetigkeit->name ?? 'Unbekannt'); ?></span>
+                                <?php if ($tl_is_split): ?>
+                                <div class="dp-tl-split-halves">
+                                    <?php foreach ($tl_split_slots as $tl_half_slot): ?>
+                                        <?php
+                                        $tl_half_slot_id = $tl_half_slot ? intval($tl_half_slot->id) : 0;
+                                        $tl_half_is_occupied = $tl_half_slot && !empty($tl_half_slot->mitarbeiter_id);
+                                        $tl_half_is_own = $tl_half_slot && $current_mitarbeiter_id > 0 && intval($tl_half_slot->mitarbeiter_id) === intval($current_mitarbeiter_id);
+                                        $tl_half_label = 'Frei';
+                                        if ($tl_half_is_occupied) {
+                                            $tl_half_m_obj = $db->get_mitarbeiter($tl_half_slot->mitarbeiter_id);
+                                            if ($tl_half_m_obj && ($can_manage_dienste || $tl_half_is_own)) {
+                                                $tl_half_label = trim(($tl_half_m_obj->vorname ?? '') . ' ' . substr(($tl_half_m_obj->nachname ?? ''), 0, 1) . '.');
+                                            } else {
+                                                $tl_half_label = 'Besetzt';
+                                            }
+                                        }
+                                        ?>
+                                        <div class="dp-tl-split-half">
+                                            <span class="dp-tl-bar-time"><?php echo esc_html($tl_half_label); ?></span>
+                                            <div class="dp-tl-split-action">
+                                                <?php if ($tl_half_is_own && $tl_half_slot_id > 0): ?>
+                                                    <button type="button" class="dp-tl-bar-btn" onclick="dpCancelDienst(<?php echo intval($tl_half_slot_id); ?>, this)">Absagen</button>
+                                                <?php elseif ($anmeldung_aktiv && !$tl_half_is_occupied && $tl_half_slot_id > 0): ?>
+                                                    <button type="button" class="dp-tl-bar-btn dp-tl-bar-btn--takeover" style="--dp-btn-accent:<?php echo esc_attr($tl_bclr); ?>;" onclick="return dpOpenTakeoverModal(<?php echo intval($tl_half_slot_id); ?>, <?php echo intval($dienst->id); ?>, event);">Anmelden</button>
+                                                <?php elseif (!$anmeldung_aktiv && !$tl_half_is_occupied): ?>
+                                                    <span class="dp-tl-locked" title="Anmeldung gesperrt">&#x1F512;</span>
+                                                <?php endif; ?>
+                                            </div>
+                                        </div>
+                                    <?php endforeach; ?>
+                                </div>
+                                <?php else: ?>
+                                <span class="dp-tl-bar-time"><?php echo esc_html($tl_bar_label); ?></span>
 
                                 <?php if ($has_my_slot && $first_own_slot_id > 0): ?>
 
@@ -811,8 +1015,9 @@ if ($dienst_start_dt !== null && $dienst_end_dt !== null) {
                                 <button type="button" class="dp-tl-bar-btn dp-tl-bar-btn--takeover" style="--dp-btn-accent:<?php echo esc_attr($tl_bclr); ?>;" onclick="return dpOpenTakeoverModal(<?php echo intval($first_free_slot_id); ?>, <?php echo intval($dienst->id); ?>, event);">Anmelden</button>
 
                                 <?php endif; ?>
+                                <?php endif; ?>
 
-                                <?php if ($can_manage_dienste): ?>
+                                <?php if ($can_manage_dienste && !$tl_is_split): ?>
 
                                     <?php foreach ($slots as $slot_rm): if (empty($slot_rm->mitarbeiter_id)) continue; ?>
 
@@ -822,7 +1027,7 @@ if ($dienst_start_dt !== null && $dienst_end_dt !== null) {
 
                                 <?php endif; ?>
 
-                                <?php if (!$anmeldung_aktiv && $freie_slots > 0): ?>
+                                <?php if (!$anmeldung_aktiv && $freie_slots > 0 && !$tl_is_split): ?>
 
                                 <span class="dp-tl-locked" title="Anmeldung gesperrt">&#x1F512;</span>
 
@@ -844,7 +1049,7 @@ if ($dienst_start_dt !== null && $dienst_end_dt !== null) {
 
             </div><!-- .dp-tl-wrap -->
         <?php elseif ($view_mode === 'kompakt'): ?>
-            <!-- Kompakte Listen-Ansicht -->
+            <!-- Kompakte Listen-Ansicht (Tabelle) -->
             <div class="dp-dienste-kompakt-list">
                 <?php foreach ($dienste_nach_tagen as $tag_id => $tag_dienste):
                     $tag = null;
@@ -860,7 +1065,19 @@ if ($dienst_start_dt !== null && $dienst_end_dt !== null) {
                     <div class="dp-day-section-compact" data-tag-id="<?php echo intval($tag_id); ?>">
                         <h3 class="dp-day-title"><?php echo esc_html($tag_datum); ?></h3>
 
-                        <div class="dp-dienst-rows">
+                        <table class="dp-dienste-table">
+                            <thead>
+                                <tr>
+                                    <th class="col-zeit">Zeit</th>
+                                    <th class="col-bereich">Bereich</th>
+                                    <th class="col-dienst">Dienst</th>
+                                    <th class="col-besonderheiten">Besonderheiten</th>
+                                    <th class="col-zugeordnet">Zugeordnet</th>
+                                    <th class="col-status">Status</th>
+                                    <th class="col-aktion">Aktion</th>
+                                </tr>
+                            </thead>
+                            <tbody>
                             <?php foreach ($tag_dienste as $dienst):
                                 $slots = $db->get_dienst_slots($dienst->id);
                                 $bereich = $db->get_bereich($dienst->bereich_id);
@@ -894,32 +1111,51 @@ if ($dienst_start_dt !== null && $dienst_end_dt !== null) {
                                 $dienst_bis = $dienst->bis_zeit ?? ($dienst->zeit_bis ?? '');
                                 $dienst_beschreibung = $dienst->beschreibung ?? ($dienst->besonderheiten ?? '');
                             ?>
-                                <div class="dp-dienst-row" data-tag-id="<?php echo intval($tag_id); ?>" data-dienst-id="<?php echo $dienst->id; ?>" data-bereich-id="<?php echo intval($dienst->bereich_id); ?>" data-taetigkeit-id="<?php echo intval($dienst->taetigkeit_id); ?>" data-has-free="<?php echo $freie_slots > 0 ? '1' : '0'; ?>" data-has-mine="<?php echo $has_my_slot ? '1' : '0'; ?>">
-                                    <div class="dp-dienst-row-main">
-                                        <span class="dp-dienst-row-time"><?php echo substr($dienst_von, 0, 5) . ' - ' . substr($dienst_bis, 0, 5); ?></span>
+                                <tr class="dp-dienst-row" data-tag-id="<?php echo intval($tag_id); ?>" data-dienst-id="<?php echo $dienst->id; ?>" data-bereich-id="<?php echo intval($dienst->bereich_id); ?>" data-taetigkeit-id="<?php echo intval($dienst->taetigkeit_id); ?>" data-has-free="<?php echo $freie_slots > 0 ? '1' : '0'; ?>" data-has-mine="<?php echo $has_my_slot ? '1' : '0'; ?>">
+                                    <td class="col-zeit">
+                                        <strong><?php echo substr($dienst_von, 0, 5) . ' - ' . substr($dienst_bis, 0, 5); ?></strong>
+                                    </td>
+                                    <td class="col-bereich">
                                         <span class="dp-bereich-badge" style="background-color: <?php echo esc_attr($bereich->farbe ?? '#e2e8f0'); ?>;">
                                             <?php echo esc_html($bereich->name ?? ''); ?>
                                         </span>
-                                        <strong class="dp-dienst-row-name"><?php echo esc_html($taetigkeit->name ?? 'Unbekannt'); ?></strong>
+                                    </td>
+                                    <td class="col-dienst">
+                                        <strong><?php echo esc_html($taetigkeit->name ?? 'Unbekannt'); ?></strong>
+                                    </td>
+                                    <td class="col-besonderheiten">
                                         <?php if (!empty($dienst_beschreibung)): ?>
-                                            <span class="dp-dienst-row-hint"><?php echo esc_html($dienst_beschreibung); ?></span>
+                                            <span class="dp-dienst-hint"><?php echo esc_html($dienst_beschreibung); ?></span>
+                                        <?php else: ?>
+                                            <span class="dp-empty">—</span>
                                         <?php endif; ?>
+                                    </td>
+                                    <td class="col-zugeordnet">
                                         <?php if ($can_manage_dienste && !empty($kp_assigned_names)): ?>
-                                            <span class="dp-dienst-row-assignees"><?php echo esc_html(implode(', ', $kp_assigned_names)); ?></span>
+                                            <span class="dp-assigned-names"><?php echo esc_html(implode(', ', $kp_assigned_names)); ?></span>
+                                        <?php else: ?>
+                                            <span class="dp-empty">—</span>
                                         <?php endif; ?>
-                                    </div>
-                                    <div class="dp-dienst-row-actions">
-                                        <span class="dp-row-status <?php echo $freie_slots > 0 ? 'open' : 'full'; ?>">
+                                    </td>
+                                    <td class="col-status">
+                                        <span class="dp-status-badge <?php echo $freie_slots > 0 ? 'open' : 'full'; ?>">
                                             <?php echo $freie_slots > 0 ? ($freie_slots . ' frei') : 'Voll'; ?>
                                         </span>
+                                    </td>
+                                    <td class="col-aktion">
                                         <?php if ($anmeldung_aktiv && $first_free_slot_id > 0): ?>
                                             <?php $dienst_btn_color = $dp_get_verein_color($dienst); ?>
-                                            <button type="button" class="dp-slot-offen-label" style="--dp-btn-accent:<?php echo esc_attr($dienst_btn_color); ?>;" onclick="return dpOpenTakeoverModal(<?php echo $first_free_slot_id; ?>, <?php echo intval($dienst->id); ?>, event);">Übernehmen</button>
+                                            <button type="button" class="dp-btn-anmelden" style="--dp-btn-accent:<?php echo esc_attr($dienst_btn_color); ?>;" onclick="return dpOpenTakeoverModal(<?php echo $first_free_slot_id; ?>, <?php echo intval($dienst->id); ?>, event);">Übernehmen</button>
+                                        <?php elseif ($freie_slots === 0): ?>
+                                            <span class="dp-grey-text">Voll</span>
+                                        <?php else: ?>
+                                            <span class="dp-grey-text">—</span>
                                         <?php endif; ?>
-                                    </div>
-                                </div>
+                                    </td>
+                                </tr>
                             <?php endforeach; ?>
-                        </div>
+                            </tbody>
+                        </table>
                     </div>
                 <?php endforeach; ?>
             </div>
@@ -953,7 +1189,7 @@ if ($dienst_start_dt !== null && $dienst_end_dt !== null) {
                                 })) > 0 : false;
                                 ?>
                                 
-                                <div class="dp-dienst-card" data-tag-id="<?php echo intval($tag_id); ?>" data-dienst-id="<?php echo $dienst->id; ?>" data-bereich-id="<?php echo intval($dienst->bereich_id); ?>" data-taetigkeit-id="<?php echo intval($dienst->taetigkeit_id); ?>" data-has-free="<?php echo $freie_slots > 0 ? '1' : '0'; ?>" data-has-mine="<?php echo $has_my_slot ? '1' : '0'; ?>">
+                                <div class="dp-dienst-card" data-tag-id="<?php echo intval($tag_id); ?>" data-dienst-id="<?php echo $dienst->id; ?>" data-bereich-id="<?php echo intval($dienst->bereich_id); ?>" data-taetigkeit-id="<?php echo intval($dienst->taetigkeit_id); ?>" data-admin-only="<?php echo $taetigkeit->admin_only ? '1' : '0'; ?>" data-has-free="<?php echo $freie_slots > 0 ? '1' : '0'; ?>" data-has-mine="<?php echo $has_my_slot ? '1' : '0'; ?>">
                                     <div class="dp-dienst-header">
                                         <?php
                                         $dienst_von = $dienst->von_zeit ?? ($dienst->zeit_von ?? '');
@@ -1009,10 +1245,18 @@ if ($dienst_start_dt !== null && $dienst_end_dt !== null) {
                                                 <?php else: ?>
                                                     <?php if ($anmeldung_aktiv): ?>
                                                         <?php $dienst_btn_color = $dp_get_verein_color($dienst); ?>
-                                                        <span class="dp-slot-offen-label" style="--dp-btn-accent:<?php echo esc_attr($dienst_btn_color); ?>;" onclick="return dpOpenTakeoverModal(<?php echo intval($slot->id); ?>, <?php echo intval($dienst->id); ?>, event);">
-                                                            <span class="dashicons dashicons-unlock"></span>
-                                                            Übernehmen
-                                                        </span>
+                                                        <?php $is_admin_only_blocked = !empty($taetigkeit->admin_only) && !$can_manage_dienste; ?>
+                                                        <?php if ($is_admin_only_blocked): ?>
+                                                            <span class="dp-slot-admin-only" style="color: #d97706; font-size: 0.875rem; display: flex; align-items: center; gap: 0.4rem; cursor: not-allowed; opacity: 0.6;">
+                                                                <span class="dashicons dashicons-lock" style="width: 18px; height: 18px; font-size: 18px;"></span> 
+                                                                Admin-only
+                                                            </span>
+                                                        <?php else: ?>
+                                                            <span class="dp-slot-offen-label" style="--dp-btn-accent:<?php echo esc_attr($dienst_btn_color); ?>;" onclick="return dpOpenTakeoverModal(<?php echo intval($slot->id); ?>, <?php echo intval($dienst->id); ?>, event);" title="<?php echo $is_admin_only_blocked ? 'Nur Admins können diese Tätigkeit zuweisen' : 'Dienst übernehmen'; ?>">
+                                                                <span class="dashicons dashicons-unlock"></span>
+                                                                Übernehmen
+                                                            </span>
+                                                        <?php endif; ?>
                                                     <?php else: ?>
                                                         <span class="dp-slot-gesperrt" style="color: #9ca3af; font-size: 0.875rem;">
                                                             <span class="dashicons dashicons-lock"></span> Gesperrt
@@ -1109,6 +1353,14 @@ window.dpOpenTakeoverModal = function(slotId, dienstId, event) {
     if (!slotId || !dienstId) {
         window.dpTrace('Abbruch: ungültige IDs', { slotId: slotId, dienstId: dienstId });
         alert('Dienstdaten konnten nicht geladen werden. Bitte Seite neu laden.');
+        return false;
+    }
+
+    // Prüfe ob die Tätigkeit admin-only ist
+    var dienstCard = document.querySelector('[data-dienst-id="' + dienstId + '"]');
+    if (dienstCard && dienstCard.getAttribute('data-admin-only') === '1' && !window.dpCanManageDienste) {
+        alert('⛔ Diese Tätigkeit kann nur durch Administratoren zugewiesen werden.\n\nBitte kontaktieren Sie einen Admin oder einen Verantwortlichen.');
+        window.dpTrace('Admin-only Dienst Blockierung', { dienstId: dienstId, adminOnly: true, isAdmin: window.dpCanManageDienste });
         return false;
     }
 
@@ -1322,48 +1574,6 @@ function dpAdminRemoveSlot(slotId, buttonElement) {
         },
         error: function() {
             alert('Serverfehler beim Löschen der Zuweisung.');
-            btn.disabled = false;
-            btn.innerHTML = originalText;
-        }
-    });
-}
-
-function dpAdminSplitDienst(dienstId, buttonElement) {
-    if (!confirm('Diesen Dienst jetzt splitten?')) {
-        return;
-    }
-
-    if (!window.dpPublic || !window.dpPublic.ajaxurl || !window.dpPublic.nonce) {
-        alert('Konfiguration fehlt (dpPublic). Bitte Seite neu laden.');
-        return;
-    }
-
-    var btn = buttonElement;
-    var originalText = btn.innerHTML;
-    btn.disabled = true;
-    btn.innerHTML = 'Splitte...';
-
-    jQuery.ajax({
-        url: window.dpPublic.ajaxurl,
-        type: 'POST',
-        data: {
-            action: 'dp_frontend_admin_split_dienst',
-            nonce: window.dpPublic.nonce,
-            dienst_id: dienstId
-        },
-        success: function(response) {
-            if (response && response.success) {
-                alert((response.data && response.data.message) ? response.data.message : 'Dienst wurde gesplittet.');
-                window.location.reload();
-            } else {
-                var message = (response && response.data && response.data.message) ? response.data.message : 'Split fehlgeschlagen.';
-                alert(message);
-                btn.disabled = false;
-                btn.innerHTML = originalText;
-            }
-        },
-        error: function() {
-            alert('Serverfehler beim Splitten.');
             btn.disabled = false;
             btn.innerHTML = originalText;
         }
@@ -2673,30 +2883,22 @@ document.addEventListener('DOMContentLoaded', function() {
 
     }
 
+    .dp-tl-bar.is-split {
+        padding: 0;
+        gap: 0;
+    }
+
     .dp-tl-bar.is-split::after {
-        content: '';
+        content: none;
         position: absolute;
-        top: 2px;
-        bottom: 2px;
+        top: 1px;
+        bottom: 1px;
         left: 50%;
         width: 2px;
         margin-left: -1px;
         border-radius: 1px;
-        background: rgba(255,255,255,0.92);
-        box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.15);
-        pointer-events: none;
-    }
-
-    .dp-tl-split-marker {
-        position: absolute;
-        left: 50%;
-        top: 3px;
-        transform: translateX(-50%);
-        width: 7px;
-        height: 7px;
-        border-radius: 999px;
-        background: #ffffff;
-        box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.2);
+        background: rgba(255,255,255,0.96);
+        box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.22);
         pointer-events: none;
     }
 
@@ -2710,8 +2912,68 @@ document.addEventListener('DOMContentLoaded', function() {
 
         opacity: 0.96;
 
-        flex-shrink: 0;
+        flex-shrink: 1;
+        min-width: 0;
+        margin-right: auto;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
 
+    }
+
+    .dp-tl-split-halves {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        column-gap: 0;
+        width: 100%;
+        height: 100%;
+    }
+
+    .dp-tl-split-half {
+        min-width: 0;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.3rem;
+        padding: 0 0.4rem;
+        overflow: hidden;
+        border-radius: 0;
+        background: transparent;
+        height: 100%;
+    }
+
+    .dp-tl-split-action {
+        flex-shrink: 0;
+        width: 50px;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+    }
+
+    .dp-tl-split-half:first-child {
+        border-right: 2px solid rgba(255,255,255,0.85);
+    }
+
+    .dp-tl-split-half .dp-tl-bar-time {
+        margin-right: 0;
+        margin-left: 0;
+        text-align: left;
+        max-width: calc(100% - 52px);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        height: 1.2em;
+        line-height: 1.2;
+        flex-grow: 1;
+        min-width: 0;
+    }
+
+    .dp-tl-split-half .dp-tl-bar-btn,
+    .dp-tl-split-half .dp-tl-locked {
+        margin-left: 0;
+        margin-right: 0;
+        flex-shrink: 0;
+        font-size: 0.7rem;
     }
 
 
@@ -2816,6 +3078,10 @@ document.addEventListener('DOMContentLoaded', function() {
         background: #f8fafc;
         border: 1px solid #e2e8f0;
         border-radius: 10px;
+        position: sticky;
+        top: 0;
+        z-index: 50;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
     }
 
     .dp-filter-group {
@@ -2948,84 +3214,146 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     .dp-day-section-compact {
+        background: #fff;
+        border: 1px solid #e2e8f0;
+        border-radius: 6px;
+        overflow: hidden;
         margin-bottom: 1.5rem;
     }
 
-    .dp-dienst-rows {
-        display: grid;
-        gap: 0.7rem;
+    .dp-dienste-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.95rem;
     }
 
-    .dp-dienst-row {
-        background: #f8fafc;
-        border: 1px solid #e2e8f0;
-        border-radius: 10px;
-        padding: 0.8rem 0.9rem;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        gap: 0.8rem;
-        flex-wrap: wrap;
+    .dp-dienste-table thead {
+        background: #f0f4f8;
     }
 
-    .dp-dienst-row-main {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.6rem;
-        flex-wrap: wrap;
-        min-width: 0;
+    .dp-dienste-table th {
+        padding: 0.75rem 1rem;
+        text-align: left;
+        font-weight: 600;
+        color: #334155;
+        border-bottom: 1px solid #cbd5e1;
     }
 
-    .dp-dienst-row-time {
-        font-weight: 700;
-        color: #0f172a;
+    .dp-dienste-table tbody tr {
+        border-bottom: 1px solid #e8ecf1;
+        transition: background-color 0.2s ease;
     }
 
-    .dp-dienst-row-name {
-        color: #0f172a;
+    .dp-dienste-table tbody tr:hover {
+        background-color: #f8fafc;
     }
 
-    .dp-dienst-row-hint {
+    .dp-dienste-table td {
+        padding: 0.875rem 1rem;
+        vertical-align: middle;
+    }
+
+    .dp-dienste-table .col-zeit {
+        font-weight: 600;
+        width: 10%;
+        min-width: 90px;
+    }
+
+    .dp-dienste-table .col-bereich {
+        width: 12%;
+        min-width: 110px;
+    }
+
+    .dp-dienste-table .col-dienst {
+        width: 18%;
+        min-width: 140px;
+    }
+
+    .dp-dienste-table .col-besonderheiten {
+        width: 20%;
+        min-width: 150px;
         color: #64748b;
-        font-size: 0.88rem;
+        font-size: 0.9rem;
+    }
+
+    .dp-dienste-table .col-zugeordnet {
+        width: 18%;
+        min-width: 140px;
+        color: #64748b;
+        font-size: 0.9rem;
+    }
+
+    .dp-dienste-table .col-status {
+        width: 10%;
+        min-width: 80px;
+    }
+
+    .dp-dienste-table .col-aktion {
+        width: 12%;
+        min-width: 100px;
+        text-align: center;
+    }
+
+    .dp-status-badge {
+        display: inline-block;
+        padding: 0.35rem 0.75rem;
+        border-radius: 4px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        white-space: nowrap;
+    }
+
+    .dp-status-badge.open {
+        background: #dcfce7;
+        color: #166534;
+    }
+
+    .dp-status-badge.full {
+        background: #fecaca;
+        color: #991b1b;
+    }
+
+    .dp-btn-anmelden {
+        padding: 0.5rem 1rem;
+        background: var(--dp-btn-accent, #3b82f6);
+        color: #fff;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 0.85rem;
+        font-weight: 500;
+        transition: opacity 0.2s;
+        white-space: nowrap;
+    }
+
+    .dp-btn-anmelden:hover {
+        opacity: 0.85;
+    }
+
+    .dp-empty,
+    .dp-grey-text {
+        color: #94a3b8;
         font-style: italic;
     }
 
-    .dp-dienst-row-assignees {
-        color: #475569;
-        font-size: 0.82rem;
+    .dp-bereich-badge {
+        display: inline-block;
+        padding: 0.35rem 0.65rem;
+        border-radius: 4px;
+        font-size: 0.85rem;
+        font-weight: 500;
+        color: #fff;
         white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        max-width: 100%;
     }
 
-    .dp-dienst-row-actions {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.55rem;
-        margin-left: auto;
+    .dp-assigned-names {
+        color: #64748b;
+        font-size: 0.9rem;
     }
 
-    .dp-row-status {
-        display: inline-flex;
-        align-items: center;
-        border-radius: 8px;
-        padding: 0.2rem 0.55rem;
-        font-size: 0.82rem;
-        font-weight: 700;
-    }
-
-    .dp-row-status.open {
-        color: #991b1b;
-        background: #fee2e2;
-        border: 1px solid #fca5a5;
-    }
-
-    .dp-row-status.full {
-        color: #166534;
-        background: #dcfce7;
-        border: 1px solid #86efac;
+    .dp-dienst-hint {
+        color: #64748b;
+        font-size: 0.9rem;
     }
     
     .dp-dienst-card {
@@ -3148,7 +3476,6 @@ document.addEventListener('DOMContentLoaded', function() {
         width: 100%;
     }
 
-    .dp-btn-admin-split,
     .dp-btn-admin-remove {
         display: inline-flex;
         align-items: center;
@@ -3160,16 +3487,6 @@ document.addEventListener('DOMContentLoaded', function() {
         padding: 0.2rem 0.5rem;
         cursor: pointer;
         border: 1px solid;
-    }
-
-    .dp-btn-admin-split {
-        color: #0f766e;
-        background: #ccfbf1;
-        border-color: #5eead4;
-    }
-
-    .dp-btn-admin-split:hover {
-        background: #99f6e4;
     }
 
     .dp-btn-admin-remove {
@@ -3212,6 +3529,20 @@ document.addEventListener('DOMContentLoaded', function() {
 
     .dp-slot-offen-label:hover {
         filter: brightness(0.9);
+    }
+
+    .dp-slot-admin-only {
+        display: inline-flex !important;
+        align-items: center;
+        gap: 0.4rem;
+        padding: 0.4rem 0.65rem;
+        border-radius: 6px;
+        background: #fef3c7;
+        border: 1px solid #fde68a;
+        color: #d97706 !important;
+        font-weight: 600;
+        font-size: 0.82rem;
+        cursor: not-allowed;
     }
     
     /* Modal-Styles */

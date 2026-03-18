@@ -190,6 +190,10 @@ if (!defined('ABSPATH')) exit;
             </form>
         </div>
         <div class="dp-modal-footer">
+            <div style="display: flex; gap: 0.5rem;">
+                <button type="button" id="btn-unsplit-dienst" class="button" style="display: none;" onclick="unsplitDienstFromModal()" title="Halbdienste zurück zu normalem Dienst">Split aufheben</button>
+                <button type="button" id="btn-split-dienst" class="button" style="display: none;" onclick="quickSplitDienstFromModal()" title="Dienst schnell in Halbdienste aufteilen">Quick Split</button>
+            </div>
             <button type="button" class="button" onclick="closeDienstModal()"><?php _e('Abbrechen', 'dienstplan-verwaltung'); ?></button>
             <button type="button" class="button button-primary" onclick="saveDienst()"><?php _e('Speichern', 'dienstplan-verwaltung'); ?></button>
         </div>

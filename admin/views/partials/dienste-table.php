@@ -134,13 +134,14 @@ uasort($dienste_nach_tagen, function($a, $b) {
                         <th width="9%"><?php _e('Tätigkeit', 'dienstplan-verwaltung'); ?></th>
                         <th width="8%"><?php _e('Personen', 'dienstplan-verwaltung'); ?></th>
                         <th width="18%"><?php _e('Besetzung', 'dienstplan-verwaltung'); ?></th>
-                        <th width="15%"><?php _e('Besonderheiten', 'dienstplan-verwaltung'); ?></th>
-                        <th width="22%"><?php _e('Aktionen', 'dienstplan-verwaltung'); ?></th>
+                        <th width="11%"><?php _e('Besonderheiten', 'dienstplan-verwaltung'); ?></th>
+                        <th width="26%"><?php _e('Aktionen', 'dienstplan-verwaltung'); ?></th>
                     </tr>
                 </thead>
                 <tbody style="position: relative; overflow: visible;">
                     <?php foreach ($tag_dienste as $dienst): 
                         $slots = $db->get_dienst_slots($dienst->id);
+                        $is_split_dienst = (intval($dienst->splittbar ?? 0) === 1) || (count($slots) >= 2);
                         $ist_unvollstaendig = (isset($dienst->status) && $dienst->status === 'unvollstaendig');
                         $row_style = $ist_unvollstaendig ? 'background: #fef3c7; border-left: 4px solid #f59e0b;' : '';
                     ?>
@@ -255,8 +256,8 @@ uasort($dienste_nach_tagen, function($a, $b) {
                                     <span style="color: #9ca3af;">—</span>
                                 <?php endif; ?>
                             </td>
-                            <td>
-                                <div style="display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end;">
+                            <td style="min-width: 250px;">
+                                <div style="display: flex; gap: 4px; flex-wrap: nowrap; justify-content: flex-end; align-items: center;">
                                     <button type="button" class="button button-small" title="<?php esc_attr_e('Besetzung verwalten', 'dienstplan-verwaltung'); ?>" onclick="editBesetzung(<?php echo $dienst->id; ?>)">
                                         <span class="dashicons dashicons-admin-users"></span>
                                     </button>
@@ -267,13 +268,26 @@ uasort($dienste_nach_tagen, function($a, $b) {
                                         <button type="button" class="button button-small" title="<?php esc_attr_e('Dienst kopieren', 'dienstplan-verwaltung'); ?>" onclick="copyDienst(<?php echo $dienst->id; ?>)">
                                             <span class="dashicons dashicons-admin-page"></span>
                                         </button>
+                                        <?php if (!$is_split_dienst): ?>
+                                            <button type="button" class="button button-small" title="<?php esc_attr_e('Dienst splitten', 'dienstplan-verwaltung'); ?>" onclick="window.splitDienst(<?php echo $dienst->id; ?>)">
+                                                <span class="dashicons dashicons-randomize"></span>
+                                            </button>
+                                        <?php else: ?>
+                                            <button type="button" class="button button-small" title="<?php esc_attr_e('Split aufheben', 'dienstplan-verwaltung'); ?>" onclick="window.unsplitDienst(<?php echo $dienst->id; ?>)" style="border-color: #f59e0b; color: #b45309;">
+                                                <span class="dashicons dashicons-editor-break"></span>
+                                            </button>
+                                        <?php endif; ?>
                                         <button type="button" class="button button-small" title="<?php esc_attr_e('Dienst löschen', 'dienstplan-verwaltung'); ?>" onclick="if(confirm('<?php _e('Wirklich löschen?', 'dienstplan-verwaltung'); ?>')) { deleteDienst(<?php echo $dienst->id; ?>); }" style="color: #dc2626; border-color: #fecaca;">
                                             <span class="dashicons dashicons-trash"></span>
                                         </button>
                                     <?php else: ?>
-                                        <?php if (empty($dienst->splittbar)): ?>
-                                            <button type="button" class="button button-small" title="<?php esc_attr_e('Dienst splitten', 'dienstplan-verwaltung'); ?>" onclick="splitDienst(<?php echo $dienst->id; ?>)">
+                                        <?php if (!$is_split_dienst): ?>
+                                            <button type="button" class="button button-small" title="<?php esc_attr_e('Dienst splitten', 'dienstplan-verwaltung'); ?>" onclick="window.splitDienst(<?php echo $dienst->id; ?>)">
                                                 <span class="dashicons dashicons-randomize"></span>
+                                            </button>
+                                        <?php else: ?>
+                                            <button type="button" class="button button-small" title="<?php esc_attr_e('Split aufheben', 'dienstplan-verwaltung'); ?>" onclick="window.unsplitDienst(<?php echo $dienst->id; ?>)" style="border-color: #f59e0b; color: #b45309;">
+                                                <span class="dashicons dashicons-editor-break"></span>
                                             </button>
                                         <?php endif; ?>
                                     <?php endif; ?>
@@ -341,13 +355,14 @@ uasort($dienste_nach_tagen, function($a, $b) {
                         <th width="9%"><?php _e('Tätigkeit', 'dienstplan-verwaltung'); ?></th>
                         <th width="8%"><?php _e('Personen', 'dienstplan-verwaltung'); ?></th>
                         <th width="18%"><?php _e('Besetzung', 'dienstplan-verwaltung'); ?></th>
-                        <th width="15%"><?php _e('Besonderheiten', 'dienstplan-verwaltung'); ?></th>
-                        <th width="19%"><?php _e('Aktionen', 'dienstplan-verwaltung'); ?></th>
+                        <th width="11%"><?php _e('Besonderheiten', 'dienstplan-verwaltung'); ?></th>
+                        <th width="26%"><?php _e('Aktionen', 'dienstplan-verwaltung'); ?></th>
                     </tr>
                 </thead>
                 <tbody style="position: relative; overflow: visible;">
                     <?php foreach ($dienste_ohne_tag as $dienst): 
                         $slots = $db->get_dienst_slots($dienst->id);
+                        $is_split_dienst = (intval($dienst->splittbar ?? 0) === 1) || (count($slots) >= 2);
                         $ist_unvollstaendig = (isset($dienst->status) && $dienst->status === 'unvollstaendig');
                         $row_style = $ist_unvollstaendig ? 'background: #fef3c7; border-left: 4px solid #f59e0b;' : '';
                     ?>
@@ -442,8 +457,8 @@ uasort($dienste_nach_tagen, function($a, $b) {
                                     <span style="color: #9ca3af;">—</span>
                                 <?php endif; ?>
                             </td>
-                            <td>
-                                <div style="display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end;">
+                            <td style="min-width: 250px;">
+                                <div style="display: flex; gap: 4px; flex-wrap: nowrap; justify-content: flex-end; align-items: center;">
                                     <button type="button" class="button button-small" title="<?php esc_attr_e('Dienst bearbeiten', 'dienstplan-verwaltung'); ?>" onclick="editDienst(<?php echo $dienst->id; ?>)">
                                         <span class="dashicons dashicons-edit"></span>
                                     </button>
@@ -453,6 +468,15 @@ uasort($dienste_nach_tagen, function($a, $b) {
                                     <button type="button" class="button button-small" title="<?php esc_attr_e('Dienst kopieren', 'dienstplan-verwaltung'); ?>" onclick="copyDienst(<?php echo $dienst->id; ?>)">
                                         <span class="dashicons dashicons-admin-page"></span>
                                     </button>
+                                    <?php if (!$is_split_dienst): ?>
+                                        <button type="button" class="button button-small" title="<?php esc_attr_e('Dienst splitten', 'dienstplan-verwaltung'); ?>" onclick="window.splitDienst(<?php echo $dienst->id; ?>)">
+                                            <span class="dashicons dashicons-randomize"></span>
+                                        </button>
+                                    <?php else: ?>
+                                        <button type="button" class="button button-small" title="<?php esc_attr_e('Split aufheben', 'dienstplan-verwaltung'); ?>" onclick="window.unsplitDienst(<?php echo $dienst->id; ?>)" style="border-color: #f59e0b; color: #b45309;">
+                                            <span class="dashicons dashicons-editor-break"></span>
+                                        </button>
+                                    <?php endif; ?>
                                     <button type="button" class="button button-small" title="<?php esc_attr_e('Dienst löschen', 'dienstplan-verwaltung'); ?>" onclick="if(confirm('<?php _e('Wirklich löschen?', 'dienstplan-verwaltung'); ?>')) { deleteDienst(<?php echo $dienst->id; ?>); }" style="color: #dc2626; border-color: #fecaca;">
                                         <span class="dashicons dashicons-trash"></span>
                                     </button>
