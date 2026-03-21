@@ -7,6 +7,17 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ---
 
+## [0.9.5.46] - 2026-03-21 📦 Release Packaging Hotfix
+
+### 🛠 Fixes
+
+- Release-ZIP für Deployment neu erstellt und bereinigt.
+- Doppelte Archiveinträge entfernt.
+- Backup-Dateien aus dem Release-Paket ausgeschlossen.
+- Paketstruktur für WordPress-Update robuster gemacht (Top-Level Plugin-Ordner).
+
+---
+
 ## [0.9.5.45] - 2026-03-18 🔒 Admin-only Services & Bereiche Release
 
 ### ✨ Neue Features

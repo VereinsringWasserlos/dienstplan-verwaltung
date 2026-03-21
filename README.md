@@ -1,6 +1,6 @@
 # Dienstplan Verwaltung V2
 
-**Version:** 0.9.5.45 (Admin-only Services Release)  
+**Version:** 0.9.5.46 (Release Packaging Hotfix)  
 **Requires at least:** WordPress 5.8  
 **Tested up to:** WordPress 6.4  
 **Requires PHP:** 7.4  
