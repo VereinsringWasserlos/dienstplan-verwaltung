@@ -73,6 +73,13 @@ class Dienstplan_Updater {
     private $git_available = false;
 
     /**
+     * Branch-Name für Shell-Kommandos bereinigt.
+     *
+     * @var string
+     */
+    private $safe_git_branch = 'main';
+
+    /**
      * Initialisiert den Updater
      */
     public function __construct() {
@@ -84,12 +91,14 @@ class Dienstplan_Updater {
         // Git-Repository Konfiguration
         $this->git_repo_url = 'https://github.com/VereinsringWasserlos/dienstplan-verwaltung.git';
         $this->git_branch = 'main';
+        $this->safe_git_branch = $this->sanitize_git_ref($this->git_branch);
 
         // Finde Git-Executable und prüfe Verfügbarkeit
         $this->find_git_executable();
         $this->git_available = $this->is_git_available();
 
         // WordPress Hooks für Update-System
+        add_filter('pre_set_site_transient_update_plugins', array($this, 'check_for_updates'));
         add_filter('site_transient_update_plugins', array($this, 'check_for_updates'));
         add_filter('plugins_api', array($this, 'plugin_info'), 20, 3);
         add_action('upgrader_process_complete', array($this, 'after_update'), 10, 2);
@@ -314,7 +323,7 @@ class Dienstplan_Updater {
     private function get_update_info_from_github() {
         // GitHub API: Neuestes Release
         $api_url = 'https://api.github.com/repos/VereinsringWasserlos/dienstplan-verwaltung/releases/latest';
-        
+
         $response = wp_remote_get($api_url, array(
             'timeout' => 10,
             'headers' => array(
@@ -323,45 +332,129 @@ class Dienstplan_Updater {
             )
         ));
 
-        if (is_wp_error($response)) {
-            error_log('DP Updater: GitHub API Fehler: ' . $response->get_error_message());
-            return false;
-        }
+        $release_info = false;
+        if (!is_wp_error($response)) {
+            $body = wp_remote_retrieve_body($response);
+            $release_data = json_decode($body, true);
 
-        $body = wp_remote_retrieve_body($response);
-        $release_data = json_decode($body, true);
+            if (is_array($release_data) && !empty($release_data['tag_name'])) {
+                // Version aus Tag (z.B. "v0.9.1" -> "0.9.1")
+                $version = ltrim($release_data['tag_name'], 'v');
 
-        if (!$release_data || !isset($release_data['tag_name'])) {
-            error_log('DP Updater: Ungültige GitHub API Antwort');
-            return false;
-        }
-
-        // Version aus Tag (z.B. "v0.9.1" -> "0.9.1")
-        $version = ltrim($release_data['tag_name'], 'v');
-        
-        // Finde ZIP-Asset
-        $download_url = '';
-        if (isset($release_data['assets']) && is_array($release_data['assets'])) {
-            foreach ($release_data['assets'] as $asset) {
-                if (isset($asset['name']) && strpos($asset['name'], '.zip') !== false) {
-                    $download_url = $asset['browser_download_url'];
-                    break;
+                // Finde ZIP-Asset
+                $download_url = '';
+                if (isset($release_data['assets']) && is_array($release_data['assets'])) {
+                    foreach ($release_data['assets'] as $asset) {
+                        if (isset($asset['name']) && strpos($asset['name'], '.zip') !== false) {
+                            $download_url = $asset['browser_download_url'];
+                            break;
+                        }
+                    }
                 }
+
+                // Fallback: Zipball URL
+                if (empty($download_url) && isset($release_data['zipball_url'])) {
+                    $download_url = $release_data['zipball_url'];
+                }
+
+                $release_info = array(
+                    'version' => $version,
+                    'url' => isset($release_data['html_url']) ? $release_data['html_url'] : $this->git_repo_url,
+                    'download_url' => $download_url,
+                    'tested' => '6.4',
+                    'requires_php' => '7.4',
+                    'changelog' => isset($release_data['body']) ? $release_data['body'] : ''
+                );
             }
         }
-        
-        // Fallback: Zipball URL
-        if (empty($download_url) && isset($release_data['zipball_url'])) {
-            $download_url = $release_data['zipball_url'];
+
+        // Tag-Fallback: wenn kein Release existiert oder der neueste Tag neuer als das Release ist
+        $tag_info = $this->get_latest_github_tag_info();
+
+        if ($release_info && $tag_info) {
+            if (version_compare($release_info['version'], $tag_info['version'], '>=')) {
+                return $release_info;
+            }
+            return $tag_info;
+        }
+
+        if ($release_info) {
+            return $release_info;
+        }
+
+        if ($tag_info) {
+            return $tag_info;
+        }
+
+        if (is_wp_error($response)) {
+            error_log('DP Updater: GitHub API Fehler: ' . $response->get_error_message());
+        } else {
+            error_log('DP Updater: Weder Release noch Tag-Informationen gefunden');
+        }
+
+        return false;
+    }
+
+    /**
+     * Holt Informationen zum neuesten GitHub-Tag.
+     * Dieser Fallback ist wichtig, wenn nur ein Tag gepusht wurde,
+     * aber noch kein offizieller GitHub Release-Eintrag existiert.
+     *
+     * @return array|false
+     */
+    private function get_latest_github_tag_info() {
+        $tags_api_url = 'https://api.github.com/repos/VereinsringWasserlos/dienstplan-verwaltung/tags?per_page=20';
+
+        $response = wp_remote_get($tags_api_url, array(
+            'timeout' => 10,
+            'headers' => array(
+                'Accept' => 'application/vnd.github.v3+json',
+                'User-Agent' => 'WordPress/' . get_bloginfo('version') . '; ' . get_bloginfo('url')
+            )
+        ));
+
+        if (is_wp_error($response)) {
+            error_log('DP Updater: GitHub Tags API Fehler: ' . $response->get_error_message());
+            return false;
+        }
+
+        $tags_data = json_decode(wp_remote_retrieve_body($response), true);
+        if (!is_array($tags_data) || empty($tags_data)) {
+            return false;
+        }
+
+        $latest_tag = '';
+        $latest_version = '';
+
+        foreach ($tags_data as $tag) {
+            if (empty($tag['name'])) {
+                continue;
+            }
+
+            $tag_name = (string) $tag['name'];
+            $version = ltrim($tag_name, 'v');
+
+            if (!preg_match('/^[0-9]+(\.[0-9]+)*$/', $version)) {
+                continue;
+            }
+
+            if ($latest_version === '' || version_compare($version, $latest_version, '>')) {
+                $latest_version = $version;
+                $latest_tag = $tag_name;
+            }
+        }
+
+        if ($latest_version === '' || $latest_tag === '') {
+            return false;
         }
 
         return array(
-            'version' => $version,
-            'url' => isset($release_data['html_url']) ? $release_data['html_url'] : $this->git_repo_url,
-            'download_url' => $download_url,
+            'version' => $latest_version,
+            'url' => 'https://github.com/VereinsringWasserlos/dienstplan-verwaltung/releases/tag/' . rawurlencode($latest_tag),
+            'download_url' => 'https://github.com/VereinsringWasserlos/dienstplan-verwaltung/archive/refs/tags/' . rawurlencode($latest_tag) . '.zip',
             'tested' => '6.4',
             'requires_php' => '7.4',
-            'changelog' => isset($release_data['body']) ? $release_data['body'] : ''
+            'changelog' => 'Automatisch von Git-Tag ' . $latest_tag . ' erkannt.'
         );
     }
 
@@ -403,7 +496,7 @@ class Dienstplan_Updater {
 
         try {
             // Fetch Remote-Changes
-            exec('"' . $this->git_cmd . '" fetch origin ' . escapeshellarg($this->git_branch) . ' 2>&1', $output, $return_var);
+            exec('"' . $this->git_cmd . '" fetch origin "' . $this->safe_git_branch . '" 2>&1', $output, $return_var);
             
             if ($return_var !== 0) {
                 error_log('DP Updater: Git fetch fehlgeschlagen');
@@ -412,7 +505,7 @@ class Dienstplan_Updater {
             }
 
             // Hole Version aus remote Plugin-Datei
-            $remote_file_cmd = '"' . $this->git_cmd . '" show origin/' . escapeshellarg($this->git_branch) . ':dienstplan-verwaltung.php';
+            $remote_file_cmd = '"' . $this->git_cmd . '" show origin/' . $this->safe_git_branch . ':dienstplan-verwaltung.php';
             exec($remote_file_cmd . ' 2>&1', $file_output, $return_var);
             
             if ($return_var !== 0) {
@@ -597,7 +690,7 @@ class Dienstplan_Updater {
         chdir($this->plugin_dir);
 
         $archive_cmd = '"' . $this->git_cmd . '" archive --format=zip --prefix=dienstplan-verwaltung/ '
-            . 'origin/' . escapeshellarg($this->git_branch)
+            . 'origin/' . $this->safe_git_branch
             . ' -o ' . escapeshellarg($zipfile) . ' 2>&1';
 
         exec($archive_cmd, $output, $return_var);
@@ -729,7 +822,7 @@ class Dienstplan_Updater {
             }
 
             // Pull Updates (--ff-only vermeidet Merge-Nachfragen und unerwartete Merges)
-            $pull_cmd = '"' . $this->git_cmd . '" pull --ff-only origin ' . escapeshellarg($this->git_branch) . ' 2>&1';
+            $pull_cmd = '"' . $this->git_cmd . '" pull --ff-only origin "' . $this->safe_git_branch . '" 2>&1';
             exec($pull_cmd, $pull_output, $return_var);
             
             if ($return_var !== 0) {
@@ -898,5 +991,26 @@ class Dienstplan_Updater {
                 'message' => 'Fehler: ' . $e->getMessage()
             );
         }
+    }
+
+    /**
+     * Bereinigt Git-Refs für Shell-Kommandos.
+     * Erlaubt nur übliche Zeichen für Branch-/Tag-Namen.
+     *
+     * @param string $ref
+     * @return string
+     */
+    private function sanitize_git_ref($ref) {
+        $ref = (string) $ref;
+        if ($ref === '') {
+            return 'main';
+        }
+
+        $sanitized = preg_replace('/[^A-Za-z0-9._\/-]/', '', $ref);
+        if ($sanitized === '') {
+            return 'main';
+        }
+
+        return $sanitized;
     }
 }
