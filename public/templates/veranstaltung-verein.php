@@ -181,8 +181,15 @@ if ($view_mode === 'list') {
 if (!in_array($view_mode, array('kachel', 'kompakt', 'timeline'), true)) {
     $view_mode = 'kachel';
 }
-$dp_debug_enabled = isset($_GET['dpdebug']) || isset($_GET['debug']);
-$current_request_url = (is_ssl() ? 'https://' : 'http://') . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI'];
+$dp_debug_query = '';
+if (isset($_GET['dpdebug'])) {
+    $dp_debug_query = sanitize_text_field(wp_unslash($_GET['dpdebug']));
+} elseif (isset($_GET['debug'])) {
+    $dp_debug_query = sanitize_text_field(wp_unslash($_GET['debug']));
+}
+$dp_debug_enabled = ($dp_debug_query === '1') && current_user_can('manage_options');
+$request_uri = isset($_SERVER['REQUEST_URI']) ? wp_unslash($_SERVER['REQUEST_URI']) : '/';
+$current_request_url = set_url_scheme(home_url($request_uri), is_ssl() ? 'https' : 'http');
 
 // Status-Anzeige und Anmeldungs-Logik
 $anmeldung_aktiv = ($veranstaltung->status === 'geplant');
@@ -1277,20 +1284,22 @@ if ($dienst_start_dt !== null && $dienst_end_dt !== null) {
 </div>
 
 <script>
-window.dpVereinDebug = /[?&](dpdebug|debug)=1(&|$)/.test(window.location.search);
+window.dpVereinDebug = <?php echo $dp_debug_enabled ? 'true' : 'false'; ?>;
 window.dpTrace = function(message, payload) {
+    if (!window.dpVereinDebug) {
+        return;
+    }
+
     if (typeof payload !== 'undefined') {
         console.warn('[DP DEBUG]', message, payload);
     } else {
         console.warn('[DP DEBUG]', message);
     }
 
-    if (window.dpVereinDebug) {
-        var bootstrap = document.getElementById('dp-debug-bootstrap');
-        if (bootstrap) {
-            var text = typeof payload !== 'undefined' ? (message + ' ' + JSON.stringify(payload)) : message;
-            bootstrap.textContent = 'DP DEBUG BOOTSTRAP aktiv | ' + text;
-        }
+    var bootstrap = document.getElementById('dp-debug-bootstrap');
+    if (bootstrap) {
+        var text = typeof payload !== 'undefined' ? (message + ' ' + JSON.stringify(payload)) : message;
+        bootstrap.textContent = 'DP DEBUG BOOTSTRAP aktiv | ' + text;
     }
 };
 
@@ -2288,10 +2297,10 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     .dp-frontend-container.dp-verein-specific {
-        width: min(1600px, calc(100vw - 24px));
-        max-width: min(1600px, calc(100vw - 24px));
-        margin-left: calc(50% - 50vw + 12px);
-        margin-right: calc(50% - 50vw + 12px);
+        width: 100%;
+        max-width: none;
+        margin-left: 0;
+        margin-right: 0;
         padding: 1.5rem;
         overflow-x: clip;
         box-sizing: border-box;
@@ -2332,10 +2341,10 @@ document.addEventListener('DOMContentLoaded', function() {
     
     @media (max-width: 768px) {
         .dp-frontend-container.dp-verein-specific {
-            width: calc(100vw - 16px);
-            max-width: calc(100vw - 16px);
-            margin-left: calc(50% - 50vw + 8px);
-            margin-right: calc(50% - 50vw + 8px);
+            width: 100%;
+            max-width: none;
+            margin-left: 0;
+            margin-right: 0;
             padding: 1rem;
         }
     }
@@ -3202,8 +3211,8 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     .dp-dienste-kompakt-list {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+        display: flex;
+        flex-direction: column;
         gap: 1.5rem;
     }
 
@@ -3218,7 +3227,8 @@ document.addEventListener('DOMContentLoaded', function() {
         border: 1px solid #e2e8f0;
         border-radius: 6px;
         overflow: hidden;
-        margin-bottom: 1.5rem;
+        margin-bottom: 0;
+        width: 100%;
     }
 
     .dp-dienste-table {

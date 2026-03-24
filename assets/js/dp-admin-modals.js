@@ -4,7 +4,15 @@
  * @version 1.0.0
  */
 
-console.log('dp-admin-modals.js geladen');
+const dpAdminModalsDebugEnabled = Boolean(window.dpAdminModalsDebug);
+const dpAdminModalsDebugLog = function() {
+    if (!dpAdminModalsDebugEnabled) {
+        return;
+    }
+    console.log.apply(console, arguments);
+};
+
+dpAdminModalsDebugLog('dp-admin-modals.js geladen');
 
 // ============================================================================
 // VEREINE MODAL FUNCTIONS
@@ -1029,4 +1037,4 @@ window.checkDienstStatus = function() {
     alert('Dienst-Status-Check wird implementiert');
 };
 
-console.log('dp-admin-modals.js vollständig geladen - alle Funktionen registriert');
+dpAdminModalsDebugLog('dp-admin-modals.js vollständig geladen - alle Funktionen registriert');

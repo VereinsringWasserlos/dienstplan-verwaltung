@@ -15,6 +15,18 @@ if (!current_user_can('manage_options')) {
 $db = new Dienstplan_Database('dp_');
 global $wpdb;
 
+// Handle Option: Daten bei Deaktivierung vollständig löschen
+if (isset($_POST['save_deactivate_reset_option']) && check_admin_referer('dp_debug_deactivate_reset', 'dp_debug_nonce_deactivate_reset')) {
+    $enabled = isset($_POST['delete_data_on_deactivate']) ? 1 : 0;
+    update_option('dienstplan_delete_data_on_deactivate', $enabled);
+
+    if ($enabled) {
+        echo '<div class="notice notice-warning"><p><strong>Reset bei Deaktivierung aktiviert.</strong> Beim nächsten Deaktivieren des Plugins werden alle Plugin-Daten gelöscht.</p></div>';
+    } else {
+        echo '<div class="notice notice-success"><p><strong>Reset bei Deaktivierung deaktiviert.</strong></p></div>';
+    }
+}
+
 // Prüfe zuerst welche Tabellen existieren (MUSS VOR POST-Handling stehen!)
 $existing_tables = $wpdb->get_col("SHOW TABLES LIKE '{$wpdb->prefix}dp_%'");
 $existing_tables_simple = array_map(function($table) use ($wpdb) {
@@ -144,6 +156,32 @@ foreach ($stats as $count) {
             <strong>⚠️ WARNUNG:</strong> Diese Seite ist nur für Entwicklung und Testing gedacht. 
             Das Leeren von Tabellen löscht unwiderruflich alle Daten!
         </p>
+    </div>
+
+    <div class="card" style="margin-top: 2rem; border-left: 4px solid #b32d2e;">
+        <h2 style="color: #b32d2e;">🧨 Reset bei Deaktivierung</h2>
+        <p>
+            Wenn aktiviert, löscht das Plugin beim Deaktivieren alle eigenen Tabellen und Optionen,
+            damit ein kompletter Neustart möglich ist.
+        </p>
+
+        <form method="post">
+            <?php wp_nonce_field('dp_debug_deactivate_reset', 'dp_debug_nonce_deactivate_reset'); ?>
+            <label>
+                <input type="checkbox" name="delete_data_on_deactivate" value="1"
+                       <?php checked((int) get_option('dienstplan_delete_data_on_deactivate', 0), 1); ?>>
+                <strong>Alle Plugin-Daten beim Deaktivieren löschen</strong>
+            </label>
+            <p class="description" style="color:#b32d2e; margin-top: 0.5rem;">
+                Achtung: Diese Aktion ist destruktiv und nicht rückgängig.
+            </p>
+
+            <p style="margin-top: 1rem;">
+                <button type="submit" name="save_deactivate_reset_option" class="button button-secondary">
+                    Einstellung speichern
+                </button>
+            </p>
+        </form>
     </div>
 
     <!-- Statistiken -->

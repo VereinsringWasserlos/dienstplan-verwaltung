@@ -329,7 +329,7 @@ class Dienstplan_Database {
             bis_datum date,
             anzahl_personen int(2) DEFAULT 1,
             besonderheiten text,
-            splittbar tinyint(1) DEFAULT 1,
+            splittbar tinyint(1) DEFAULT 0,
             erstellt_am datetime DEFAULT CURRENT_TIMESTAMP,
             PRIMARY KEY (id),
             KEY veranstaltung_id (veranstaltung_id),
@@ -352,6 +352,11 @@ class Dienstplan_Database {
                 ADD COLUMN status varchar(50) DEFAULT 'geplant' AFTER anzahl_personen"
             );
         }
+
+        // Stelle sicher, dass neue Dienste standardmäßig nicht automatisch gesplittet sind.
+        $this->wpdb->query(
+            "ALTER TABLE {$this->prefix}dienste MODIFY COLUMN splittbar tinyint(1) DEFAULT 0"
+        );
         
         // Dienst-Slots-Tabelle (für Split-Dienste)
         $sql = "CREATE TABLE IF NOT EXISTS {$this->prefix}dienst_slots (
@@ -467,11 +472,94 @@ class Dienstplan_Database {
         
         dbDelta($sql);
         
-        // Migrationen
-        $this->migrate_taetigkeiten_add_bereich();
-        $this->migrate_veranstaltungen_add_seite_id();
-        $this->migrate_vereine_add_seite_id();
-        $this->migrate_vereine_add_farbe();
+        // Versionsbasierte Migrationen (idempotent)
+        $this->run_versioned_migrations(DIENSTPLAN_VERSION);
+    }
+
+    /**
+     * Führt versionsbasierte Datenbank-Migrationen aus.
+     *
+     * Die Migrationen werden nur einmal je Installation ausgeführt und in
+     * einer History-Option gespeichert. Jede Migration bleibt zusätzlich
+     * idempotent und prüft intern, ob die Änderung bereits vorhanden ist.
+     *
+     * @param string $target_version Zielversion, bis zu der Migrationen laufen sollen.
+     */
+    public function run_versioned_migrations($target_version = DIENSTPLAN_VERSION) {
+        $history = get_option('dienstplan_db_migration_history', array());
+        if (!is_array($history)) {
+            $history = array();
+        }
+
+        foreach ($this->get_migration_plan() as $migration) {
+            if (empty($migration['id']) || empty($migration['version']) || empty($migration['method'])) {
+                continue;
+            }
+
+            $migration_id = (string) $migration['id'];
+            $migration_version = (string) $migration['version'];
+            $method = (string) $migration['method'];
+
+            if (isset($history[$migration_id])) {
+                continue;
+            }
+
+            if (version_compare($migration_version, $target_version, '>')) {
+                continue;
+            }
+
+            if (!method_exists($this, $method)) {
+                error_log('Dienstplan Migration: Methode nicht gefunden: ' . $method);
+                continue;
+            }
+
+            $this->{$method}();
+
+            $history[$migration_id] = array(
+                'version' => $migration_version,
+                'method' => $method,
+                'ran_at' => current_time('mysql')
+            );
+        }
+
+        update_option('dienstplan_db_migration_history', $history, false);
+    }
+
+    /**
+     * Definiert die Reihenfolge und Version aller Schema-Migrationen.
+     *
+     * Bei künftigen DB-Anpassungen hier eine neue Zeile ergänzen.
+     *
+     * @return array<int,array<string,string>>
+     */
+    private function get_migration_plan() {
+        return array(
+            array(
+                'id' => '0.2.3_taetigkeiten_add_bereich',
+                'version' => '0.2.3',
+                'method' => 'migrate_taetigkeiten_add_bereich'
+            ),
+            array(
+                'id' => '0.8.0_veranstaltungen_add_seite_id',
+                'version' => '0.8.0',
+                'method' => 'migrate_veranstaltungen_add_seite_id'
+            ),
+            array(
+                'id' => '0.8.1_vereine_add_seite_id',
+                'version' => '0.8.1',
+                'method' => 'migrate_vereine_add_seite_id'
+            ),
+            array(
+                'id' => '0.9.0_vereine_add_farbe',
+                'version' => '0.9.0',
+                'method' => 'migrate_vereine_add_farbe'
+            ),
+            array(
+                'id' => '0.9.5.45_admin_only_flags',
+                'version' => '0.9.5.45',
+                'method' => 'migrate_admin_only_flags'
+            ),
+        );
     }
     
     /**
@@ -535,6 +623,35 @@ class Dienstplan_Database {
             );
 
             error_log('Dienstplan Migration: farbe Spalte für Vereine erfolgreich hinzugefügt');
+        }
+    }
+
+    /**
+     * Migration: Fügt admin_only in Bereiche und Tätigkeiten hinzu.
+     */
+    public function migrate_admin_only_flags() {
+        $bereiche_admin_only_exists = $this->wpdb->get_results(
+            "SHOW COLUMNS FROM {$this->prefix}bereiche LIKE 'admin_only'"
+        );
+
+        if (empty($bereiche_admin_only_exists)) {
+            $this->wpdb->query(
+                "ALTER TABLE {$this->prefix}bereiche
+                ADD COLUMN admin_only tinyint(1) DEFAULT 0 AFTER aktiv"
+            );
+            error_log('Dienstplan Migration: admin_only Spalte für Bereiche hinzugefügt');
+        }
+
+        $taetigkeiten_admin_only_exists = $this->wpdb->get_results(
+            "SHOW COLUMNS FROM {$this->prefix}taetigkeiten LIKE 'admin_only'"
+        );
+
+        if (empty($taetigkeiten_admin_only_exists)) {
+            $this->wpdb->query(
+                "ALTER TABLE {$this->prefix}taetigkeiten
+                ADD COLUMN admin_only tinyint(1) DEFAULT 0 AFTER aktiv"
+            );
+            error_log('Dienstplan Migration: admin_only Spalte für Tätigkeiten hinzugefügt');
         }
     }
     
@@ -1466,6 +1583,54 @@ class Dienstplan_Database {
      */
     public function get_dienst_with_details($id) {
         return $this->get_dienst($id);
+    }
+
+    /**
+     * Findet einen bestehenden Dienst anhand seiner fachlichen Signatur.
+     *
+     * Die Identität eines Dienstes wird bewusst ohne anzahl_personen,
+     * splittbar, status und besonderheiten bestimmt, damit Re-Imports
+     * denselben Dienst aktualisieren können statt Dubletten anzulegen.
+     *
+     * @param array $data Dienst-Daten.
+     * @return object|null
+     */
+    public function find_existing_dienst($data) {
+        $veranstaltung_id = isset($data['veranstaltung_id']) ? intval($data['veranstaltung_id']) : 0;
+        $tag_id = isset($data['tag_id']) ? intval($data['tag_id']) : 0;
+        $verein_id = isset($data['verein_id']) ? intval($data['verein_id']) : 0;
+        $bereich_id = isset($data['bereich_id']) ? intval($data['bereich_id']) : 0;
+        $taetigkeit_id = isset($data['taetigkeit_id']) ? intval($data['taetigkeit_id']) : 0;
+        $von_zeit = isset($data['von_zeit']) && $data['von_zeit'] !== '' ? (string) $data['von_zeit'] : null;
+        $bis_zeit = isset($data['bis_zeit']) && $data['bis_zeit'] !== '' ? (string) $data['bis_zeit'] : null;
+        $bis_datum = isset($data['bis_datum']) && $data['bis_datum'] !== '' ? (string) $data['bis_datum'] : null;
+
+        if ($veranstaltung_id <= 0 || $tag_id <= 0) {
+            return null;
+        }
+
+        return $this->wpdb->get_row($this->wpdb->prepare(
+            "SELECT id, veranstaltung_id, tag_id, verein_id, bereich_id, taetigkeit_id,
+                    von_zeit, bis_zeit, bis_datum, anzahl_personen, splittbar, status, besonderheiten
+             FROM {$this->prefix}dienste
+             WHERE veranstaltung_id = %d
+               AND tag_id = %d
+               AND verein_id = %d
+               AND bereich_id = %d
+               AND taetigkeit_id = %d
+               AND von_zeit <=> %s
+               AND bis_zeit <=> %s
+               AND bis_datum <=> %s
+             LIMIT 1",
+            $veranstaltung_id,
+            $tag_id,
+            $verein_id,
+            $bereich_id,
+            $taetigkeit_id,
+            $von_zeit,
+            $bis_zeit,
+            $bis_datum
+        ));
     }
     
     public function add_dienst($data) {

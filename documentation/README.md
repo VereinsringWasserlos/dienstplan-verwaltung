@@ -1,8 +1,8 @@
 # Dokumentation - Dienstplan-Verwaltung V2
 
-**Version:** 0.9.5.24  
-**Stand:** 13. März 2026  
-**Status:** Rollen-/Rechte-System in v2-Umstellung (Baseline aktiv)
+**Version:** 0.9.5.47  
+**Stand:** 24. März 2026  
+**Status:** Dashboard-Version, Import-UX und Frontend-Layout-Fixes aktuell
 
 ---
 
@@ -55,6 +55,8 @@
 |----------|--------------|------------|
 | **[CHANGELOG.md](CHANGELOG.md)** | Vollständiges Änderungsprotokoll | Alle |
 | **[TEST_PLAN.md](TEST_PLAN.md)** | Test-Szenarien & QA | Tester, QA |
+| **[EVENT1_GO_LIVE_PLAN.md](EVENT1_GO_LIVE_PLAN.md)** | Event-1 Fokusplan mit Go-Live-Checklisten | Team, Admins |
+| **[EVENT1_TEST_RUNBOOK.md](EVENT1_TEST_RUNBOOK.md)** | Sofort nutzbarer 90-Minuten-Testlauf für Event 1 | Team, QA |
 | **[ROADMAP.md](ROADMAP.md)** | Feature-Roadmap bis Version 2.0 | Alle |
 
 ---

@@ -767,17 +767,18 @@ class Dienstplan_Updater {
      * Führt Datenbank-Migrationen aus
      */
     private function run_migrations() {
-        // Prüfe ob Migrationen notwendig sind
-        $current_db_version = get_option('dienstplan_db_version', '0.0.0');
-        
-        if (version_compare($current_db_version, $this->current_version, '<')) {
-            // Führe Aktivator aus (erstellt/aktualisiert Tabellen)
-            require_once $this->plugin_dir . 'includes/class-activator.php';
-            Dienstplan_Activator::activate();
-            
-            // Aktualisiere DB-Version
-            update_option('dienstplan_db_version', $this->current_version);
-        }
+        require_once $this->plugin_dir . 'includes/class-database.php';
+        require_once $this->plugin_dir . 'includes/class-dienstplan-notifications.php';
+
+        $database = new Dienstplan_Database(DIENSTPLAN_DB_PREFIX);
+        $database->install();
+        $database->run_versioned_migrations($this->current_version);
+
+        $notifications = new Dienstplan_Notifications(DIENSTPLAN_DB_PREFIX);
+        $notifications->install();
+
+        update_option('dienstplan_db_version', $this->current_version);
+        update_option('dienstplan_version', $this->current_version);
     }
 
     /**

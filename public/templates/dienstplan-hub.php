@@ -379,8 +379,8 @@ $hub_base_url = get_permalink();
 <style>
 /* Dienstplan Hub Styles */
 .dp-hub-container {
-    max-width: 1200px;
-    margin: 0 auto;
+    max-width: none;
+    margin: 0;
     padding: 2rem 1rem;
 }
 

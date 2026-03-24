@@ -1,9 +1,9 @@
 # Dienstplan Verwaltung V2
 
-**Version:** 0.9.5.46 (Release Packaging Hotfix)  
-**Requires at least:** WordPress 5.8  
+**Version:** 0.9.5.47 (Dashboard Version & Import UX Release)  
+**Requires at least:** WordPress 5.0  
 **Tested up to:** WordPress 6.4  
-**Requires PHP:** 7.4  
+**Requires PHP:** 7.2  
 **License:** GPLv2 or later  
 
 Moderne Dienstplan-Verwaltung für Events und Veranstaltungen mit Slot-System, Frontend Crew-Portal und vollständiger Admin-Verwaltung.
@@ -97,32 +97,15 @@ Zeigt eine komplette Einstiegsseite mit:
 - Quick-Links zu "Meine Dienste" und Profil
 
 **Weitere Details:** `documentation/FRONTEND_PORTAL.md`
-- Changelog
-- Roadmap bis Version 2.0
 
 ---
 
-## 🎯 Roadmap
+## 🎯 Aktueller Stand
 
-### Version 0.9.0 (Aktuell - UAT Release)
-- ✅ Vollständige Kern-Funktionalität
-- ✅ Slot-System & Split-Dienste
-- ✅ Frontend Crew-Portal
-- ✅ Admin-Backend
-- ✅ Dokumentation integriert
-- ⏳ User Acceptance Testing
-
-### Version 1.0.0 (Q1 2026)
-- Produktiv-Release
-- Alle UAT-Bugs behoben
-- Vollständige Dokumentation mit Screenshots
-
-### Zukünftige Versionen
-- v1.1.0: Email-Benachrichtigungen
-- v1.2.0: Qualifikations-System
-- v1.3.0: Reporting & Statistiken
-- v1.4.0: Mobile-App (PWA)
-- v2.0.0: Enterprise Features
+- Aktuelle Version: **0.9.5.47**
+- Laufende Änderungen und Releases: siehe `documentation/CHANGELOG.md`
+- Rollenübersicht: siehe `documentation/ROLLEN-UEBERSICHT.md`
+- Schnellstart: siehe `documentation/QUICK_START.md`
 
 ---
 
@@ -140,7 +123,7 @@ GPLv2 or later
 
 ---
 
-**Version 0.9.0** - Bereit für User Acceptance Testing (UAT)  
-Stand: 17. November 2025
+**Version 0.9.5.47** - Dashboard Version & Import UX Release  
+Stand: 24. März 2026
 
 Entwickelt für den Vereinsring Wasserlos und die Feuerwehr- und Event-Gemeinschaft.

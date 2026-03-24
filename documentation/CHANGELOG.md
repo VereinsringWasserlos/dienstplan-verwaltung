@@ -7,6 +7,39 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ---
 
+## [Unreleased]
+
+---
+
+## [0.9.5.47] - 2026-03-24 🚀 Dashboard Version & Import UX Release
+
+### ✨ Verbesserungen
+
+- Dashboard-Header zeigt jetzt die aktuelle Plugin-Version direkt im Seitenkopf an.
+- Import-Ergebnisanzeige trennt Fehler, Warnungen und reine Infos in klaren Blöcken.
+- Nicht gefundene Vereine können nach dem Import direkt zugeordnet werden; die Zuordnung wird sofort auf die gerade importierten Dienste angewendet.
+- Gespeicherte Vereins-Aliase bleiben für Folgeimporte erhalten.
+
+### 🐛 Bugfixes
+
+- Kompaktansicht im Frontend stapelt Tagesblöcke wieder korrekt untereinander statt nebeneinander.
+- Public-Templates respektieren wieder die Standard-Positionierung des aktiven Themes statt eigene Root-Zentrierungen zu erzwingen.
+
+### 📦 Release
+
+- Versionsstand auf 0.9.5.47 angehoben und Release-ZIP neu erstellt.
+
+---
+
+### 🧹 Bereinigung
+
+- Legacy-Backup-Fallback für Import/Export entfernt; aktuelle View wird wieder konsistent geladen.
+- Temporäre Backup-Artefakte (`import-export.backup.php`, `dp-import-export.backup.js`) aus dem Codebestand entfernt.
+- Mehrere JavaScript-Dateien auf optionales Debug-Logging umgestellt (`window.dpTimelineDebug`, `window.dpImportExportDebug`, `window.dpAdminDebug`, `window.dpAdminModalsDebug`, `window.dpBesetzungDebug`).
+- README auf aktuellen Versions- und Dokumentationsstand (0.9.5.46) konsolidiert.
+
+---
+
 ## [0.9.5.46] - 2026-03-21 📦 Release Packaging Hotfix
 
 ### 🛠 Fixes

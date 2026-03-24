@@ -27,6 +27,37 @@ $scoped_verein_ids = isset($allowed_verein_ids) && is_array($allowed_verein_ids)
 if ($selected_veranstaltung > 0) {
     // Lade Tage der Veranstaltung
     $veranstaltung_tage = $db->get_veranstaltung_tage($selected_veranstaltung);
+
+    // Tag-Datum-Map für präzise Zeitberechnung (inkl. Overnight)
+    $tag_date_map = array();
+    foreach ($veranstaltung_tage as $tag_item) {
+        if (!empty($tag_item->id) && !empty($tag_item->tag_datum)) {
+            $tag_date_map[intval($tag_item->id)] = date('Y-m-d', strtotime($tag_item->tag_datum));
+        }
+    }
+
+    $resolve_dienst_range = function($dienst) use ($tag_date_map) {
+        if (empty($dienst->von_zeit) || empty($dienst->bis_zeit)) {
+            return array(null, null);
+        }
+
+        $tag_id = isset($dienst->tag_id) ? intval($dienst->tag_id) : 0;
+        $base_date = isset($tag_date_map[$tag_id]) ? $tag_date_map[$tag_id] : date('Y-m-d');
+
+        $start_ts = strtotime($base_date . ' ' . $dienst->von_zeit);
+
+        if (!empty($dienst->bis_datum)) {
+            $end_ts = strtotime(date('Y-m-d', strtotime($dienst->bis_datum)) . ' ' . $dienst->bis_zeit);
+        } else {
+            $end_ts = strtotime($base_date . ' ' . $dienst->bis_zeit);
+            // Fallback für Overnight ohne gesetztes bis_datum
+            if ($end_ts <= $start_ts) {
+                $end_ts = strtotime('+1 day', $end_ts);
+            }
+        }
+
+        return array($start_ts, $end_ts);
+    };
     
     // Lade Dienste - optional nach Tag filtern
     if ($selected_tag > 0) {
@@ -44,17 +75,14 @@ if ($selected_veranstaltung > 0) {
     
     // Ermittle Zeitbereich für Timeline (frühester Start bis spätestes Ende)
     foreach ($dienste as $dienst) {
-        if (!empty($dienst->von_zeit)) {
-            $start_time = strtotime($dienst->von_zeit);
-            if ($timeline_start === null || $start_time < $timeline_start) {
-                $timeline_start = $start_time;
-            }
+        list($start_time, $end_time) = $resolve_dienst_range($dienst);
+
+        if ($start_time !== null && ($timeline_start === null || $start_time < $timeline_start)) {
+            $timeline_start = $start_time;
         }
-        if (!empty($dienst->bis_zeit)) {
-            $end_time = strtotime($dienst->bis_zeit);
-            if ($timeline_end === null || $end_time > $timeline_end) {
-                $timeline_end = $end_time;
-            }
+
+        if ($end_time !== null && ($timeline_end === null || $end_time > $timeline_end)) {
+            $timeline_end = $end_time;
         }
     }
     
@@ -341,9 +369,12 @@ $bereiche = $db->get_bereiche();
                                             }
                                         }
                                         
-                                        // Berechne Position und Breite des Balkens
-                                        $dienst_start = strtotime($dienst->von_zeit);
-                                        $dienst_end = strtotime($dienst->bis_zeit);
+                                        // Berechne Position und Breite des Balkens (inkl. Overnight)
+                                        list($dienst_start, $dienst_end) = $resolve_dienst_range($dienst);
+
+                                        if ($dienst_start === null || $dienst_end === null) {
+                                            continue;
+                                        }
                                         
                                         // Position in Slots (0-basiert, 30-Min-Raster)
                                         $start_slot = floor(($dienst_start - $timeline_start) / 1800);

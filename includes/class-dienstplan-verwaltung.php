@@ -238,6 +238,7 @@ class Dienstplan_Verwaltung {
         // Import/Export AJAX Actions
         // Export wird über admin_init in class-admin.php handle_export() behandelt
         $this->loader->add_action('wp_ajax_dp_import_csv', $plugin_admin, 'ajax_import_csv');
+        $this->loader->add_action('wp_ajax_dp_save_verein_aliases', $plugin_admin, 'ajax_save_verein_aliases');
         
         // Login-Redirect für Dienstplan-Rollen
         $this->loader->add_filter('login_redirect', $plugin_admin, 'login_redirect', 10, 3);
@@ -306,14 +307,15 @@ class Dienstplan_Verwaltung {
             // Wenn Datenbank aktualisiert wurde, starten Sie die Reparatur
             $this->repair_dienst_status();
         }
-        
-        // Führe Migrationen immer aus (sie prüfen selbst ob nötig)
-        $database->migrate_veranstaltungen_add_seite_id();
-        $database->migrate_vereine_add_seite_id();
+
+        // Führe versionsbasierte Migrationen aus.
+        // Läuft auch dann, wenn die Plugin-Version bereits identisch ist,
+        // falls eine Installation aus einem älteren Datenbankstand stammt.
+        $database->run_versioned_migrations($this->version);
         
         // Blockiere Reparatur auf Import/Export-Seite zur Performance
         $current_page = isset($_GET['page']) ? sanitize_text_field($_GET['page']) : '';
-        if ($current_page === 'dienstplan-import-export') {
+        if (in_array($current_page, array('dienstplan-import', 'dienstplan-export', 'dienstplan-import-export'), true)) {
             return;
         }
         

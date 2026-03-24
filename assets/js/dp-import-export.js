@@ -1,5 +1,19 @@
 (function($) {
     'use strict';
+
+    const debugEnabled = Boolean(window.dpImportExportDebug);
+    const debugLog = function() {
+        if (!debugEnabled) {
+            return;
+        }
+        console.log.apply(console, arguments);
+    };
+    const debugWarn = function() {
+        if (!debugEnabled) {
+            return;
+        }
+        console.warn.apply(console, arguments);
+    };
     
     let csvData = null;
     let csvHeaders = null;
@@ -14,10 +28,26 @@
             { key: 'kontakt_email', label: 'Kontakt E-Mail', required: false },
             { key: 'kontakt_telefon', label: 'Kontakt Telefon', required: false }
         ],
+        'bereiche': [
+            { key: 'name', label: 'Name', required: true },
+            { key: 'farbe', label: 'Farbe (Hex, z.B. #3b82f6)', required: false },
+            { key: 'aktiv', label: 'Aktiv (1/0)', required: false },
+            { key: 'sortierung', label: 'Sortierung', required: false },
+            { key: 'admin_only', label: 'Nur Admin (1/0)', required: false }
+        ],
+        'taetigkeiten': [
+            { key: 'bereich_name', label: 'Bereich Name', required: true },
+            { key: 'bereich_id', label: 'Bereich ID (optional)', required: false },
+            { key: 'name', label: 'Name', required: true },
+            { key: 'beschreibung', label: 'Beschreibung', required: false },
+            { key: 'aktiv', label: 'Aktiv (1/0)', required: false },
+            { key: 'sortierung', label: 'Sortierung', required: false },
+            { key: 'admin_only', label: 'Nur Admin (1/0)', required: false }
+        ],
         'veranstaltungen': [
             { key: 'name', label: 'Name', required: true },
             { key: 'start_datum', label: 'Start-Datum (YYYY-MM-DD)', required: true },
-            { key: 'ende_datum', label: 'Ende-Datum (YYYY-MM-DD)', required: true },
+            { key: 'end_datum', label: 'End-Datum (YYYY-MM-DD)', required: true },
             { key: 'beschreibung', label: 'Beschreibung', required: false },
             { key: 'dienst_von_zeit', label: 'Dienst von Zeit (HH:MM)', required: false },
             { key: 'dienst_bis_zeit', label: 'Dienst bis Zeit (HH:MM)', required: false }
@@ -36,12 +66,12 @@
     };
     
     $(document).ready(function() {
-        console.log('Import/Export Seite geladen');
+        debugLog('Import/Export Seite geladen');
         
         // CSV Analyse Button Click Handler
         $('#analyze-csv-btn').on('click', function(e) {
             e.preventDefault();
-            console.log('CSV Analyse Button geklickt');
+            debugLog('CSV Analyse Button geklickt');
             analyzeCSV();
         });
         
@@ -68,12 +98,12 @@
     
     // CSV analysieren
     window.analyzeCSV = function() {
-        console.log('analyzeCSV aufgerufen');
+        debugLog('analyzeCSV aufgerufen');
         const type = $('#import_type').val();
         const fileInput = $('#import_file')[0];
         
-        console.log('Import-Typ:', type);
-        console.log('File Input Element:', fileInput);
+        debugLog('Import-Typ:', type);
+        debugLog('File Input Element:', fileInput);
         
         if (!type) {
             alert('Bitte wählen Sie zuerst einen Import-Typ!');
@@ -86,7 +116,7 @@
         }
         
         const file = fileInput.files[0];
-        console.log('Datei ausgewählt:', file.name, 'Größe:', file.size, 'Typ:', file.type);
+        debugLog('Datei ausgewählt:', file.name, 'Größe:', file.size, 'Typ:', file.type);
         const reader = new FileReader();
         
         reader.onload = function(e) {
@@ -97,37 +127,37 @@
                 // Versuche zuerst ISO-8859-1 (Windows-Encoding)
                 try {
                     text = new TextDecoder('iso-8859-1').decode(new Uint8Array(e.target.result));
-                    console.log('Datei als ISO-8859-1 dekodiert');
+                    debugLog('Datei als ISO-8859-1 dekodiert');
                 } catch(err) {
-                    console.warn('ISO-8859-1 Dekodierung fehlgeschlagen, versuche UTF-8:', err);
+                    debugWarn('ISO-8859-1 Dekodierung fehlgeschlagen, versuche UTF-8:', err);
                     text = new TextDecoder('utf-8').decode(new Uint8Array(e.target.result));
-                    console.log('Datei als UTF-8 dekodiert');
+                    debugLog('Datei als UTF-8 dekodiert');
                 }
             } else {
                 // Falls bereits String (sollte nicht vorkommen)
                 text = e.target.result;
-                console.log('Datei als String gelesen');
+                debugLog('Datei als String gelesen');
             }
             
             // Versuche, Encoding-Probleme zu beheben
             const isBroken = /\ufffd/.test(text); // Zeichen für Encoding-Fehler
             
             if (isBroken) {
-                console.warn('Encoding-Fehler erkannt, versuche UTF-8...');
+                debugWarn('Encoding-Fehler erkannt, versuche UTF-8...');
                 try {
                     const uint8Array = new Uint8Array(e.target.result);
                     text = new TextDecoder('utf-8').decode(uint8Array);
-                    console.log('Erfolgreich zu UTF-8 gewechselt');
+                    debugLog('Erfolgreich zu UTF-8 gewechselt');
                 } catch(err) {
-                    console.warn('UTF-8 Konvertierung fehlgeschlagen:', err);
+                    debugWarn('UTF-8 Konvertierung fehlgeschlagen:', err);
                 }
             }
             
             const lines = text.split(/\r?\n/).filter(line => line.trim());
             
-            console.log('CSV Zeilen:', lines.length);
-            console.log('Erste Zeile:', lines[0]);
-            console.log('Zweite Zeile:', lines[1]);
+            debugLog('CSV Zeilen:', lines.length);
+            debugLog('Erste Zeile:', lines[0]);
+            debugLog('Zweite Zeile:', lines[1]);
             
             if (lines.length < 2) {
                 alert('CSV-Datei enthält keine Daten!');
@@ -140,9 +170,9 @@
             const firstDataRow = parseCSVLine(lines[1]);
             csvData = lines.slice(1).map(line => parseCSVLine(line));
             
-            console.log('CSV Headers:', csvHeaders);
-            console.log('Erste Zeile:', firstDataRow);
-            console.log('Gesamt Zeilen zum Import:', csvData.length);
+            debugLog('CSV Headers:', csvHeaders);
+            debugLog('Erste Zeile:', firstDataRow);
+            debugLog('Gesamt Zeilen zum Import:', csvData.length);
             
             // Validierung: Prüfe ob Headers erkannt wurden
             if (csvHeaders.length === 0 || csvHeaders[0].trim() === '') {
@@ -285,8 +315,8 @@
             }
         });
         
-        console.log('Mapping:', mapping);
-        console.log('Start Import:', type, mode, csvData.length + ' Zeilen');
+        debugLog('Mapping:', mapping);
+        debugLog('Start Import:', type, mode, csvData.length + ' Zeilen');
         
         $('#import-progress').show();
         $('#import-status').text('Lese CSV-Datei...');
@@ -309,14 +339,14 @@
             importData.veranstaltung_ende = veranstaltungEnde;
         }
         
-        console.log('Sende Import-Daten:', importData);
+        debugLog('Sende Import-Daten:', importData);
         
         $.ajax({
             url: dpAjax.ajaxurl,
             type: 'POST',
             data: importData,
             success: function(response) {
-                console.log('Import Response:', response);
+                debugLog('Import Response:', response);
                 $('#progress-bar-fill').css('width', '100%');
                 
                 if (response.success && response.data) {
@@ -377,7 +407,7 @@
     
     window.exportData = function(type, e) {
         if (e) e.preventDefault();
-        console.log('Export:', type);
+        debugLog('Export:', type);
         
         // Download über versteckten Link
         const url = dpAjax.ajaxurl + '?action=dp_export_csv&type=' + type + '&nonce=' + dpAjax.nonce;

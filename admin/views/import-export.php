@@ -54,7 +54,7 @@ if (isset($stats['veranstaltungen'])) {
                     </div>
             <div class="inside">
                 <p class="description">
-                    <?php _e('Importieren Sie Vereine, Veranstaltungen und Dienste aus einer CSV-Datei.', 'dienstplan-verwaltung'); ?>
+                    <?php _e('Importieren Sie Vereine, Bereiche, Tätigkeiten, Veranstaltungen und Dienste aus einer CSV-Datei.', 'dienstplan-verwaltung'); ?>
                 </p>
                 
                 <div class="notice notice-info" style="margin: 1rem 0;">
@@ -79,6 +79,8 @@ if (isset($stats['veranstaltungen'])) {
                                     <option value="vereine"><?php _e('Vereine', 'dienstplan-verwaltung'); ?></option>
                                     <?php endif; ?>
                                     <?php if ($can_manage_events): ?>
+                                    <option value="bereiche"><?php _e('Bereiche', 'dienstplan-verwaltung'); ?></option>
+                                    <option value="taetigkeiten"><?php _e('Tätigkeiten', 'dienstplan-verwaltung'); ?></option>
                                     <option value="veranstaltungen"><?php _e('Veranstaltungen', 'dienstplan-verwaltung'); ?></option>
                                     <option value="dienste"><?php _e('Dienste', 'dienstplan-verwaltung'); ?></option>
                                     <?php endif; ?>
@@ -195,9 +197,17 @@ if (isset($stats['veranstaltungen'])) {
                     <h4><?php _e('CSV-Format', 'dienstplan-verwaltung'); ?></h4>
                     <p><strong><?php _e('Vereine:', 'dienstplan-verwaltung'); ?></strong><br>
                     <code>name,kuerzel,beschreibung,kontakt_name,kontakt_email,kontakt_telefon</code></p>
+
+                    <p><strong><?php _e('Bereiche:', 'dienstplan-verwaltung'); ?></strong><br>
+                    <code>name,farbe,aktiv,sortierung,admin_only</code><br>
+                    <small><?php _e('farbe optional als Hex (#RRGGBB), aktiv/admin_only: 1 oder 0', 'dienstplan-verwaltung'); ?></small></p>
+
+                    <p><strong><?php _e('Tätigkeiten:', 'dienstplan-verwaltung'); ?></strong><br>
+                    <code>bereich_name,name,beschreibung,aktiv,sortierung,admin_only</code><br>
+                    <small><?php _e('Alternativ kann bereich_id gemappt werden. aktiv/admin_only: 1 oder 0', 'dienstplan-verwaltung'); ?></small></p>
                     
                     <p><strong><?php _e('Veranstaltungen:', 'dienstplan-verwaltung'); ?></strong><br>
-                    <code>name,start_datum,ende_datum,beschreibung,dienst_von_zeit,dienst_bis_zeit</code><br>
+                    <code>name,start_datum,end_datum,beschreibung,dienst_von_zeit,dienst_bis_zeit</code><br>
                     <small><?php _e('Datum: YYYY-MM-DD, Zeit: HH:MM', 'dienstplan-verwaltung'); ?></small></p>
                     
                     <p><strong><?php _e('Dienste:', 'dienstplan-verwaltung'); ?></strong><br>
@@ -270,6 +280,14 @@ if (isset($stats['veranstaltungen'])) {
                             <span class="dashicons dashicons-calendar-alt" style="color: #2271b1;"></span>
                             <strong><?php echo count($stats['veranstaltungen']); ?></strong> <?php _e('Veranstaltungen', 'dienstplan-verwaltung'); ?>
                         </li>
+                        <li style="padding: 0.5rem 0; border-bottom: 1px solid #e5e7eb;">
+                            <span class="dashicons dashicons-category" style="color: #2271b1;"></span>
+                            <strong><?php echo count($stats['bereiche']); ?></strong> <?php _e('Bereiche', 'dienstplan-verwaltung'); ?>
+                        </li>
+                        <li style="padding: 0.5rem 0; border-bottom: 1px solid #e5e7eb;">
+                            <span class="dashicons dashicons-hammer" style="color: #2271b1;"></span>
+                            <strong><?php echo count($stats['taetigkeiten']); ?></strong> <?php _e('Tätigkeiten', 'dienstplan-verwaltung'); ?>
+                        </li>
                         <li style="padding: 0.5rem 0;">
                             <span class="dashicons dashicons-list-view" style="color: #2271b1;"></span>
                             <strong><?php echo count($stats['dienste']); ?></strong> <?php _e('Dienste', 'dienstplan-verwaltung'); ?>
@@ -290,6 +308,18 @@ if (isset($stats['veranstaltungen'])) {
                 <?php endif; ?>
                 
                 <?php if ($can_manage_events): ?>
+                <p>
+                    <button type="button" class="button button-secondary" onclick="return exportData('bereiche', event);" style="display: block; width: 100%; margin-bottom: 0.5rem;">
+                        <span class="dashicons dashicons-download" style="margin-top: 3px;"></span>
+                        <?php _e('Bereiche exportieren', 'dienstplan-verwaltung'); ?>
+                    </button>
+                </p>
+                <p>
+                    <button type="button" class="button button-secondary" onclick="return exportData('taetigkeiten', event);" style="display: block; width: 100%; margin-bottom: 0.5rem;">
+                        <span class="dashicons dashicons-download" style="margin-top: 3px;"></span>
+                        <?php _e('Tätigkeiten exportieren', 'dienstplan-verwaltung'); ?>
+                    </button>
+                </p>
                 <p>
                     <button type="button" class="button button-secondary" onclick="return exportData('veranstaltungen', event);" style="display: block; width: 100%; margin-bottom: 0.5rem;">
                         <span class="dashicons dashicons-download" style="margin-top: 3px;"></span>

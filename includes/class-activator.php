@@ -70,6 +70,7 @@ class Dienstplan_Activator {
         // Plugin-Version speichern
         add_option('dienstplan_version', DIENSTPLAN_VERSION);
         add_option('dienstplan_db_version', DIENSTPLAN_VERSION);
+        add_option('dienstplan_delete_data_on_deactivate', 0);
         
         // Standard-Einstellungen
         $default_settings = array(

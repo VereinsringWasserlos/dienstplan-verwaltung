@@ -86,8 +86,8 @@ if (!defined('ABSPATH')) exit;
 /* Verein Selection - Modern Dashboard Style */
 
 .dp-verein-selection {
-    max-width: 1400px;
-    margin: 0 auto;
+    max-width: none;
+    margin: 0;
     padding: 3rem 1rem;
 }
 

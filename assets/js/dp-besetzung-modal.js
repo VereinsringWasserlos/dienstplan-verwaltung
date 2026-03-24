@@ -6,8 +6,16 @@
 (function($) {
     'use strict';
 
+    const dpBesetzungDebugEnabled = Boolean(window.dpBesetzungDebug);
+    const dpBesetzungDebugLog = function() {
+        if (!dpBesetzungDebugEnabled) {
+            return;
+        }
+        console.log.apply(console, arguments);
+    };
+
     $(document).ready(function() {
-        console.log('Besetzung Modal geladen');
+        dpBesetzungDebugLog('Besetzung Modal geladen');
         
         // ESC-Taste zum Schließen
         $(document).on('keydown', function(e) {
@@ -25,7 +33,7 @@
      * Öffnet das Besetzungs-Modal für einen Dienst
      */
     window.editBesetzung = function(dienstId) {
-        console.log('editBesetzung', dienstId);
+        dpBesetzungDebugLog('editBesetzung', dienstId);
         $('#besetzung_dienst_id').val(dienstId);
         $('#besetzung-slots-container').html('<p style="text-align: center; color: #666;"><span class="spinner is-active" style="float: none; margin: 0;"></span> Lade Slots...</p>');
         $('#besetzung-modal').css('display', 'flex');
@@ -40,7 +48,7 @@
                 dienst_id: dienstId
             },
             success: function(response) {
-                console.log('Besetzung Response:', response);
+                dpBesetzungDebugLog('Besetzung Response:', response);
                 if (response.success && response.data) {
                     renderBesetzung(response.data);
                 } else {
@@ -130,7 +138,7 @@
             }
         }
         
-        console.log('assignSlot', slotId, mitarbeiterId, 'isReplacement:', isReplacement);
+        dpBesetzungDebugLog('assignSlot', slotId, mitarbeiterId, 'isReplacement:', isReplacement);
         
         $.ajax({
             url: dpAjax.ajaxurl,
@@ -143,7 +151,7 @@
                 force_replace: isReplacement ? 1 : 0
             },
             success: function(response) {
-                console.log('Assign Response:', response);
+                dpBesetzungDebugLog('Assign Response:', response);
                 if (response.success) {
                     // Reload Besetzung
                     const dienstId = $('#besetzung_dienst_id').val();
@@ -167,7 +175,7 @@
             return;
         }
         
-        console.log('removeSlotAssignment', slotId);
+        dpBesetzungDebugLog('removeSlotAssignment', slotId);
         
         $.ajax({
             url: dpAjax.ajaxurl,
@@ -178,7 +186,7 @@
                 slot_id: slotId
             },
             success: function(response) {
-                console.log('Remove Response:', response);
+                dpBesetzungDebugLog('Remove Response:', response);
                 if (response.success) {
                     // Reload Besetzung
                     const dienstId = $('#besetzung_dienst_id').val();
@@ -239,7 +247,7 @@
             }
         }
         
-        console.log('saveNeuerMitarbeiter', {vorname, nachname, email, telefon});
+        dpBesetzungDebugLog('saveNeuerMitarbeiter', {vorname, nachname, email, telefon});
         
         const requestData = {
             action: 'dp_add_mitarbeiter',
@@ -261,7 +269,7 @@
             type: 'POST',
             data: requestData,
             success: function(response) {
-                console.log('Add Mitarbeiter Response:', response);
+                dpBesetzungDebugLog('Add Mitarbeiter Response:', response);
                 if (response.success) {
                     const newMitarbeiterId = response.data.mitarbeiter_id;
                     alert('Mitarbeiter erfolgreich angelegt!');

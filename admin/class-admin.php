@@ -24,8 +24,9 @@ class Dienstplan_Admin {
         $this->version = $version;
         $this->db_prefix = $db_prefix;
         
-        // Hook für Export (vor WordPress-Headers)
+        // Hook für Export: admin_init (reguläre Admin-Seiten) UND wp_ajax (AJAX-Aufrufe)
         add_action('admin_init', array($this, 'handle_export'));
+        add_action('wp_ajax_dp_export_csv', array($this, 'handle_export'));
         
         // Admin-Notices
         add_action('admin_notices', array($this, 'show_admin_notices'));
@@ -554,6 +555,11 @@ class Dienstplan_Admin {
             );
         }
         
+        $can_access_import_export = Dienstplan_Roles::can_manage_clubs()
+            || Dienstplan_Roles::can_manage_events()
+            || Dienstplan_Roles::can_manage_settings()
+            || current_user_can('manage_options');
+
         // Einstellungen
         if (Dienstplan_Roles::can_manage_settings() || current_user_can('manage_options')) {
             add_submenu_page(
@@ -565,12 +571,33 @@ class Dienstplan_Admin {
                 array($this, 'display_settings')
             );
             
-            // Import/Export - für alle mit Verwaltungsrechten
+        }
+
+        // Import/Export - für alle mit Verwaltungsrechten
+        if ($can_access_import_export) {
+            add_submenu_page(
+                '',
+                __('Import', 'dienstplan-verwaltung'),
+                __('Import', 'dienstplan-verwaltung'),
+                'read', // Niedrigere Berechtigung, wird in Funktion genauer geprüft
+                'dienstplan-import',
+                array($this, 'display_import')
+            );
+
+            add_submenu_page(
+                '',
+                __('Export', 'dienstplan-verwaltung'),
+                __('Export', 'dienstplan-verwaltung'),
+                'read',
+                'dienstplan-export',
+                array($this, 'display_export')
+            );
+
             add_submenu_page(
                 '',
                 __('Import/Export', 'dienstplan-verwaltung'),
                 __('Import/Export', 'dienstplan-verwaltung'),
-                'read', // Niedrigere Berechtigung, wird in Funktion genauer geprüft
+                'read',
                 'dienstplan-import-export',
                 array($this, 'display_import_export')
             );
@@ -657,6 +684,8 @@ class Dienstplan_Admin {
             'dienstplan-dienste' => __('Dienste', 'dienstplan-verwaltung'),
             'dienstplan-overview' => __('Dienst-Übersicht', 'dienstplan-verwaltung'),
             'dienstplan-einstellungen' => __('Einstellungen', 'dienstplan-verwaltung'),
+            'dienstplan-import' => __('Import', 'dienstplan-verwaltung'),
+            'dienstplan-export' => __('Export', 'dienstplan-verwaltung'),
             'dienstplan-import-export' => __('Import/Export', 'dienstplan-verwaltung'),
             'dienstplan-benutzer' => __('Admin-Benutzer', 'dienstplan-verwaltung'),
             'dienstplan-dokumentation' => __('Dokumentation', 'dienstplan-verwaltung'),
@@ -836,14 +865,32 @@ class Dienstplan_Admin {
             true
         );
         
-        // Import-Export Script (für Import/Export-Verwaltung)
-        wp_enqueue_script(
-            'dp-import-export',
-            DIENSTPLAN_PLUGIN_URL . 'assets/js/dp-import-export.js',
-            array('jquery', 'dp-admin-scripts'),
-            $this->version,
-            true
-        );
+        $current_page = isset($_GET['page']) ? sanitize_text_field($_GET['page']) : '';
+
+        if ($current_page === 'dienstplan-import-export') {
+            wp_enqueue_script(
+                'dp-import-export',
+                DIENSTPLAN_PLUGIN_URL . 'assets/js/dp-import-export.js',
+                array('jquery', 'dp-admin-scripts'),
+                $this->version,
+                true
+            );
+        }
+
+        if ($current_page === 'dienstplan-import') {
+            $dp_import_path = DIENSTPLAN_PLUGIN_PATH . 'assets/js/dp-import.js';
+            $dp_import_version = $this->version;
+            if (file_exists($dp_import_path)) {
+                $dp_import_version .= '.' . filemtime($dp_import_path);
+            }
+            wp_enqueue_script(
+                'dp-import',
+                DIENSTPLAN_PLUGIN_URL . 'assets/js/dp-import.js',
+                array('jquery', 'dp-admin-scripts'),
+                $dp_import_version,
+                true
+            );
+        }
         
         // AJAX-Daten für JavaScript
         $localize_data = array(
@@ -1042,14 +1089,45 @@ class Dienstplan_Admin {
         require_once DIENSTPLAN_PLUGIN_PATH . 'includes/class-database.php';
         $db = new Dienstplan_Database($this->db_prefix);
         
-        // Statistiken für Export
         $stats = array(
             'vereine' => $db->get_vereine(true),
+            'bereiche' => $db->get_bereiche(false),
+            'taetigkeiten' => $db->get_taetigkeiten(false),
             'veranstaltungen' => $db->get_veranstaltungen(),
             'dienste' => $db->get_dienste()
         );
-        
+
         include_once DIENSTPLAN_PLUGIN_PATH . 'admin/views/import-export.php';
+    }
+
+    public function display_import() {
+        require_once DIENSTPLAN_PLUGIN_PATH . 'includes/class-database.php';
+        $db = new Dienstplan_Database($this->db_prefix);
+
+        $stats = array(
+            'vereine' => $db->get_vereine(true),
+            'bereiche' => $db->get_bereiche(false),
+            'taetigkeiten' => $db->get_taetigkeiten(false),
+            'veranstaltungen' => $db->get_veranstaltungen(),
+            'dienste' => $db->get_dienste()
+        );
+
+        include_once DIENSTPLAN_PLUGIN_PATH . 'admin/views/import.php';
+    }
+
+    public function display_export() {
+        require_once DIENSTPLAN_PLUGIN_PATH . 'includes/class-database.php';
+        $db = new Dienstplan_Database($this->db_prefix);
+
+        $stats = array(
+            'vereine' => $db->get_vereine(true),
+            'bereiche' => $db->get_bereiche(false),
+            'taetigkeiten' => $db->get_taetigkeiten(false),
+            'veranstaltungen' => $db->get_veranstaltungen(),
+            'dienste' => $db->get_dienste()
+        );
+
+        include_once DIENSTPLAN_PLUGIN_PATH . 'admin/views/export.php';
     }
     
     public function display_debug() {
@@ -3298,12 +3376,17 @@ class Dienstplan_Admin {
             case 'vereine':
                 $can_export = Dienstplan_Roles::can_manage_clubs() || current_user_can('manage_options');
                 break;
+            case 'bereiche':
+            case 'taetigkeiten':
             case 'veranstaltungen':
             case 'dienste':
                 $can_export = Dienstplan_Roles::can_manage_events() || current_user_can('manage_options');
                 break;
+            case 'all':
+                $can_export = (Dienstplan_Roles::can_manage_clubs() || Dienstplan_Roles::can_manage_events() || current_user_can('manage_options'));
+                break;
             default:
-                $can_export = current_user_can('manage_options'); // Nur WP-Admin für unbekannte Typen
+                $can_export = current_user_can('manage_options');
         }
         
         if (!$can_export) {
@@ -3321,6 +3404,126 @@ class Dienstplan_Admin {
         header('Pragma: no-cache');
         header('Expires: 0');
         
+        // Hilfsfunktion: CSV-Inhalt für einen Typ als String erzeugen
+        $build_csv = function($csv_type) use ($db, $can_manage_clubs, $can_manage_events) {
+            if (!isset($can_manage_clubs)) {
+                $can_manage_clubs = Dienstplan_Roles::can_manage_clubs() || current_user_can('manage_options');
+            }
+            if (!isset($can_manage_events)) {
+                $can_manage_events = Dienstplan_Roles::can_manage_events() || current_user_can('manage_options');
+            }
+
+            ob_start();
+            $out = fopen('php://output', 'w');
+            fprintf($out, chr(0xEF).chr(0xBB).chr(0xBF));
+
+            switch ($csv_type) {
+                case 'vereine':
+                    if (!$can_manage_clubs) { fclose($out); ob_end_clean(); return ''; }
+                    fputcsv($out, array('name', 'kuerzel', 'beschreibung', 'kontakt_name', 'kontakt_email', 'kontakt_telefon'), ';');
+                    $rows = $db->get_vereine();
+                    if ($rows) {
+                        foreach ($rows as $r) {
+                            fputcsv($out, array($r->name ?? '', $r->kuerzel ?? '', $r->beschreibung ?? '', $r->kontakt_name ?? '', $r->kontakt_email ?? '', $r->kontakt_telefon ?? ''), ';');
+                        }
+                    }
+                    break;
+
+                case 'bereiche':
+                    if (!$can_manage_events) { fclose($out); ob_end_clean(); return ''; }
+                    fputcsv($out, array('name', 'farbe', 'aktiv', 'sortierung', 'admin_only'), ';');
+                    $rows = $db->get_bereiche(false);
+                    if ($rows) {
+                        foreach ($rows as $r) {
+                            fputcsv($out, array($r->name ?? '', $r->farbe ?? '', isset($r->aktiv) ? (int)$r->aktiv : 1, isset($r->sortierung) ? (int)$r->sortierung : 999, isset($r->admin_only) ? (int)$r->admin_only : 0), ';');
+                        }
+                    }
+                    break;
+
+                case 'taetigkeiten':
+                    if (!$can_manage_events) { fclose($out); ob_end_clean(); return ''; }
+                    fputcsv($out, array('bereich_name', 'bereich_id', 'name', 'beschreibung', 'aktiv', 'sortierung', 'admin_only'), ';');
+                    $rows = $db->get_taetigkeiten(false);
+                    if ($rows) {
+                        foreach ($rows as $r) {
+                            fputcsv($out, array($r->bereich_name ?? '', $r->bereich_id ?? '', $r->name ?? '', $r->beschreibung ?? '', isset($r->aktiv) ? (int)$r->aktiv : 1, isset($r->sortierung) ? (int)$r->sortierung : 999, isset($r->admin_only) ? (int)$r->admin_only : 0), ';');
+                        }
+                    }
+                    break;
+
+                case 'veranstaltungen':
+                    if (!$can_manage_events) { fclose($out); ob_end_clean(); return ''; }
+                    fputcsv($out, array('name', 'start_datum', 'end_datum', 'beschreibung'), ';');
+                    $rows = $db->get_veranstaltungen();
+                    if ($rows) {
+                        foreach ($rows as $r) {
+                            fputcsv($out, array($r->name ?? '', $r->start_datum ?? '', $r->end_datum ?? '', $r->beschreibung ?? ''), ';');
+                        }
+                    }
+                    break;
+
+                case 'dienste':
+                    if (!$can_manage_events) { fclose($out); ob_end_clean(); return ''; }
+                    fputcsv($out, array('veranstaltung_id', 'veranstaltung_name', 'tag_nummer', 'verein_id', 'verein_name', 'bereich_id', 'bereich_name', 'taetigkeit_id', 'taetigkeit_name', 'von_zeit', 'bis_zeit', 'bis_datum', 'anzahl_personen', 'splittbar', 'status'), ';');
+                    $rows = $db->get_dienste();
+                    if ($rows) {
+                        foreach ($rows as $r) {
+                            $tag_nummer = '';
+                            if (!empty($r->tag_id)) {
+                                $tag = $db->get_veranstaltung_tag($r->tag_id);
+                                if ($tag) { $tag_nummer = $tag->tag_nummer; }
+                            }
+                            fputcsv($out, array($r->veranstaltung_id ?? '', '', $tag_nummer, $r->verein_id ?? '', $r->verein_name ?? '', $r->bereich_id ?? '', $r->bereich_name ?? '', $r->taetigkeit_id ?? '', $r->taetigkeit_name ?? '', $r->von_zeit ?? '', $r->bis_zeit ?? '', $r->bis_datum ?? '', $r->anzahl_personen ?? '', $r->splittbar ? '1' : '0', $r->status ?? 'geplant'), ';');
+                        }
+                    }
+                    break;
+            }
+
+            fclose($out);
+            return ob_get_clean();
+        };
+
+        if ($type === 'all') {
+            // ZIP mit allen CSVs erstellen
+            if (!class_exists('ZipArchive')) {
+                wp_die('ZipArchive nicht verfügbar. Bitte exportieren Sie die Typen einzeln.');
+            }
+
+            $tmpfile = tempnam(sys_get_temp_dir(), 'dp_exp_');
+            $zip = new ZipArchive();
+            if ($zip->open($tmpfile, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
+                wp_die('ZIP-Erstellung fehlgeschlagen.');
+            }
+
+            $can_manage_clubs = Dienstplan_Roles::can_manage_clubs() || current_user_can('manage_options');
+            $can_manage_events = Dienstplan_Roles::can_manage_events() || current_user_can('manage_options');
+
+            $export_types = array();
+            if ($can_manage_clubs) {
+                $export_types[] = 'vereine';
+            }
+            if ($can_manage_events) {
+                $export_types = array_merge($export_types, array('bereiche', 'taetigkeiten', 'veranstaltungen', 'dienste'));
+            }
+
+            foreach ($export_types as $t) {
+                $csv_content = $build_csv($t);
+                $zip->addFromString('dienstplan-' . $t . '-' . date('Y-m-d') . '.csv', $csv_content);
+            }
+
+            $zip->close();
+
+            $zip_filename = 'dienstplan-export-' . date('Y-m-d') . '.zip';
+            header('Content-Type: application/zip');
+            header('Content-Disposition: attachment; filename=' . $zip_filename);
+            header('Content-Length: ' . filesize($tmpfile));
+            header('Pragma: no-cache');
+            header('Expires: 0');
+            readfile($tmpfile);
+            @unlink($tmpfile);
+            exit;
+        }
+
         $output = fopen('php://output', 'w');
         
         // UTF-8 BOM für Excel
@@ -3344,8 +3547,42 @@ class Dienstplan_Admin {
                 }
                 break;
                 
+            case 'bereiche':
+                fputcsv($output, array('name', 'farbe', 'aktiv', 'sortierung', 'admin_only'), ';');
+                $data = $db->get_bereiche(false);
+                if ($data) {
+                    foreach ($data as $row) {
+                        fputcsv($output, array(
+                            $row->name ?? '',
+                            $row->farbe ?? '',
+                            isset($row->aktiv) ? (int)$row->aktiv : 1,
+                            isset($row->sortierung) ? (int)$row->sortierung : 999,
+                            isset($row->admin_only) ? (int)$row->admin_only : 0
+                        ), ';');
+                    }
+                }
+                break;
+
+            case 'taetigkeiten':
+                fputcsv($output, array('bereich_name', 'bereich_id', 'name', 'beschreibung', 'aktiv', 'sortierung', 'admin_only'), ';');
+                $data = $db->get_taetigkeiten(false);
+                if ($data) {
+                    foreach ($data as $row) {
+                        fputcsv($output, array(
+                            $row->bereich_name ?? '',
+                            $row->bereich_id ?? '',
+                            $row->name ?? '',
+                            $row->beschreibung ?? '',
+                            isset($row->aktiv) ? (int)$row->aktiv : 1,
+                            isset($row->sortierung) ? (int)$row->sortierung : 999,
+                            isset($row->admin_only) ? (int)$row->admin_only : 0
+                        ), ';');
+                    }
+                }
+                break;
+
             case 'veranstaltungen':
-                fputcsv($output, array('name', 'start_datum', 'ende_datum', 'beschreibung'), ';');
+                fputcsv($output, array('name', 'start_datum', 'end_datum', 'beschreibung'), ';');
                 $data = $db->get_veranstaltungen();
                 if ($data) {
                     foreach ($data as $row) {
@@ -3419,6 +3656,9 @@ class Dienstplan_Admin {
             case 'vereine':
                 $can_import = Dienstplan_Roles::can_manage_clubs() || current_user_can('manage_options');
                 break;
+            case 'dienstplan':
+            case 'bereiche':
+            case 'taetigkeiten':
             case 'veranstaltungen':
             case 'dienste':
                 $can_import = Dienstplan_Roles::can_manage_events() || current_user_can('manage_options');
@@ -3497,6 +3737,25 @@ class Dienstplan_Admin {
         $skipped = 0;
         $errors = 0;
         $error_details = array();
+        $unresolved_vereine = array();
+        $unresolved_verein_keys = array();
+        $unresolved_verein_indices = array();
+
+        $verein_alias_map = get_option('dp_import_verein_aliases', array());
+        if (!is_array($verein_alias_map)) {
+            $verein_alias_map = array();
+        }
+
+        // Normalisiere Alias-Map auf saubere Großschreibung
+        $normalized_alias_map = array();
+        foreach ($verein_alias_map as $from => $to) {
+            $from_clean = strtoupper(trim((string) $from));
+            $to_clean = strtoupper(trim((string) $to));
+            if ($from_clean !== '' && $to_clean !== '') {
+                $normalized_alias_map[$from_clean] = $to_clean;
+            }
+        }
+        $verein_alias_map = $normalized_alias_map;
         
         // Zeitzone Objekt für Konvertierung
         $tz = new DateTimeZone($timezone);
@@ -3540,6 +3799,83 @@ class Dienstplan_Admin {
             }
             
             return false;
+        };
+
+        $parse_bool = function($value, $default = 0) {
+            if ($value === null || $value === '') {
+                return (int) $default;
+            }
+
+            $value = strtolower(trim((string) $value));
+            if (in_array($value, array('1', 'true', 'yes', 'ja', 'y', 'on'), true)) {
+                return 1;
+            }
+            if (in_array($value, array('0', 'false', 'no', 'nein', 'n', 'off'), true)) {
+                return 0;
+            }
+
+            return (int) $default;
+        };
+
+        $make_verein_kuerzel = function($verein_name, $vereine_by_kuerzel) {
+            $verein_name = trim((string) $verein_name);
+            if ($verein_name === '') {
+                return '';
+            }
+
+            $normalized_name = remove_accents($verein_name);
+            $normalized_name = preg_replace('/[^A-Za-z0-9\s]/', ' ', $normalized_name);
+            $parts = preg_split('/\s+/', trim($normalized_name));
+            $parts = array_values(array_filter($parts));
+
+            $base = '';
+            if (count($parts) >= 2) {
+                foreach ($parts as $part) {
+                    $base .= strtoupper(substr($part, 0, 1));
+                }
+            } else {
+                $collapsed = strtoupper(preg_replace('/[^A-Za-z0-9]/', '', $normalized_name));
+                $base = substr($collapsed, 0, 6);
+            }
+
+            if ($base === '') {
+                $base = 'VRN';
+            }
+
+            $candidate = $base;
+            $suffix = 2;
+            while (isset($vereine_by_kuerzel[$candidate])) {
+                $candidate = substr($base, 0, 4) . $suffix;
+                $suffix++;
+            }
+
+            return $candidate;
+        };
+
+        $register_unresolved_verein = function($key_hash, $payload, $dienst_id = 0) use (&$unresolved_vereine, &$unresolved_verein_indices) {
+            if ($key_hash === '' || !is_array($payload)) {
+                return;
+            }
+
+            if (!isset($unresolved_verein_indices[$key_hash])) {
+                $payload['dienst_ids'] = array();
+                $payload['rows'] = !empty($payload['row']) ? array(intval($payload['row'])) : array();
+                $unresolved_vereine[] = $payload;
+                $unresolved_verein_indices[$key_hash] = count($unresolved_vereine) - 1;
+            }
+
+            $entry_index = $unresolved_verein_indices[$key_hash];
+
+            if (!empty($payload['row'])) {
+                $row_number = intval($payload['row']);
+                if ($row_number > 0 && !in_array($row_number, $unresolved_vereine[$entry_index]['rows'], true)) {
+                    $unresolved_vereine[$entry_index]['rows'][] = $row_number;
+                }
+            }
+
+            if ($dienst_id > 0 && !in_array($dienst_id, $unresolved_vereine[$entry_index]['dienst_ids'], true)) {
+                $unresolved_vereine[$entry_index]['dienst_ids'][] = intval($dienst_id);
+            }
         };
         
         switch ($import_type) {
@@ -3596,15 +3932,17 @@ class Dienstplan_Admin {
                         $data[$field] = isset($row[$csvIndex]) ? trim($row[$csvIndex]) : '';
                     }
                     
-                    if (empty($data['name']) || empty($data['start_datum']) || empty($data['ende_datum'])) {
+                    $raw_end_date = !empty($data['end_datum']) ? $data['end_datum'] : (isset($data['ende_datum']) ? $data['ende_datum'] : '');
+
+                    if (empty($data['name']) || empty($data['start_datum']) || empty($raw_end_date)) {
                         $errors++;
-                        $error_details[] = "Zeile {$row_number}: Pflichtfelder fehlen (Name, Start-Datum, Ende-Datum)";
+                        $error_details[] = "Zeile {$row_number}: Pflichtfelder fehlen (Name, Start-Datum, End-Datum)";
                         continue;
                     }
                     
                     // Datum-Validierung mit intelligenter Erkennung
                     $start_timestamp = $parse_date($data['start_datum']);
-                    $ende_timestamp = $parse_date($data['ende_datum']);
+                    $ende_timestamp = $parse_date($raw_end_date);
                     
                     if ($start_timestamp === false) {
                         $errors++;
@@ -3614,13 +3952,14 @@ class Dienstplan_Admin {
                     
                     if ($ende_timestamp === false) {
                         $errors++;
-                        $error_details[] = "Zeile {$row_number}: Ungültiges Ende-Datum '{$data['ende_datum']}'";
+                        $error_details[] = "Zeile {$row_number}: Ungültiges End-Datum '{$raw_end_date}'";
                         continue;
                     }
                     
                     // Datum in MySQL-Format konvertieren
                     $data['start_datum'] = date('Y-m-d', $start_timestamp);
-                    $data['ende_datum'] = date('Y-m-d', $ende_timestamp);
+                    $data['end_datum'] = date('Y-m-d', $ende_timestamp);
+                    unset($data['ende_datum']);
                     
                     // Setze Standardwerte wenn nicht gemappt
                     if (!isset($data['dienst_von_zeit']) || empty($data['dienst_von_zeit'])) {
@@ -3654,6 +3993,551 @@ class Dienstplan_Admin {
                     }
                 }
                 break;
+
+            case 'bereiche':
+                $row_number = 1;
+                $existing_bereiche = $db->get_bereiche(false);
+                $bereiche_by_name = array();
+
+                foreach ($existing_bereiche as $bereich) {
+                    $bereich_name_key = strtolower(trim((string) $bereich->name));
+                    if ($bereich_name_key !== '') {
+                        $bereiche_by_name[$bereich_name_key] = $bereich;
+                    }
+                }
+
+                foreach ($csv_data as $row) {
+                    $row_number++;
+                    $current_unresolved_key_hash = '';
+                    $current_unresolved_payload = null;
+
+                    $data = array();
+                    foreach ($mapping as $field => $csvIndex) {
+                        $data[$field] = isset($row[$csvIndex]) ? trim($row[$csvIndex]) : '';
+                    }
+
+                    if (empty($data['name'])) {
+                        $errors++;
+                        $error_details[] = "Zeile {$row_number}: Pflichtfeld fehlt (Name)";
+                        continue;
+                    }
+
+                    $name = sanitize_text_field($data['name']);
+                    $name_key = strtolower($name);
+
+                    $bereich_data = array(
+                        'name' => $name,
+                        'farbe' => !empty($data['farbe']) ? sanitize_hex_color($data['farbe']) : null,
+                        'aktiv' => $parse_bool(isset($data['aktiv']) ? $data['aktiv'] : '', 1),
+                        'sortierung' => isset($data['sortierung']) && $data['sortierung'] !== '' ? max(0, intval($data['sortierung'])) : 999,
+                        'admin_only' => $parse_bool(isset($data['admin_only']) ? $data['admin_only'] : '', 0)
+                    );
+
+                    if (empty($bereich_data['farbe'])) {
+                        $bereich_data['farbe'] = '#3b82f6';
+                    }
+
+                    $existing = isset($bereiche_by_name[$name_key]) ? $bereiche_by_name[$name_key] : null;
+
+                    if ($existing && $import_mode === 'update') {
+                        $result = $db->update_bereich($existing->id, $bereich_data);
+                        if ($result !== false) {
+                            $updated++;
+                            $existing->name = $bereich_data['name'];
+                            $existing->farbe = $bereich_data['farbe'];
+                            $existing->aktiv = $bereich_data['aktiv'];
+                            $existing->sortierung = $bereich_data['sortierung'];
+                            $existing->admin_only = $bereich_data['admin_only'];
+                            $bereiche_by_name[$name_key] = $existing;
+                        } else {
+                            $errors++;
+                            $error_details[] = "Zeile {$row_number}: Fehler beim Aktualisieren von Bereich '{$name}'";
+                        }
+                    } elseif (!$existing) {
+                        $result = $db->add_bereich($bereich_data);
+                        if ($result !== false) {
+                            $created++;
+                            $bereiche_by_name[$name_key] = (object) array(
+                                'id' => $result,
+                                'name' => $bereich_data['name'],
+                                'farbe' => $bereich_data['farbe'],
+                                'aktiv' => $bereich_data['aktiv'],
+                                'sortierung' => $bereich_data['sortierung'],
+                                'admin_only' => $bereich_data['admin_only']
+                            );
+                        } else {
+                            $errors++;
+                            $error_details[] = "Zeile {$row_number}: Fehler beim Erstellen von Bereich '{$name}'";
+                        }
+                    } else {
+                        $skipped++;
+                    }
+                }
+                break;
+
+            case 'taetigkeiten':
+                $row_number = 1;
+                $existing_bereiche = $db->get_bereiche(false);
+                $bereiche_by_name = array();
+                $bereiche_by_id = array();
+
+                foreach ($existing_bereiche as $bereich) {
+                    $bereiche_by_id[(int) $bereich->id] = $bereich;
+                    $bereich_name_key = strtolower(trim((string) $bereich->name));
+                    if ($bereich_name_key !== '') {
+                        $bereiche_by_name[$bereich_name_key] = $bereich;
+                    }
+                }
+
+                $existing_taetigkeiten = $db->get_taetigkeiten(false);
+                $taetigkeiten_by_key = array();
+                foreach ($existing_taetigkeiten as $taetigkeit) {
+                    if (empty($taetigkeit->bereich_id) || empty($taetigkeit->name)) {
+                        continue;
+                    }
+                    $taetigkeit_key = intval($taetigkeit->bereich_id) . '|' . strtolower(trim((string) $taetigkeit->name));
+                    $taetigkeiten_by_key[$taetigkeit_key] = $taetigkeit;
+                }
+
+                foreach ($csv_data as $row) {
+                    $row_number++;
+
+                    $data = array();
+                    foreach ($mapping as $field => $csvIndex) {
+                        $data[$field] = isset($row[$csvIndex]) ? trim($row[$csvIndex]) : '';
+                    }
+
+                    if (empty($data['name'])) {
+                        $errors++;
+                        $error_details[] = "Zeile {$row_number}: Pflichtfeld fehlt (Name)";
+                        continue;
+                    }
+
+                    $bereich_id = 0;
+                    if (!empty($data['bereich_id'])) {
+                        $candidate_bereich_id = intval($data['bereich_id']);
+                        if ($candidate_bereich_id > 0 && isset($bereiche_by_id[$candidate_bereich_id])) {
+                            $bereich_id = $candidate_bereich_id;
+                        }
+                    }
+
+                    if (!$bereich_id && !empty($data['bereich_name'])) {
+                        $bereich_name_key = strtolower(trim($data['bereich_name']));
+                        if (isset($bereiche_by_name[$bereich_name_key])) {
+                            $bereich_id = (int) $bereiche_by_name[$bereich_name_key]->id;
+                        } else {
+                            $new_bereich_id = $db->get_or_create_bereich($data['bereich_name']);
+                            if ($new_bereich_id) {
+                                $bereich_id = (int) $new_bereich_id;
+                                $new_bereich = (object) array(
+                                    'id' => $bereich_id,
+                                    'name' => sanitize_text_field($data['bereich_name'])
+                                );
+                                $bereiche_by_id[$bereich_id] = $new_bereich;
+                                $bereiche_by_name[$bereich_name_key] = $new_bereich;
+                            }
+                        }
+                    }
+
+                    if (!$bereich_id) {
+                        $errors++;
+                        $error_details[] = "Zeile {$row_number}: Pflichtfeld fehlt oder ungültig (bereich_name oder bereich_id)";
+                        continue;
+                    }
+
+                    $name = sanitize_text_field($data['name']);
+                    $taetigkeit_key = $bereich_id . '|' . strtolower($name);
+
+                    $taetigkeit_data = array(
+                        'bereich_id' => $bereich_id,
+                        'name' => $name,
+                        'beschreibung' => isset($data['beschreibung']) ? sanitize_textarea_field($data['beschreibung']) : '',
+                        'aktiv' => $parse_bool(isset($data['aktiv']) ? $data['aktiv'] : '', 1),
+                        'sortierung' => isset($data['sortierung']) && $data['sortierung'] !== '' ? max(0, intval($data['sortierung'])) : 999,
+                        'admin_only' => $parse_bool(isset($data['admin_only']) ? $data['admin_only'] : '', 0)
+                    );
+
+                    $existing = isset($taetigkeiten_by_key[$taetigkeit_key]) ? $taetigkeiten_by_key[$taetigkeit_key] : null;
+
+                    if ($existing && $import_mode === 'update') {
+                        $result = $db->update_taetigkeit($existing->id, $taetigkeit_data);
+                        if ($result !== false) {
+                            $updated++;
+                            $existing->name = $taetigkeit_data['name'];
+                            $existing->bereich_id = $taetigkeit_data['bereich_id'];
+                            $existing->beschreibung = $taetigkeit_data['beschreibung'];
+                            $existing->aktiv = $taetigkeit_data['aktiv'];
+                            $existing->sortierung = $taetigkeit_data['sortierung'];
+                            $existing->admin_only = $taetigkeit_data['admin_only'];
+                            $taetigkeiten_by_key[$taetigkeit_key] = $existing;
+                        } else {
+                            $errors++;
+                            $error_details[] = "Zeile {$row_number}: Fehler beim Aktualisieren von Tätigkeit '{$name}'";
+                        }
+                    } elseif (!$existing) {
+                        $result = $db->add_taetigkeit($taetigkeit_data);
+                        if ($result !== false) {
+                            $created++;
+                            $taetigkeiten_by_key[$taetigkeit_key] = (object) array(
+                                'id' => $result,
+                                'bereich_id' => $taetigkeit_data['bereich_id'],
+                                'name' => $taetigkeit_data['name'],
+                                'beschreibung' => $taetigkeit_data['beschreibung'],
+                                'aktiv' => $taetigkeit_data['aktiv'],
+                                'sortierung' => $taetigkeit_data['sortierung'],
+                                'admin_only' => $taetigkeit_data['admin_only']
+                            );
+                        } else {
+                            $errors++;
+                            $error_details[] = "Zeile {$row_number}: Fehler beim Erstellen von Tätigkeit '{$name}'";
+                        }
+                    } else {
+                        $skipped++;
+                    }
+                }
+                break;
+
+            case 'dienstplan':
+                $veranstaltung_id = isset($_POST['veranstaltung_id']) ? intval($_POST['veranstaltung_id']) : 0;
+                $veranstaltung_start = isset($_POST['veranstaltung_start']) ? sanitize_text_field($_POST['veranstaltung_start']) : '';
+                $veranstaltung_ende = isset($_POST['veranstaltung_ende']) ? sanitize_text_field($_POST['veranstaltung_ende']) : '';
+                $default_bereich_farbe = isset($_POST['default_bereich_farbe']) ? sanitize_hex_color($_POST['default_bereich_farbe']) : '';
+                $auto_create_vereine = !empty($_POST['auto_create_vereine']);
+
+                if (empty($default_bereich_farbe)) {
+                    $default_bereich_farbe = '#3b82f6';
+                }
+
+                if (!$veranstaltung_id || !$veranstaltung_start) {
+                    wp_send_json_error(array('message' => 'Veranstaltung fehlt oder ungültig'));
+                    return;
+                }
+
+                $start_timestamp = strtotime($veranstaltung_start);
+                $ende_timestamp = strtotime($veranstaltung_ende . ' 23:59:59');
+
+                $veranstaltung_tage = $db->get_veranstaltung_tage($veranstaltung_id);
+                $tage_by_date = array();
+                foreach ($veranstaltung_tage as $tag) {
+                    $tage_by_date[date('Y-m-d', strtotime($tag->tag_datum))] = $tag;
+                }
+
+                $existing_bereiche = $db->get_bereiche(false);
+                $bereiche_by_name = array();
+                foreach ($existing_bereiche as $bereich) {
+                    $bereich_name_key = strtolower(trim((string) $bereich->name));
+                    if ($bereich_name_key !== '') {
+                        $bereiche_by_name[$bereich_name_key] = $bereich;
+                    }
+                }
+
+                $existing_taetigkeiten = $db->get_taetigkeiten(false);
+                $taetigkeiten_by_key = array();
+                foreach ($existing_taetigkeiten as $taetigkeit) {
+                    if (empty($taetigkeit->bereich_id) || empty($taetigkeit->name)) {
+                        continue;
+                    }
+                    $taetigkeiten_by_key[intval($taetigkeit->bereich_id) . '|' . strtolower(trim((string) $taetigkeit->name))] = $taetigkeit;
+                }
+
+                $existing_vereine = $db->get_vereine(false);
+                $vereine_by_kuerzel = array();
+                $vereine_by_name = array();
+                foreach ($existing_vereine as $verein) {
+                    $verein_array = (array) $verein;
+                    if (!empty($verein_array['kuerzel'])) {
+                        $vereine_by_kuerzel[strtoupper(trim((string) $verein_array['kuerzel']))] = $verein_array;
+                    }
+                    if (!empty($verein_array['name'])) {
+                        $vereine_by_name[strtolower(trim((string) $verein_array['name']))] = $verein_array;
+                    }
+                }
+
+                $row_number = 1;
+                foreach ($csv_data as $row) {
+                    $row_number++;
+
+                    $data = array();
+                    foreach ($mapping as $field => $csvIndex) {
+                        $data[$field] = isset($row[$csvIndex]) ? trim($row[$csvIndex]) : '';
+                    }
+
+                    if (empty($data['datum'])) {
+                        $errors++;
+                        $error_details[] = "Zeile {$row_number}: Pflichtfeld 'Datum' fehlt";
+                        continue;
+                    }
+
+                    $dienst_timestamp = $parse_date($data['datum']);
+                    if ($dienst_timestamp === false) {
+                        $errors++;
+                        $error_details[] = "Zeile {$row_number}: Ungültiges Datum '{$data['datum']}'";
+                        continue;
+                    }
+
+                    if ($dienst_timestamp < $start_timestamp || $dienst_timestamp > $ende_timestamp) {
+                        $errors++;
+                        $error_details[] = "Zeile {$row_number}: Datum '{$data['datum']}' liegt außerhalb der Veranstaltung ({$veranstaltung_start} - {$veranstaltung_ende})";
+                        continue;
+                    }
+
+                    $dienst_datum = date('Y-m-d', $dienst_timestamp);
+                    if (!isset($tage_by_date[$dienst_datum])) {
+                        $errors++;
+                        $error_details[] = "Zeile {$row_number}: Datum '{$data['datum']}' nicht in Veranstaltung gefunden";
+                        continue;
+                    }
+
+                    $dienst_data = array(
+                        'veranstaltung_id' => $veranstaltung_id,
+                        'tag_id' => $tage_by_date[$dienst_datum]->id,
+                        'status' => 'geplant',
+                        'anzahl_personen' => isset($data['anzahl_personen']) && $data['anzahl_personen'] !== '' ? max(1, intval($data['anzahl_personen'])) : 1,
+                        // Beim Import werden Dienste standardmäßig nicht automatisch gesplittet.
+                        // Splittbar wird als Option für spätere manuelle Aufteilung behandelt.
+                        'splittbar' => 0
+                    );
+
+                    if (!empty($data['von_zeit'])) {
+                        $von_zeit = str_replace('.', ':', $data['von_zeit']);
+                        if (preg_match('/^\d{1,2}:\d{2}$/', $von_zeit)) {
+                            $von_zeit .= ':00';
+                        }
+                        $dienst_data['von_zeit'] = $von_zeit;
+                    }
+                    if (!empty($data['bis_zeit'])) {
+                        $bis_zeit = str_replace('.', ':', $data['bis_zeit']);
+                        if (preg_match('/^\d{1,2}:\d{2}$/', $bis_zeit)) {
+                            $bis_zeit .= ':00';
+                        }
+                        $dienst_data['bis_zeit'] = $bis_zeit;
+
+                        if (!empty($dienst_data['von_zeit'])) {
+                            $von_hour = intval(substr($dienst_data['von_zeit'], 0, 2));
+                            $bis_hour = intval(substr($bis_zeit, 0, 2));
+                            if ($bis_hour < $von_hour) {
+                                $dienst_data['bis_datum'] = date('Y-m-d', strtotime($tage_by_date[$dienst_datum]->tag_datum . ' +1 day'));
+                            }
+                        }
+                    }
+
+                    if (!empty($data['besonderheiten'])) {
+                        $dienst_data['besonderheiten'] = sanitize_textarea_field($data['besonderheiten']);
+                    }
+
+                    $missing_info = array();
+                    $bereich_id = 0;
+
+                    if (!empty($data['bereich_name'])) {
+                        $bereich_name = sanitize_text_field($data['bereich_name']);
+                        $bereich_name_key = strtolower($bereich_name);
+                        $bereich_farbe = !empty($data['bereich_farbe']) ? sanitize_hex_color($data['bereich_farbe']) : $default_bereich_farbe;
+                        $bereich_admin_only = $parse_bool(isset($data['bereich_admin_only']) ? $data['bereich_admin_only'] : '', 0);
+                        $existing_bereich = isset($bereiche_by_name[$bereich_name_key]) ? $bereiche_by_name[$bereich_name_key] : null;
+
+                        if ($existing_bereich) {
+                            $bereich_id = (int) $existing_bereich->id;
+                            if ($import_mode === 'update') {
+                                $db->update_bereich($bereich_id, array(
+                                    'name' => $bereich_name,
+                                    'farbe' => $bereich_farbe,
+                                    'aktiv' => 1,
+                                    'sortierung' => isset($existing_bereich->sortierung) ? intval($existing_bereich->sortierung) : 999,
+                                    'admin_only' => $bereich_admin_only
+                                ));
+                            }
+                        } else {
+                            $bereich_id = $db->add_bereich(array(
+                                'name' => $bereich_name,
+                                'farbe' => $bereich_farbe,
+                                'aktiv' => 1,
+                                'sortierung' => 999,
+                                'admin_only' => $bereich_admin_only
+                            ));
+
+                            if ($bereich_id) {
+                                $bereiche_by_name[$bereich_name_key] = (object) array(
+                                    'id' => $bereich_id,
+                                    'name' => $bereich_name,
+                                    'farbe' => $bereich_farbe,
+                                    'sortierung' => 999,
+                                    'admin_only' => $bereich_admin_only
+                                );
+                            } else {
+                                $missing_info[] = "Bereich '{$bereich_name}' konnte nicht angelegt werden";
+                            }
+                        }
+                    } else {
+                        $missing_info[] = 'Kein Bereich angegeben';
+                    }
+
+                    if ($bereich_id) {
+                        $dienst_data['bereich_id'] = $bereich_id;
+                    }
+
+                    if (!empty($data['taetigkeit_name']) && $bereich_id) {
+                        $taetigkeit_name = sanitize_text_field($data['taetigkeit_name']);
+                        $taetigkeit_key = $bereich_id . '|' . strtolower($taetigkeit_name);
+                        $existing_taetigkeit = isset($taetigkeiten_by_key[$taetigkeit_key]) ? $taetigkeiten_by_key[$taetigkeit_key] : null;
+                        $taetigkeit_data = array(
+                            'bereich_id' => $bereich_id,
+                            'name' => $taetigkeit_name,
+                            'beschreibung' => '',
+                            'aktiv' => 1,
+                            'sortierung' => 999,
+                            'admin_only' => $parse_bool(isset($data['taetigkeit_admin_only']) ? $data['taetigkeit_admin_only'] : '', 0)
+                        );
+
+                        if ($existing_taetigkeit) {
+                            $dienst_data['taetigkeit_id'] = (int) $existing_taetigkeit->id;
+                            if ($import_mode === 'update') {
+                                $db->update_taetigkeit($existing_taetigkeit->id, $taetigkeit_data);
+                            }
+                        } else {
+                            $taetigkeit_id = $db->add_taetigkeit($taetigkeit_data);
+                            if ($taetigkeit_id) {
+                                $dienst_data['taetigkeit_id'] = (int) $taetigkeit_id;
+                                $taetigkeiten_by_key[$taetigkeit_key] = (object) array_merge(array('id' => $taetigkeit_id), $taetigkeit_data);
+                            } else {
+                                $missing_info[] = "Tätigkeit '{$taetigkeit_name}' konnte nicht angelegt werden";
+                            }
+                        }
+                    } elseif (!empty($data['taetigkeit_name'])) {
+                        $missing_info[] = 'Tätigkeit konnte ohne Bereich nicht angelegt werden';
+                    } else {
+                        $missing_info[] = 'Keine Tätigkeit angegeben';
+                    }
+
+                    $verein = null;
+                    $verein_kuerzel = !empty($data['verein_kuerzel']) ? strtoupper(sanitize_text_field($data['verein_kuerzel'])) : '';
+                    $verein_name = !empty($data['verein_name']) ? sanitize_text_field($data['verein_name']) : '';
+                    $verein_name_key = strtolower($verein_name);
+
+                    if ($verein_kuerzel !== '' && isset($verein_alias_map[$verein_kuerzel])) {
+                        $verein_kuerzel = $verein_alias_map[$verein_kuerzel];
+                    }
+
+                    if ($verein_kuerzel !== '' && isset($vereine_by_kuerzel[$verein_kuerzel])) {
+                        $verein = $vereine_by_kuerzel[$verein_kuerzel];
+                    } elseif ($verein_name_key !== '' && isset($vereine_by_name[$verein_name_key])) {
+                        $verein = $vereine_by_name[$verein_name_key];
+                    } elseif ($auto_create_vereine && $verein_name !== '') {
+                        if ($verein_kuerzel === '') {
+                            $verein_kuerzel = $make_verein_kuerzel($verein_name, $vereine_by_kuerzel);
+                        }
+
+                        $verein_data = array(
+                            'name' => $verein_name,
+                            'kuerzel' => $verein_kuerzel,
+                            'beschreibung' => ''
+                        );
+
+                        $verein_id = $db->add_verein($verein_data);
+                        if ($verein_id) {
+                            $verein = array_merge(array('id' => $verein_id), $verein_data);
+                            $vereine_by_kuerzel[strtoupper($verein_kuerzel)] = $verein;
+                            $vereine_by_name[$verein_name_key] = $verein;
+                        } else {
+                            $missing_info[] = "Verein '{$verein_name}' konnte nicht angelegt werden";
+                        }
+                    }
+
+                    if ($verein && !empty($verein['id'])) {
+                        $dienst_data['verein_id'] = (int) $verein['id'];
+                    } elseif ($verein_name !== '' || $verein_kuerzel !== '') {
+                        $verein_label = $verein_name !== '' ? $verein_name : $verein_kuerzel;
+                        $missing_info[] = "Verein '{$verein_label}' nicht gefunden";
+
+                        $verein_key = $verein_kuerzel !== '' ? $verein_kuerzel : strtolower($verein_name);
+                        $verein_key_hash = 'dienstplan|' . $verein_key;
+                        if ($verein_key !== '') {
+                            $current_unresolved_key_hash = $verein_key_hash;
+                            $current_unresolved_payload = array(
+                                'row' => $row_number,
+                                'import_type' => 'dienstplan',
+                                'input_kuerzel' => $verein_kuerzel,
+                                'input_name' => $verein_name,
+                                'display' => $verein_label,
+                                'lookup_key' => $verein_kuerzel !== '' ? $verein_kuerzel : strtoupper(substr($verein_name, 0, 64))
+                            );
+                            if (!isset($unresolved_verein_keys[$verein_key_hash])) {
+                                $unresolved_verein_keys[$verein_key_hash] = true;
+                                $register_unresolved_verein($current_unresolved_key_hash, $current_unresolved_payload);
+                            }
+                        }
+                    } else {
+                        $missing_info[] = 'Kein Verein angegeben';
+                    }
+
+                    if (!empty($missing_info)) {
+                        $dienst_data['status'] = 'unvollstaendig';
+                        $error_details[] = array(
+                            'row' => $row_number,
+                            'type' => 'warning',
+                            'message' => 'Unvollständige Daten: ' . implode(', ', $missing_info)
+                        );
+                    }
+
+                    $existing_dienst = $db->find_existing_dienst($dienst_data);
+                    if ($existing_dienst) {
+                        if ($import_mode === 'update') {
+                            $result = $db->update_dienst($existing_dienst->id, $dienst_data);
+
+                            if (is_array($result) && isset($result['error']) && $result['error']) {
+                                $errors++;
+                                $error_details[] = "Zeile {$row_number}: " . $result['message'];
+                            } elseif ($result !== false) {
+                                $updated++;
+                                if ($current_unresolved_key_hash !== '' && $current_unresolved_payload !== null) {
+                                    $register_unresolved_verein($current_unresolved_key_hash, $current_unresolved_payload, intval($existing_dienst->id));
+                                }
+                            } else {
+                                $errors++;
+                                $error_details[] = "Zeile {$row_number}: Fehler beim Aktualisieren des bereits vorhandenen Dienstes";
+                            }
+                        } else {
+                            $skipped++;
+                        }
+                        continue;
+                    }
+
+                    $result = $db->add_dienst($dienst_data);
+
+                    if (is_array($result) && isset($result['error']) && $result['error']) {
+                        $errors++;
+                        $error_details[] = "Zeile {$row_number}: " . $result['message'];
+                    } elseif ($result !== false && is_numeric($result)) {
+                        $created++;
+                        if ($current_unresolved_key_hash !== '' && $current_unresolved_payload !== null) {
+                            $register_unresolved_verein($current_unresolved_key_hash, $current_unresolved_payload, intval($result));
+                        }
+                    } else {
+                        $errors++;
+                        $error_details[] = "Zeile {$row_number}: Fehler beim Speichern des Dienstes in die Datenbank";
+                    }
+                }
+
+                if ($created > 0 || $updated > 0) {
+                    $veranstaltung_dienste = $db->get_dienste($veranstaltung_id);
+                    $used_verein_ids = array();
+                    foreach ($veranstaltung_dienste as $dienst) {
+                        if (!empty($dienst->verein_id) && !in_array($dienst->verein_id, $used_verein_ids, true)) {
+                            $used_verein_ids[] = $dienst->verein_id;
+                        }
+                    }
+
+                    foreach ($used_verein_ids as $verein_id) {
+                        $existing = $db->get_wpdb()->get_var($db->get_wpdb()->prepare(
+                            "SELECT id FROM {$db->get_prefix()}veranstaltung_vereine WHERE veranstaltung_id = %d AND verein_id = %d",
+                            $veranstaltung_id, $verein_id
+                        ));
+
+                        if (!$existing) {
+                            $db->add_veranstaltung_verein($veranstaltung_id, $verein_id);
+                        }
+                    }
+                }
+                break;
                 
             case 'dienste':
                 // Veranstaltungs-Daten aus POST holen
@@ -3673,6 +4557,8 @@ class Dienstplan_Admin {
                 $row_number = 1; // Zeilennummer für Fehlermeldungen
                 foreach ($csv_data as $row) {
                     $row_number++;
+                    $current_unresolved_key_hash = '';
+                    $current_unresolved_payload = null;
                     
                     // Mapping anwenden
                     $data = array();
@@ -3785,6 +4671,11 @@ class Dienstplan_Admin {
                     // Verein nach Kürzel suchen (mit Fuzzy-Matching für Abkürzungen)
                     if (!empty($data['verein_kuerzel'])) {
                         $kuerzel_input = trim($data['verein_kuerzel']);
+                        $kuerzel_input_upper = strtoupper($kuerzel_input);
+
+                        if (isset($verein_alias_map[$kuerzel_input_upper])) {
+                            $kuerzel_input = $verein_alias_map[$kuerzel_input_upper];
+                        }
                         
                         // Kürzel-Mapping für häufige Varianten
                         $kuerzel_aliases = array(
@@ -3826,6 +4717,21 @@ class Dienstplan_Admin {
                         } else {
                             $missing_info[] = "Verein '{$kuerzel_input}' nicht gefunden";
                             $error_details[] = "Zeile {$row_number}: ⚠️ Verein mit Kürzel '{$kuerzel_input}' nicht gefunden - Dienst wird als unvollständig markiert";
+
+                            $verein_key_hash = 'dienste|' . strtoupper($kuerzel_input);
+                            $current_unresolved_key_hash = $verein_key_hash;
+                            $current_unresolved_payload = array(
+                                'row' => $row_number,
+                                'import_type' => 'dienste',
+                                'input_kuerzel' => strtoupper($kuerzel_input),
+                                'input_name' => '',
+                                'display' => strtoupper($kuerzel_input),
+                                'lookup_key' => strtoupper($kuerzel_input)
+                            );
+                            if (!isset($unresolved_verein_keys[$verein_key_hash])) {
+                                $unresolved_verein_keys[$verein_key_hash] = true;
+                                $register_unresolved_verein($current_unresolved_key_hash, $current_unresolved_payload);
+                            }
                         }
                     } else {
                         $missing_info[] = "Kein Verein angegeben";
@@ -3883,12 +4789,33 @@ class Dienstplan_Admin {
                         $dienst_data['anzahl_personen'] = 1;
                     }
                     
-                    if (isset($data['splittbar'])) {
-                        $dienst_data['splittbar'] = ($data['splittbar'] === '1' || $data['splittbar'] === 'true');
-                    } else {
-                        $dienst_data['splittbar'] = false;
-                    }
+                    // Beim CSV-Import nie automatisch in Halbdienste splitten.
+                    // Falls gewünscht, kann später manuell gesplittet werden.
+                    $dienst_data['splittbar'] = 0;
                     
+                    $existing_dienst = $db->find_existing_dienst($dienst_data);
+                    if ($existing_dienst) {
+                        if ($import_mode === 'update') {
+                            $result = $db->update_dienst($existing_dienst->id, $dienst_data);
+
+                            if (is_array($result) && isset($result['error']) && $result['error']) {
+                                $errors++;
+                                $error_details[] = "Zeile {$row_number}: " . $result['message'];
+                            } elseif ($result !== false) {
+                                $updated++;
+                                if ($current_unresolved_key_hash !== '' && $current_unresolved_payload !== null) {
+                                    $register_unresolved_verein($current_unresolved_key_hash, $current_unresolved_payload, intval($existing_dienst->id));
+                                }
+                            } else {
+                                $errors++;
+                                $error_details[] = "Zeile {$row_number}: Fehler beim Aktualisieren des bereits vorhandenen Dienstes";
+                            }
+                        } else {
+                            $skipped++;
+                        }
+                        continue;
+                    }
+
                     $result = $db->add_dienst($dienst_data);
                     
                     // Prüfe ob Fehler-Array zurückgegeben wurde
@@ -3899,6 +4826,9 @@ class Dienstplan_Admin {
                         // Erfolg: $result ist die neue dienst_id
                         // Slots werden automatisch von add_dienst() erstellt via create_dienst_slots()
                         $created++;
+                        if ($current_unresolved_key_hash !== '' && $current_unresolved_payload !== null) {
+                            $register_unresolved_verein($current_unresolved_key_hash, $current_unresolved_payload, intval($result));
+                        }
                     } else {
                         $errors++;
                         $error_details[] = "Zeile {$row_number}: Fehler beim Speichern des Dienstes in die Datenbank";
@@ -3942,8 +4872,141 @@ class Dienstplan_Admin {
             'skipped' => $skipped,
             'errors' => $errors,
             'error_details' => $error_details,
+            'unresolved_vereine' => array_values($unresolved_vereine),
             'message' => sprintf('Import abgeschlossen: %d erstellt, %d aktualisiert, %d übersprungen, %d Fehler', 
                 $created, $updated, $skipped, $errors)
+        ));
+    }
+
+    /**
+     * Speichert Alias-Zuordnungen für Vereinskürzel, die beim Import nicht direkt gefunden wurden.
+     */
+    public function ajax_save_verein_aliases() {
+        check_ajax_referer('dp_ajax_nonce', 'nonce');
+
+        $can_manage = Dienstplan_Roles::can_manage_events() || Dienstplan_Roles::can_manage_clubs() || current_user_can('manage_options');
+        if (!$can_manage) {
+            wp_send_json_error(array('message' => 'Keine Berechtigung'));
+            return;
+        }
+
+        $aliases_json = isset($_POST['aliases']) ? wp_unslash($_POST['aliases']) : '';
+        $aliases = json_decode($aliases_json, true);
+        $assignments_json = isset($_POST['assignments']) ? wp_unslash($_POST['assignments']) : '';
+        $assignments = json_decode($assignments_json, true);
+
+        if ((!is_array($aliases) || empty($aliases)) && (!is_array($assignments) || empty($assignments))) {
+            wp_send_json_error(array('message' => 'Keine Alias-Zuordnungen übergeben'));
+            return;
+        }
+
+        require_once DIENSTPLAN_PLUGIN_PATH . 'includes/class-database.php';
+        $db = new Dienstplan_Database($this->db_prefix);
+        $wpdb = $db->get_wpdb();
+
+        $existing = get_option('dp_import_verein_aliases', array());
+        if (!is_array($existing)) {
+            $existing = array();
+        }
+
+        $saved = 0;
+        foreach ($aliases as $from => $to) {
+            $from_clean = strtoupper(trim(sanitize_text_field((string) $from)));
+            $to_clean = strtoupper(trim(sanitize_text_field((string) $to)));
+
+            if ($from_clean === '' || $to_clean === '') {
+                continue;
+            }
+
+            $existing[$from_clean] = $to_clean;
+            $saved++;
+        }
+
+        update_option('dp_import_verein_aliases', $existing, false);
+
+        $applied = 0;
+        $updated_dienste = array();
+        if (is_array($assignments) && !empty($assignments)) {
+            foreach ($assignments as $assignment) {
+                $target_kuerzel = strtoupper(trim(sanitize_text_field((string) ($assignment['target_kuerzel'] ?? ''))));
+                $dienst_ids = isset($assignment['dienst_ids']) && is_array($assignment['dienst_ids'])
+                    ? array_values(array_unique(array_filter(array_map('intval', $assignment['dienst_ids']))))
+                    : array();
+
+                if ($target_kuerzel === '' || empty($dienst_ids)) {
+                    continue;
+                }
+
+                $target_verein = $db->get_verein_by_kuerzel($target_kuerzel);
+                if (!$target_verein) {
+                    continue;
+                }
+
+                $target_verein_id = intval(is_array($target_verein) ? ($target_verein['id'] ?? 0) : ($target_verein->id ?? 0));
+                if ($target_verein_id <= 0) {
+                    continue;
+                }
+
+                foreach ($dienst_ids as $dienst_id) {
+                    $dienst_row = $wpdb->get_row($wpdb->prepare(
+                        "SELECT id, veranstaltung_id, verein_id, bereich_id, taetigkeit_id, von_zeit, bis_zeit, status
+                         FROM {$db->get_prefix()}dienste
+                         WHERE id = %d",
+                        $dienst_id
+                    ));
+
+                    if (!$dienst_row) {
+                        continue;
+                    }
+
+                    $update_data = array('verein_id' => $target_verein_id);
+                    $update_format = array('%d');
+                    $has_complete_assignment = !empty($dienst_row->bereich_id)
+                        && !empty($dienst_row->taetigkeit_id)
+                        && !empty($dienst_row->von_zeit)
+                        && !empty($dienst_row->bis_zeit);
+                    if ($has_complete_assignment) {
+                        $update_data['status'] = 'geplant';
+                        $update_format[] = '%s';
+                    }
+
+                    $update_result = $wpdb->update(
+                        $db->get_prefix() . 'dienste',
+                        $update_data,
+                        array('id' => intval($dienst_id)),
+                        $update_format,
+                        array('%d')
+                    );
+
+                    if ($update_result === false) {
+                        continue;
+                    }
+
+                    if (!in_array($dienst_id, $updated_dienste, true)) {
+                        $updated_dienste[] = $dienst_id;
+                        $applied++;
+                    }
+
+                    if (!empty($dienst_row->veranstaltung_id)) {
+                        $existing_link = $wpdb->get_var($wpdb->prepare(
+                            "SELECT id FROM {$db->get_prefix()}veranstaltung_vereine WHERE veranstaltung_id = %d AND verein_id = %d",
+                            intval($dienst_row->veranstaltung_id),
+                            $target_verein_id
+                        ));
+
+                        if (!$existing_link) {
+                            $db->add_veranstaltung_verein(intval($dienst_row->veranstaltung_id), $target_verein_id);
+                        }
+                    }
+                }
+            }
+        }
+
+        wp_send_json_success(array(
+            'saved' => $saved,
+            'aliases' => $existing,
+            'applied' => $applied,
+            'updated_dienste' => $updated_dienste
         ));
     }
     

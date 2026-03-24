@@ -1,2 +1,10 @@
 # Generierte Release-Pakete – sollen nicht ins Repository
 release/*.zip
+
+# Lokale Packaging-/Staging-Artefakte
+_zip_*/
+_release_stage_wp/
+
+# Lokal erzeugte ZIPs im Plugin-Root
+dienstplan-verwaltung-*.zip
+dienstplan-verwaltung-wp-install.zip

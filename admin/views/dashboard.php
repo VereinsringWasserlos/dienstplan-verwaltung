@@ -13,6 +13,19 @@ $page_title = __('Dienstplan Verwaltung', 'dienstplan-verwaltung');
 $page_icon = 'dashicons-admin-generic';
 $page_class = 'header-dashboard';
 $nav_items = [];
+$page_meta_badges = array(
+    array(
+        'label' => 'Version ' . DIENSTPLAN_VERSION,
+        'tone' => 'neutral',
+    ),
+);
+
+$is_admin_user = current_user_can('manage_options')
+    || Dienstplan_Roles::can_manage_settings()
+    || Dienstplan_Roles::can_manage_users()
+    || Dienstplan_Roles::can_manage_events()
+    || Dienstplan_Roles::can_manage_clubs();
+$is_hauptadmin = current_user_can('manage_options') || current_user_can(Dienstplan_Roles::CAP_MANAGE_SETTINGS);
 ?>
 
 <div class="wrap dienstplan-admin-container">
@@ -47,14 +60,6 @@ $nav_items = [];
                 <h3 class="dashboard-admin-card-title"><?php _e('Veranstaltungen', 'dienstplan-verwaltung'); ?></h3>
             </div>
             <p class="dashboard-admin-card-description"><?php _e('Events planen und organisieren', 'dienstplan-verwaltung'); ?></p>
-        </a>
-
-        <a href="<?php echo admin_url('admin.php?page=dienstplan-statistik'); ?>" class="dashboard-admin-card card-timeline">
-            <div class="dashboard-admin-card-header">
-                <span class="dashicons dashicons-chart-line dashboard-admin-card-icon"></span>
-                <h3 class="dashboard-admin-card-title"><?php _e('Event-Statistik', 'dienstplan-verwaltung'); ?></h3>
-            </div>
-            <p class="dashboard-admin-card-description"><?php _e('Qualität und Verteilung pro Veranstaltung auswerten', 'dienstplan-verwaltung'); ?></p>
         </a>
         <?php endif; ?>
         
@@ -122,20 +127,20 @@ $nav_items = [];
             <p class="dashboard-admin-card-description"><?php _e('Admins in eigener Seite verwalten', 'dienstplan-verwaltung'); ?></p>
         </a>
         <?php endif; ?>
-        
-        <!-- Portal-Verwaltung (nur für Admins) -->
-        <?php if (current_user_can('manage_options')): ?>
-        <a href="<?php echo admin_url('admin.php?page=dienstplan-portal'); ?>" class="dashboard-admin-card card-portal">
+
+        <!-- Event-Statistik (nur Admins) -->
+        <?php if ($is_admin_user): ?>
+        <a href="<?php echo admin_url('admin.php?page=dienstplan-statistik'); ?>" class="dashboard-admin-card card-timeline">
             <div class="dashboard-admin-card-header">
-                <span class="dashicons dashicons-admin-home dashboard-admin-card-icon"></span>
-                <h3 class="dashboard-admin-card-title"><?php _e('Frontend Portal', 'dienstplan-verwaltung'); ?></h3>
+                <span class="dashicons dashicons-chart-line dashboard-admin-card-icon"></span>
+                <h3 class="dashboard-admin-card-title"><?php _e('Event-Statistik', 'dienstplan-verwaltung'); ?></h3>
             </div>
-            <p class="dashboard-admin-card-description"><?php _e('Portal-Seite verwalten, erstellen und bearbeiten', 'dienstplan-verwaltung'); ?></p>
+            <p class="dashboard-admin-card-description"><?php _e('Qualität und Verteilung pro Veranstaltung auswerten', 'dienstplan-verwaltung'); ?></p>
         </a>
         <?php endif; ?>
         
         <!-- Import/Export -->
-        <a href="<?php echo admin_url('admin.php?page=dienstplan-import-export'); ?>" class="dashboard-admin-card card-import">
+        <a href="<?php echo admin_url('admin.php?page=dienstplan-import'); ?>" class="dashboard-admin-card card-import">
             <div class="dashboard-admin-card-header">
                 <span class="dashicons dashicons-migrate dashboard-admin-card-icon"></span>
                 <h3 class="dashboard-admin-card-title"><?php _e('Import/Export', 'dienstplan-verwaltung'); ?></h3>
@@ -164,4 +169,20 @@ $nav_items = [];
         </a>
         
     </div>
+
+    <?php if ($is_hauptadmin): ?>
+    <h2 class="dashboard-section-heading">
+        <span class="dashicons dashicons-admin-home"></span>
+        <?php _e('Frontend-Portal', 'dienstplan-verwaltung'); ?>
+    </h2>
+    <div class="dashboard-compact-grid">
+        <a href="<?php echo admin_url('admin.php?page=dienstplan-portal'); ?>" class="dashboard-admin-card card-portal">
+            <div class="dashboard-admin-card-header">
+                <span class="dashicons dashicons-admin-home dashboard-admin-card-icon"></span>
+                <h3 class="dashboard-admin-card-title"><?php _e('Frontend Portal', 'dienstplan-verwaltung'); ?></h3>
+            </div>
+            <p class="dashboard-admin-card-description"><?php _e('Portal-Seite verwalten, erstellen und bearbeiten', 'dienstplan-verwaltung'); ?></p>
+        </a>
+    </div>
+    <?php endif; ?>
 </div>

@@ -68,7 +68,8 @@ $header_title = 'Dienstplan';
 $header_subtitle = 'Vereinsübersicht';
 $header_event_count = 0;
 $is_logged_in = is_user_logged_in();
-$current_request_url = (is_ssl() ? 'https://' : 'http://') . ($_SERVER['HTTP_HOST'] ?? '') . ($_SERVER['REQUEST_URI'] ?? '');
+$request_uri = isset($_SERVER['REQUEST_URI']) ? wp_unslash($_SERVER['REQUEST_URI']) : '/';
+$current_request_url = set_url_scheme(home_url($request_uri), is_ssl() ? 'https' : 'http');
 $logout_url = wp_logout_url($current_request_url);
 $can_manage_backend = current_user_can('manage_options') || Dienstplan_Roles::can_manage_events() || Dienstplan_Roles::can_manage_clubs();
 $backend_url = admin_url('admin.php?page=dienstplan');
@@ -320,7 +321,7 @@ if ($selected_verein) {
 <?php endif; ?>
 
 <style>
-.dp-vereine-overview { max-width: 1600px; }
+.dp-vereine-overview { max-width: none; }
 
 .dp-landing-header {
     background: linear-gradient(135deg, #eff6ff 0%, #e0ecff 45%, #f8fafc 100%);

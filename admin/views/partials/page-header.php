@@ -27,6 +27,7 @@ $page_title = $page_title ?? 'Admin';
 $page_icon = $page_icon ?? 'dashicons-admin-generic';
 $page_class = $page_class ?? 'header-vereine';
 $nav_items = $nav_items ?? [];
+$page_meta_badges = $page_meta_badges ?? [];
 $current_page = $_GET['page'] ?? '';
 
 /**
@@ -59,6 +60,13 @@ $can_show_nav_item = function($item) {
         return true;
     }
 
+    if (in_array($target_page, array('dienstplan-import', 'dienstplan-export', 'dienstplan-import-export'), true)) {
+        return current_user_can('manage_options')
+            || Dienstplan_Roles::can_manage_clubs()
+            || Dienstplan_Roles::can_manage_events()
+            || Dienstplan_Roles::can_manage_settings();
+    }
+
     $required_capabilities = array(
         'dienstplan-vereine' => Dienstplan_Roles::CAP_MANAGE_CLUBS,
         'dienstplan-veranstaltungen' => Dienstplan_Roles::CAP_MANAGE_EVENTS,
@@ -67,7 +75,6 @@ $can_show_nav_item = function($item) {
         'dienstplan-dienste' => Dienstplan_Roles::CAP_MANAGE_EVENTS,
         'dienstplan-overview' => Dienstplan_Roles::CAP_MANAGE_EVENTS,
         'dienstplan-einstellungen' => Dienstplan_Roles::CAP_MANAGE_SETTINGS,
-        'dienstplan-import-export' => Dienstplan_Roles::CAP_MANAGE_SETTINGS,
         'dienstplan-benutzer' => Dienstplan_Roles::CAP_MANAGE_USERS,
         'dienstplan-dokumentation' => 'read',
         'dienstplan-updates' => 'manage_options',
@@ -89,7 +96,32 @@ $can_show_nav_item = function($item) {
     <!-- Seiten-Titel mit Icon -->
     <div class="page-title-section">
         <span class="dashicons <?php echo esc_attr($page_icon); ?>"></span>
-        <h1><?php echo esc_html($page_title); ?></h1>
+        <div>
+            <h1><?php echo esc_html($page_title); ?></h1>
+            <?php if (!empty($page_meta_badges) && is_array($page_meta_badges)): ?>
+                <div style="display:flex; flex-wrap:wrap; gap:0.5rem; margin-top:0.45rem;">
+                    <?php foreach ($page_meta_badges as $badge): ?>
+                        <?php
+                        $badge_label = isset($badge['label']) ? (string) $badge['label'] : '';
+                        if ($badge_label === '') {
+                            continue;
+                        }
+
+                        $badge_tone = isset($badge['tone']) ? (string) $badge['tone'] : 'neutral';
+                        $badge_styles = array(
+                            'neutral' => 'background: rgba(255,255,255,0.18); color: #ffffff; border: 1px solid rgba(255,255,255,0.28);',
+                            'info' => 'background: #dbeafe; color: #1d4ed8; border: 1px solid #93c5fd;',
+                            'success' => 'background: #dcfce7; color: #166534; border: 1px solid #86efac;'
+                        );
+                        $badge_style = isset($badge_styles[$badge_tone]) ? $badge_styles[$badge_tone] : $badge_styles['neutral'];
+                        ?>
+                        <span style="display:inline-flex; align-items:center; gap:0.35rem; padding:0.25rem 0.6rem; border-radius:999px; font-size:0.78rem; font-weight:700; line-height:1.1; <?php echo esc_attr($badge_style); ?>">
+                            <?php echo esc_html($badge_label); ?>
+                        </span>
+                    <?php endforeach; ?>
+                </div>
+            <?php endif; ?>
+        </div>
     </div>
     
     <!-- Navigation Buttons -->

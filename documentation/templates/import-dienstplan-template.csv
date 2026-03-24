@@ -1,0 +1,3 @@
+datum;von_zeit;bis_zeit;bereich_name;bereich_farbe;bereich_admin_only;taetigkeit_name;taetigkeit_admin_only;verein_kuerzel;verein_name;anzahl_personen;splittbar;besonderheiten
+2026-05-01;18:00;22:00;Einlass;#3b82f6;0;Ticketkontrolle;0;VRW;Vereinsring Wasserlos;3;0;Abendkasse
+2026-05-01;22:00;01:00;Sicherheit;#ef4444;1;Nachtwache;1;THW;THW Ortsverband;2;1;Uebergabe um Mitternacht

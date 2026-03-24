@@ -3,9 +3,17 @@
  * @version 0.2.2
  */
 
+const dpAdminDebugEnabled = Boolean(window.dpAdminDebug);
+const dpAdminDebugLog = function() {
+    if (!dpAdminDebugEnabled) {
+        return;
+    }
+    console.log.apply(console, arguments);
+};
+
 jQuery(document).ready(function($) {
-    console.log('Dienstplan Admin JS geladen');
-    console.log('dpAjax verfügbar:', typeof dpAjax !== 'undefined');
+    dpAdminDebugLog('Dienstplan Admin JS geladen');
+    dpAdminDebugLog('dpAjax verfügbar:', typeof dpAjax !== 'undefined');
 });
 
 /**
@@ -60,7 +68,7 @@ window.dpSafeReload = function(delay) {
         if (!hasOpenModal) {
             window.location.reload();
         } else {
-            console.log('Reload unterdrückt: Modal ist geöffnet');
+            dpAdminDebugLog('Reload unterdrückt: Modal ist geöffnet');
             window.__dpReloadScheduled = false;
         }
     }, delay);
@@ -293,8 +301,8 @@ window.createPortalPageFromDashboard = function(buttonElement) {
     if (!confirm('Möchtest du jetzt die Portal-Seite erstellen?\n\nDie Seite wird mit dem Titel "Dienstplan-Portal" und dem Shortcode [dienstplan_hub] veröffentlicht.')) {
         return;
     }
-    
-    console.log('Erstelle Portal-Seite vom Dashboard...');
+
+    dpAdminDebugLog('Erstelle Portal-Seite vom Dashboard...');
     
     // Zeige Loading-Status - nutze entweder übergebenen Button oder suche ihn
     var button = buttonElement || document.querySelector('#portal-page-card button') || document.getElementById('portal-create-button');
@@ -315,7 +323,7 @@ window.createPortalPageFromDashboard = function(buttonElement) {
             nonce: dpAjax.nonce_create_portal
         },
         success: function(response) {
-            console.log('Portal-Seite erstellt:', response);
+            dpAdminDebugLog('Portal-Seite erstellt:', response);
             
             if (response.success) {
                 alert('✓ Portal-Seite erfolgreich erstellt!\n\nDie Seite ist jetzt verfügbar und kann bearbeitet werden.');
@@ -343,8 +351,8 @@ window.deletePortalPage = function() {
     if (!confirm('⚠️ ACHTUNG: Möchtest du die Portal-Seite wirklich permanent löschen?\n\nDiese Aktion kann nicht rückgängig gemacht werden!')) {
         return;
     }
-    
-    console.log('Lösche Portal-Seite vom Dashboard...');
+
+    dpAdminDebugLog('Lösche Portal-Seite vom Dashboard...');
     
     // Zeige Loading-Status
     var button = document.querySelector('#portal-page-card button[onclick*="deletePortalPage"]');
@@ -360,7 +368,7 @@ window.deletePortalPage = function() {
             nonce: dpAjax.nonce_delete_portal
         },
         success: function(response) {
-            console.log('Portal-Seite gelöscht:', response);
+            dpAdminDebugLog('Portal-Seite gelöscht:', response);
             
             if (response.success) {
                 alert('✓ Portal-Seite erfolgreich gelöscht!');
