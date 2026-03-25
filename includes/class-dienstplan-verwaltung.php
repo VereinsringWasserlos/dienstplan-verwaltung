@@ -68,6 +68,7 @@ class Dienstplan_Verwaltung {
         $this->define_security_hooks();
         $this->define_admin_hooks();
         $this->define_public_hooks();
+        $this->setup_mail_filters();
         $this->check_database_updates();
     }
 
@@ -110,6 +111,38 @@ class Dienstplan_Verwaltung {
 
         $this->loader->add_action('init', $plugin_i18n, 'load_plugin_textdomain');
         $this->loader->add_action('init', 'Dienstplan_Roles', 'run_pending_role_migration', 20);
+    }
+
+    /**
+     * Plugin-weite E-Mail-Absender-Filter aus den Einstellungen anwenden.
+     *
+     * @since    1.0.0
+     * @access   private
+     */
+    private function setup_mail_filters() {
+        $from_name  = get_option('dp_mail_from_name', '');
+        $from_email = get_option('dp_mail_from_email', '');
+        $reply_to   = get_option('dp_mail_reply_to', '');
+
+        if (!empty($from_name)) {
+            add_filter('wp_mail_from_name', function() use ($from_name) {
+                return $from_name;
+            }, 20);
+        }
+
+        if (!empty($from_email) && is_email($from_email)) {
+            add_filter('wp_mail_from', function() use ($from_email) {
+                return $from_email;
+            }, 20);
+        }
+
+        if (!empty($reply_to) && is_email($reply_to)) {
+            add_filter('wp_mail', function($args) use ($reply_to) {
+                $args['headers']   = (array) ($args['headers'] ?? array());
+                $args['headers'][] = 'Reply-To: ' . $reply_to;
+                return $args;
+            }, 20);
+        }
     }
 
     /**
@@ -234,6 +267,9 @@ class Dienstplan_Verwaltung {
         // AJAX-Actions für Mitarbeiter-Export
         $this->loader->add_action('wp_ajax_dp_export_mitarbeiter', $plugin_admin, 'ajax_export_mitarbeiter');
         $this->loader->add_action('wp_ajax_dp_export_portal_credentials', $plugin_admin, 'ajax_export_portal_credentials');
+
+        // AJAX: Test-Mail
+        $this->loader->add_action('wp_ajax_dp_send_test_mail', $plugin_admin, 'ajax_send_test_mail');
         
         // Import/Export AJAX Actions
         // Export wird über admin_init in class-admin.php handle_export() behandelt

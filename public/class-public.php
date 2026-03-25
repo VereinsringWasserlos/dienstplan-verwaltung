@@ -971,7 +971,9 @@ class Dienstplan_Public {
                 $login_url,
                 get_bloginfo('name')
             );
-            wp_mail($email, $subject, $body);
+            if (get_option('dp_mail_enable_portal_invite', 1)) {
+                wp_mail($email, $subject, $body);
+            }
         }
 
         $db->update_mitarbeiter(intval($mitarbeiter->id), array('user_id' => intval($user_id)));
@@ -1158,13 +1160,13 @@ class Dienstplan_Public {
             return;
         }
 
-        if ($selected_mitarbeiter_id <= 0 && (!$vorname || !$nachname || !$email)) {
+        if ($selected_mitarbeiter_id <= 0 && (!$vorname || !$nachname || ($create_user_account && !$email))) {
             wp_send_json_error(array('message' => 'Bitte alle Pflichtfelder ausfüllen.'));
             return;
         }
         
-        // E-Mail validieren (nur bei freier Eingabe)
-        if ($selected_mitarbeiter_id <= 0 && !is_email($email)) {
+        // E-Mail validieren (nur bei freier Eingabe und wenn angegeben)
+        if ($selected_mitarbeiter_id <= 0 && !empty($email) && !is_email($email)) {
             wp_send_json_error(array('message' => 'Ungültige E-Mail-Adresse.'));
             return;
         }
@@ -1253,10 +1255,10 @@ class Dienstplan_Public {
             $create_user_account = false;
             $create_user_datenschutz = false;
         } else {
-            $existing_mitarbeiter = $wpdb->get_row($wpdb->prepare(
+            $existing_mitarbeiter = !empty($email) ? $wpdb->get_row($wpdb->prepare(
                 "SELECT id FROM {$prefix}mitarbeiter WHERE email = %s",
                 $email
-            ));
+            )) : null;
 
             if ($existing_mitarbeiter) {
                 $mitarbeiter_id = $existing_mitarbeiter->id;
@@ -1334,7 +1336,7 @@ class Dienstplan_Public {
             $this->ensure_portal_user_for_mitarbeiter($db, $mitarbeiter, $email, $verein_id);
         }
         
-        if ($dienst) {
+        if ($dienst && !empty($email) && get_option('dp_mail_enable_booking', 1)) {
             $tag = $wpdb->get_row($wpdb->prepare(
                 "SELECT datum FROM {$prefix}veranstaltung_tage WHERE id = %d",
                 $dienst->tag_id
@@ -1369,8 +1371,12 @@ class Dienstplan_Public {
             wp_mail($to, $subject, $message);
         }
         
+        $success_msg = 'Anmeldung erfolgreich!';
+        if (!empty($email)) {
+            $success_msg .= ' Sie erhalten in Kürze eine Bestätigungs-E-Mail.';
+        }
         wp_send_json_success(array(
-            'message' => 'Anmeldung erfolgreich! Sie erhalten in Kürze eine Bestätigungs-E-Mail.',
+            'message' => $success_msg,
             'mitarbeiter_id' => $mitarbeiter_id
         ));
     }

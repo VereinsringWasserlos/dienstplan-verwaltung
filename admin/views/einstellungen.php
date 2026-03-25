@@ -17,6 +17,10 @@ $active_tab = isset($_GET['tab']) ? $_GET['tab'] : 'general';
         <a href="?page=dienstplan-einstellungen&tab=general" class="nav-tab <?php echo $active_tab == 'general' ? 'nav-tab-active' : ''; ?>">
             <?php _e('Allgemein', 'dienstplan-verwaltung'); ?>
         </a>
+        <a href="?page=dienstplan-einstellungen&tab=email" class="nav-tab <?php echo $active_tab == 'email' ? 'nav-tab-active' : ''; ?>">
+            <span class="dashicons dashicons-email-alt" style="vertical-align: text-top; margin-right: 4px;"></span>
+            <?php _e('E-Mail-Versand', 'dienstplan-verwaltung'); ?>
+        </a>
         <a href="?page=dienstplan-einstellungen&tab=notifications" class="nav-tab <?php echo $active_tab == 'notifications' ? 'nav-tab-active' : ''; ?>">
             <?php _e('Benachrichtigungen', 'dienstplan-verwaltung'); ?>
         </a>
@@ -80,6 +84,165 @@ $active_tab = isset($_GET['tab']) ? $_GET['tab'] : 'general';
             </div>
         </div>
         
+    <?php elseif ($active_tab == 'email'): ?>
+        <?php
+        // Speichern
+        if (isset($_POST['save_email_settings']) && check_admin_referer('dp_email_settings', 'dp_email_nonce')) {
+            update_option('dp_mail_from_name',  sanitize_text_field(wp_unslash($_POST['dp_mail_from_name'] ?? '')));
+            update_option('dp_mail_from_email', sanitize_email(wp_unslash($_POST['dp_mail_from_email'] ?? '')));
+            update_option('dp_mail_reply_to',   sanitize_email(wp_unslash($_POST['dp_mail_reply_to'] ?? '')));
+            update_option('dp_mail_enable_booking',           isset($_POST['dp_mail_enable_booking']) ? 1 : 0);
+            update_option('dp_mail_enable_portal_invite',     isset($_POST['dp_mail_enable_portal_invite']) ? 1 : 0);
+            update_option('dp_mail_enable_dienste_uebersicht',isset($_POST['dp_mail_enable_dienste_uebersicht']) ? 1 : 0);
+            echo '<div class="notice notice-success is-dismissible"><p><strong>E-Mail-Einstellungen gespeichert.</strong></p></div>';
+        }
+        ?>
+
+        <!-- Absender -->
+        <div class="dp-card">
+            <div class="dp-card-header">
+                <h2><span class="dashicons dashicons-email-alt" style="vertical-align:middle; margin-right:6px;"></span><?php _e('Absender-Konfiguration', 'dienstplan-verwaltung'); ?></h2>
+            </div>
+            <div class="dp-card-body">
+                <p class="description" style="margin-bottom:1.5rem;">
+                    Diese Einstellungen gelten <strong>plugin-weit</strong> für alle vom Dienstplan-Plugin versendeten E-Mails.
+                    Leer lassen = WordPress-Standard (<code>wordpress@<?php echo esc_html(wp_parse_url(home_url(), PHP_URL_HOST)); ?></code>).
+                </p>
+                <form method="post" action="">
+                    <?php wp_nonce_field('dp_email_settings', 'dp_email_nonce'); ?>
+                    <table class="form-table">
+                        <tr>
+                            <th scope="row"><label for="dp_mail_from_name">Absender-Name</label></th>
+                            <td>
+                                <input type="text" id="dp_mail_from_name" name="dp_mail_from_name" class="regular-text"
+                                       value="<?php echo esc_attr(get_option('dp_mail_from_name', '')); ?>"
+                                       placeholder="<?php echo esc_attr(get_option('dp_site_name', get_bloginfo('name'))); ?>">
+                                <p class="description">Erscheint im E-Mail-Client als Absender-Name, z.&nbsp;B. <em>Vereinsring Wasserlos</em>.</p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th scope="row"><label for="dp_mail_from_email">Absender-E-Mail (From)</label></th>
+                            <td>
+                                <input type="email" id="dp_mail_from_email" name="dp_mail_from_email" class="regular-text"
+                                       value="<?php echo esc_attr(get_option('dp_mail_from_email', '')); ?>"
+                                       placeholder="dienstplan@<?php echo esc_html(wp_parse_url(home_url(), PHP_URL_HOST)); ?>">
+                                <p class="description">Verwende eine Adresse der eigenen Domain, damit Mails nicht im Spam landen (<abbr title="Sender Policy Framework">SPF</abbr>/<abbr title="DomainKeys Identified Mail">DKIM</abbr>).</p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th scope="row"><label for="dp_mail_reply_to">Antwort-Adresse (Reply-To)</label></th>
+                            <td>
+                                <input type="email" id="dp_mail_reply_to" name="dp_mail_reply_to" class="regular-text"
+                                       value="<?php echo esc_attr(get_option('dp_mail_reply_to', '')); ?>"
+                                       placeholder="kontakt@<?php echo esc_html(wp_parse_url(home_url(), PHP_URL_HOST)); ?>">
+                                <p class="description">Optional. Antwortet ein Empfänger auf eine Plugin-Mail, geht die Antwort an diese Adresse.</p>
+                            </td>
+                        </tr>
+                    </table>
+
+                    <hr style="margin: 1.5rem 0;">
+                    <h3 style="margin-top:0;">Welche E-Mail-Typen sollen versendet werden?</h3>
+                    <p class="description" style="margin-bottom:1rem;">
+                        Hier kannst du einzelne automatische Mails komplett deaktivieren (z.&nbsp;B. wenn du eigene Workflows oder Newsletter-System nutzt).
+                    </p>
+                    <table class="form-table">
+                        <tr>
+                            <th scope="row">Buchungsbestätigung</th>
+                            <td>
+                                <label>
+                                    <input type="checkbox" name="dp_mail_enable_booking" value="1"
+                                           <?php checked(get_option('dp_mail_enable_booking', 1), 1); ?>>
+                                    Bestätigungs-Mail an Mitarbeiter nach Übernahme eines Dienstes senden
+                                </label>
+                                <p class="description">Betrifft: <em>Dienst übernehmen</em>-Formular im Frontend (nur wenn E-Mail-Adresse angegeben).</p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th scope="row">Portal-Einladung / Zugangsdaten</th>
+                            <td>
+                                <label>
+                                    <input type="checkbox" name="dp_mail_enable_portal_invite" value="1"
+                                           <?php checked(get_option('dp_mail_enable_portal_invite', 1), 1); ?>>
+                                    Login-Daten und Einladungen beim Erstellen / Aktivieren von Portal-Zugängen senden
+                                </label>
+                                <p class="description">Betrifft: Portal-Zugriff aktivieren, Passwort zurücksetzen, Einladungs-Mail im Admin sowie automatische Konto-Erstellung bei „Ja"-Auswahl im Frontend-Formular.</p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th scope="row">Dienste-Übersicht</th>
+                            <td>
+                                <label>
+                                    <input type="checkbox" name="dp_mail_enable_dienste_uebersicht" value="1"
+                                           <?php checked(get_option('dp_mail_enable_dienste_uebersicht', 1), 1); ?>>
+                                    Manuelle Dienste-Übersicht an einzelne Mitarbeiter senden erlauben
+                                </label>
+                                <p class="description">Betrifft: Schaltfläche „Dienste-Übersicht senden" in der Mitarbeiterliste.</p>
+                            </td>
+                        </tr>
+                    </table>
+
+                    <p class="submit">
+                        <button type="submit" name="save_email_settings" class="button button-primary">Einstellungen speichern</button>
+                    </p>
+                </form>
+            </div>
+        </div>
+
+        <!-- Test-Mail -->
+        <div class="dp-card" style="margin-top:1.5rem;">
+            <div class="dp-card-header">
+                <h2><span class="dashicons dashicons-email" style="vertical-align:middle; margin-right:6px;"></span>Test-Mail senden</h2>
+            </div>
+            <div class="dp-card-body">
+                <p class="description">Sendet eine Test-E-Mail mit den aktuell eingetragenen Absender-Einstellungen. Speichere zuerst, bevor du testest.</p>
+                <table class="form-table">
+                    <tr>
+                        <th scope="row"><label for="dp_test_mail_to">Empfänger</label></th>
+                        <td>
+                            <input type="email" id="dp_test_mail_to" class="regular-text"
+                                   value="<?php echo esc_attr(wp_get_current_user()->user_email); ?>">
+                        </td>
+                    </tr>
+                </table>
+                <p>
+                    <button type="button" id="dp-send-test-mail" class="button button-secondary">
+                        <span class="dashicons dashicons-email" style="vertical-align:middle;"></span>
+                        Test-Mail jetzt senden
+                    </button>
+                    <span id="dp-test-mail-result" style="margin-left:1rem; font-weight:600;"></span>
+                </p>
+            </div>
+        </div>
+
+        <script>
+        (function($) {
+            $('#dp-send-test-mail').on('click', function() {
+                var btn = $(this);
+                var to  = $('#dp_test_mail_to').val();
+                var result = $('#dp-test-mail-result');
+                if (!to) { result.css('color','#d63638').text('Bitte eine Empfänger-Adresse eingeben.'); return; }
+                btn.prop('disabled', true).text('Wird gesendet…');
+                result.css('color','#666').text('');
+                $.post(ajaxurl, {
+                    action: 'dp_send_test_mail',
+                    nonce:  '<?php echo esc_js(wp_create_nonce('dp_send_test_mail')); ?>',
+                    to:     to
+                }, function(res) {
+                    if (res && res.success) {
+                        result.css('color','#00a32a').text('✓ ' + res.data.message);
+                    } else {
+                        var msg = (res && res.data && res.data.message) ? res.data.message : 'Unbekannter Fehler.';
+                        result.css('color','#d63638').text('✗ ' + msg);
+                    }
+                }).fail(function() {
+                    result.css('color','#d63638').text('Serverfehler – bitte Seite neu laden.');
+                }).always(function() {
+                    btn.prop('disabled', false).html('<span class="dashicons dashicons-email" style="vertical-align:middle;"></span> Test-Mail jetzt senden');
+                });
+            });
+        })(jQuery);
+        </script>
+
     <?php elseif ($active_tab == 'notifications'): ?>
         
         <div class="dp-card">

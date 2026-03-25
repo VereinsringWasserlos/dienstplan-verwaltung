@@ -159,6 +159,17 @@ $is_hauptadmin = current_user_can('manage_options') || current_user_can(Dienstpl
         </a>
         <?php endif; ?>
 
+        <!-- Einstellungen -->
+        <?php if (Dienstplan_Roles::can_manage_settings() || current_user_can('manage_options')): ?>
+        <a href="<?php echo admin_url('admin.php?page=dienstplan-einstellungen'); ?>" class="dashboard-admin-card card-settings">
+            <div class="dashboard-admin-card-header">
+                <span class="dashicons dashicons-admin-settings dashboard-admin-card-icon"></span>
+                <h3 class="dashboard-admin-card-title"><?php _e('Einstellungen', 'dienstplan-verwaltung'); ?></h3>
+            </div>
+            <p class="dashboard-admin-card-description"><?php _e('Allgemein, E-Mail-Versand & Benachrichtigungen', 'dienstplan-verwaltung'); ?></p>
+        </a>
+        <?php endif; ?>
+
         <!-- Debug -->
         <a href="<?php echo admin_url('admin.php?page=dienstplan-debug'); ?>" class="dashboard-admin-card card-debug">
             <div class="dashboard-admin-card-header">

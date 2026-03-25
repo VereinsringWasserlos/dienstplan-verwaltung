@@ -6819,10 +6819,13 @@ class Dienstplan_Admin {
             get_bloginfo('name')
         );
         
-        $email_sent = wp_mail($mitarbeiter->email, $email_subject, $email_body);
+        $email_sent = get_option('dp_mail_enable_portal_invite', 1)
+            ? wp_mail($mitarbeiter->email, $email_subject, $email_body)
+            : false;
+        $invite_disabled = !get_option('dp_mail_enable_portal_invite', 1);
         
         wp_send_json_success(array(
-            'message' => 'Portal-Zugriff erfolgreich aktiviert!' . ($email_sent ? ' Login-Daten wurden per E-Mail versendet.' : ' Hinweis: E-Mail konnte nicht versendet werden.'),
+            'message' => 'Portal-Zugriff erfolgreich aktiviert!' . ($invite_disabled ? ' (E-Mail-Versand ist deaktiviert).' : ($email_sent ? ' Login-Daten wurden per E-Mail versendet.' : ' Hinweis: E-Mail konnte nicht versendet werden.')),
             'user_id' => $user_id,
             'username' => $username
         ));
@@ -6929,6 +6932,11 @@ class Dienstplan_Admin {
             get_bloginfo('name')
         );
         
+        if (!get_option('dp_mail_enable_portal_invite', 1)) {
+            wp_send_json_success(array('message' => 'Passwort wurde zurückgesetzt. E-Mail-Versand ist in den Einstellungen deaktiviert.'));
+            return;
+        }
+
         $email_sent = wp_mail($mitarbeiter->email, $email_subject, $email_body);
         
         if ($email_sent) {
@@ -7117,6 +7125,11 @@ class Dienstplan_Admin {
         $body .= "Gesamt: " . count($dienste) . " Dienst" . (count($dienste) !== 1 ? 'e' : '') . "\n\n";
         $body .= "Bei Fragen wende dich bitte an den Veranstalter.\n\n";
         $body .= "Viele Grüße\n" . get_bloginfo('name');
+
+        if (!get_option('dp_mail_enable_dienste_uebersicht', 1)) {
+            wp_send_json_error(array('message' => 'E-Mail-Versand für Dienste-Übersicht ist in den Einstellungen deaktiviert.'));
+            return;
+        }
 
         $sent = wp_mail($ma->email, $subject, $body);
 
@@ -7435,5 +7448,52 @@ class Dienstplan_Admin {
         
         fclose($output);
         exit;
+    }
+
+    /**
+     * AJAX: Test-Mail senden
+     *
+     * Versendet eine Test-E-Mail mit den aktuellen dp_mail_*-Einstellungen.
+     */
+    public function ajax_send_test_mail() {
+        check_ajax_referer('dp_send_test_mail', 'nonce');
+
+        if (!current_user_can('manage_options') && !Dienstplan_Roles::can_manage_events()) {
+            wp_send_json_error(array('message' => 'Keine Berechtigung.'));
+            return;
+        }
+
+        $to = isset($_POST['to']) ? sanitize_email(wp_unslash($_POST['to'])) : '';
+        if (empty($to) || !is_email($to)) {
+            wp_send_json_error(array('message' => 'Ungültige Empfänger-Adresse.'));
+            return;
+        }
+
+        $from_name  = get_option('dp_mail_from_name',  get_option('dp_site_name', get_bloginfo('name')));
+        $from_email = get_option('dp_mail_from_email', '');
+        $reply_to   = get_option('dp_mail_reply_to',   '');
+
+        $subject = '[' . get_option('dp_site_name', get_bloginfo('name')) . '] Test-Mail';
+        $body    = "Hallo,\n\n";
+        $body   .= "dies ist eine Test-Mail aus dem Dienstplan-Plugin, um die E-Mail-Einstellungen zu prüfen.\n\n";
+        $body   .= "Aktuelle Konfiguration:\n";
+        $body   .= "  Absender-Name:  " . ($from_name  ?: '(WordPress-Standard)') . "\n";
+        $body   .= "  Absender-Mail:  " . ($from_email ?: '(WordPress-Standard)') . "\n";
+        $body   .= "  Reply-To:       " . ($reply_to   ?: '(nicht gesetzt)') . "\n\n";
+        $body   .= "Wenn du diese Mail erhältst, funktioniert der Versand korrekt.\n\n";
+        $body   .= "Viele Grüße\nDein Dienstplan-Plugin";
+
+        $headers = array('Content-Type: text/plain; charset=UTF-8');
+        if (!empty($reply_to) && is_email($reply_to)) {
+            $headers[] = 'Reply-To: ' . $reply_to;
+        }
+
+        $sent = wp_mail($to, $subject, $body, $headers);
+
+        if ($sent) {
+            wp_send_json_success(array('message' => 'Test-Mail erfolgreich an ' . esc_html($to) . ' gesendet.'));
+        } else {
+            wp_send_json_error(array('message' => 'E-Mail konnte nicht gesendet werden. Bitte WordPress-Mailkonfiguration prüfen (z.&nbsp;B. SMTP-Plugin).'));
+        }
     }
 }

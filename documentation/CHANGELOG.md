@@ -11,6 +11,31 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ---
 
+## [0.9.5.48] - 2026-03-25 📧 E-Mail-Konfiguration & Frontend-Verbesserungen
+
+### ✨ Neue Features
+
+- **E-Mail-Einstellungen (neuer Tab)**: Eigener Konfigurationsbereich unter Einstellungen → E-Mail-Versand.
+  - Absender-Name, Absender-E-Mail (From) und Reply-To zentral konfigurierbar.
+  - Filter `wp_mail_from`, `wp_mail_from_name` und `wp_mail` (Reply-To) werden plugin-weit gesetzt.
+  - Einzelne E-Mail-Typen (Buchungsbestätigung, Portal-Einladung, Dienste-Übersicht) können separat aktiviert/deaktiviert werden.
+  - Test-Mail-Funktion direkt aus dem Einstellungsbereich.
+- **Einstellungen-Kachel im Dashboard**: Die Einstellungsseite ist jetzt direkt über das Admin-Dashboard erreichbar.
+
+### 🎨 UI-Verbesserungen
+
+- **Verein-Auswahl (Frontend)**: Umstellung von großen Karten auf kompakte Listenansicht.
+  - Kürzel aus der Datenbank wird als Badge angezeigt (kein automatisch generierter Fallback mehr).
+  - Name, Dienst-Anzahl und freie Plätze auf einen Blick.
+- **Dienst übernehmen – Formular**: Telefon-Feld entfernt. E-Mail ist nur noch Pflichtfeld wenn „Benutzerkonto anlegen: Ja" ausgewählt wird.
+
+### 🐛 Bugfixes
+
+- Bestätigungsmeldung „Mail wurde versandt" erschien auch bei Auswahl „Nein" für Kontoerstellung – behoben.
+- E-Mail wird serverseitig nur noch abgesendet wenn eine Adresse vorhanden ist.
+
+---
+
 ## [0.9.5.47] - 2026-03-24 🚀 Dashboard Version & Import UX Release
 
 ### ✨ Verbesserungen

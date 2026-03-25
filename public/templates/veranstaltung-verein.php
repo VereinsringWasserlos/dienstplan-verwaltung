@@ -1836,14 +1836,17 @@ document.addEventListener('DOMContentLoaded', function() {
         window.dpToggleCreateUserConsent = function() {
             var selected = jQuery('input[name="create_user_account"]:checked').val() || '0';
             var wrap = jQuery('#dp-datenschutz-wrap');
-            if (!wrap.length) {
-                return;
-            }
+            var emailInput = jQuery('#dp-email');
+            var emailLabel = jQuery('#dp-email-label');
             if (selected === '1') {
-                wrap.show();
+                if (wrap.length) { wrap.show(); }
+                emailInput.attr('required', true);
+                emailLabel.text('E-Mail *');
             } else {
                 jQuery('#dp-create-user-datenschutz').prop('checked', false);
-                wrap.hide();
+                if (wrap.length) { wrap.hide(); }
+                emailInput.removeAttr('required');
+                emailLabel.text('E-Mail');
             }
         };
 
@@ -1973,15 +1976,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 vorname: jQuery('#dp-vorname').val(),
                 nachname: jQuery('#dp-nachname').val(),
                 email: jQuery('#dp-email').val(),
-                telefon: jQuery('#dp-telefon').val(),
                 besonderheiten: jQuery('#dp-besonderheiten').val(),
                 create_user_account: jQuery('input[name="create_user_account"]:checked').val() || '0',
                 create_user_datenschutz: jQuery('#dp-create-user-datenschutz').is(':checked') ? '1' : '0'
             };
 
-            if (!formData.vorname || !formData.nachname || !formData.email) {
+            if (!formData.vorname || !formData.nachname || (formData.create_user_account === '1' && !formData.email)) {
                 window.dpTrace('Submit Abbruch: Pflichtfelder fehlen', formData);
-                alert('Bitte alle Pflichtfelder ausf├╝llen.');
+                alert('Bitte alle Pflichtfelder ausfüllen.');
                 dpDebug('Submit Abbruch: Pflichtfelder fehlen');
                 return;
             }
@@ -2157,13 +2159,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 </div>
                 
                 <div class="dp-form-group">
-                    <label for="dp-email">E-Mail *</label>
-                    <input type="email" id="dp-email" name="email" required>
-                </div>
-                
-                <div class="dp-form-group">
-                    <label for="dp-telefon">Telefon</label>
-                    <input type="tel" id="dp-telefon" name="telefon">
+                    <label for="dp-email" id="dp-email-label">E-Mail</label>
+                    <input type="email" id="dp-email" name="email">
                 </div>
                 
                 <div class="dp-form-group">
