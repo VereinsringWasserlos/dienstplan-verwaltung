@@ -913,9 +913,12 @@ class Dienstplan_Updater {
      * Manuelle Update-Prüfung
      */
     public function check_update_manually() {
-        // Lösche Cache
+        // Lösche Transient-Cache UND In-Memory-Cache des Objekts,
+        // damit auch dann frisch geprüft wird, wenn der WP-Filter
+        // check_for_updates() bereits früher im selben Request aufgerufen wurde.
         delete_transient('dienstplan_update_info');
-        
+        $this->update_info = null;
+
         // Hole neue Update-Informationen
         $update_info = $this->get_update_info();
         
