@@ -11,6 +11,19 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ---
 
+## [0.9.5.49] - 2026-03-25 🔧 Bugfixes & Server-Deployment
+
+### 🐛 Bugfixes
+
+- **Updater**: `check_update_manually()` setzte den In-Memory-Cache `$this->update_info` nicht zurück – wenn `check_for_updates()` als WP-Filter früher im selben Request lief, wurde der gecachte Wert statt frischer API-Daten geliefert. Behoben durch `$this->update_info = null` vor dem Neuabruf.
+
+### 🚀 Deployment
+
+- Plugin auf Produktionsserver (vereinsring-wasserlos.de) per Git-Clone auf 0.9.5.49 aktualisiert.
+- Diagnose: Fluent SMTP war auf PHP `mail()` konfiguriert; `sendmail` fehlt auf dem Server → SMTP-Konfiguration in Fluent SMTP erforderlich.
+
+---
+
 ## [0.9.5.48] - 2026-03-25 📧 E-Mail-Konfiguration & Frontend-Verbesserungen
 
 ### ✨ Neue Features
