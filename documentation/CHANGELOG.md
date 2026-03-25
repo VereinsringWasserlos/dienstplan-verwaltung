@@ -11,6 +11,14 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ---
 
+## [0.9.5.50] - 2026-03-25 🔧 Updater: robusteres Umbenennen nach Update
+
+### 🐛 Bugfixes
+
+- **Updater `post_install_rename`**: `$wp_filesystem->delete()` schlug fehl wenn das Plugin-Verzeichnis ein `.git`-Unterordner enthielt (z.B. nach manuellem `git clone`-Deployment). Neuer Fallback: rekursives Löschen via PHP-nativer Funktion `recursive_rmdir()`. Zusätzlich fallback auf `rename()` wenn `$wp_filesystem->move()` scheitert.
+
+---
+
 ## [0.9.5.49] - 2026-03-25 🔧 Bugfixes & Server-Deployment
 
 ### 🐛 Bugfixes

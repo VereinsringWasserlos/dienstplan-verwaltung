@@ -567,11 +567,22 @@ class Dienstplan_Updater {
             isset($result['destination']) &&
             $result['destination'] !== $proper_destination
         ) {
+            // Altes Verzeichnis entfernen – zuerst WP Filesystem API versuchen,
+            // dann nativer PHP-Fallback (wichtig wenn das Verzeichnis ein .git-Repo war
+            // oder der WP-Filesystem-User keine Schreibrechte hat).
             if ($wp_filesystem->exists($proper_destination)) {
-                $wp_filesystem->delete($proper_destination, true);
+                $deleted = $wp_filesystem->delete($proper_destination, true);
+                if (!$deleted && is_dir($proper_destination)) {
+                    // Fallback: rekursives Löschen via PHP
+                    $this->recursive_rmdir($proper_destination);
+                }
             }
 
+            // Umbenennen: erst WP Filesystem, dann nativer rename()-Syscall
             $moved = $wp_filesystem->move($result['destination'], $proper_destination, true);
+            if (!$moved) {
+                $moved = @rename($result['destination'], $proper_destination);
+            }
 
             if (!$moved) {
                 return new WP_Error(
@@ -1015,5 +1026,30 @@ class Dienstplan_Updater {
         }
 
         return $sanitized;
+    }
+
+    /**
+     * Löscht ein Verzeichnis rekursiv via nativer PHP-Funktionen.
+     * Fallback wenn WP Filesystem API scheitert (z.B. bei .git-Unterordnern).
+     *
+     * @param string $dir Absoluter Pfad zum Verzeichnis.
+     */
+    private function recursive_rmdir($dir) {
+        if (!is_dir($dir)) {
+            return;
+        }
+        $items = scandir($dir);
+        foreach ($items as $item) {
+            if ($item === '.' || $item === '..') {
+                continue;
+            }
+            $path = $dir . DIRECTORY_SEPARATOR . $item;
+            if (is_dir($path)) {
+                $this->recursive_rmdir($path);
+            } else {
+                @unlink($path);
+            }
+        }
+        @rmdir($dir);
     }
 }
