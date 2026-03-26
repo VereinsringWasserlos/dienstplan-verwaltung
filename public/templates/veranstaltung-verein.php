@@ -904,17 +904,23 @@ if ($dienst_start_dt !== null && $dienst_end_dt !== null) {
 
                         })) > 0 : false;
 
-                        $first_free_slot_id = 0;
-
-                        $first_own_slot_id  = 0;
+                        $first_free_slot_id  = 0;
+                        $second_free_slot_id = 0;
+                        $first_own_slot_id   = 0;
 
                         foreach ($slots as $slot_r) {
 
-                            if ($first_free_slot_id === 0 && empty($slot_r->mitarbeiter_id)) $first_free_slot_id = intval($slot_r->id);
+                            if (empty($slot_r->mitarbeiter_id)) {
+                                if ($first_free_slot_id === 0) {
+                                    $first_free_slot_id = intval($slot_r->id);
+                                } elseif ($second_free_slot_id === 0) {
+                                    $second_free_slot_id = intval($slot_r->id);
+                                }
+                            }
 
-                            if ($first_own_slot_id  === 0 && $current_mitarbeiter_id > 0 && intval($slot_r->mitarbeiter_id) === intval($current_mitarbeiter_id)) $first_own_slot_id = intval($slot_r->id);
+                            if ($first_own_slot_id === 0 && $current_mitarbeiter_id > 0 && intval($slot_r->mitarbeiter_id) === intval($current_mitarbeiter_id)) $first_own_slot_id = intval($slot_r->id);
 
-                            if ($first_free_slot_id && $first_own_slot_id) break;
+                            if ($first_free_slot_id && $second_free_slot_id && $first_own_slot_id) break;
 
                         }
 
@@ -1019,7 +1025,7 @@ if ($dienst_start_dt !== null && $dienst_end_dt !== null) {
 
                                 <?php if ($anmeldung_aktiv && $first_free_slot_id > 0): ?>
 
-                                <button type="button" class="dp-tl-bar-btn dp-tl-bar-btn--takeover" style="--dp-btn-accent:<?php echo esc_attr($tl_bclr); ?>;" onclick="return dpOpenTakeoverModal(<?php echo intval($first_free_slot_id); ?>, <?php echo intval($dienst->id); ?>, event);">Anmelden</button>
+                                <button type="button" class="dp-tl-bar-btn dp-tl-bar-btn--takeover" style="--dp-btn-accent:<?php echo esc_attr($tl_bclr); ?>;" onclick="return dpOpenTakeoverModal(<?php echo intval($first_free_slot_id); ?>, <?php echo intval($dienst->id); ?>, event, <?php echo intval($second_free_slot_id); ?>, <?php echo intval($dienst->splittbar ?? 0); ?>);">Anmelden</button>
 
                                 <?php endif; ?>
                                 <?php endif; ?>
@@ -1107,11 +1113,16 @@ if ($dienst_start_dt !== null && $dienst_end_dt !== null) {
                                 $has_my_slot = ($current_mitarbeiter_id > 0) ? count(array_filter($slots, function($s) use ($current_mitarbeiter_id) {
                                     return intval($s->mitarbeiter_id ?? 0) === intval($current_mitarbeiter_id);
                                 })) > 0 : false;
-                                $first_free_slot_id = 0;
+                                $first_free_slot_id  = 0;
+                                $second_free_slot_id = 0;
                                 foreach ($slots as $slot_row) {
                                     if (empty($slot_row->mitarbeiter_id)) {
-                                        $first_free_slot_id = intval($slot_row->id);
-                                        break;
+                                        if ($first_free_slot_id === 0) {
+                                            $first_free_slot_id = intval($slot_row->id);
+                                        } else {
+                                            $second_free_slot_id = intval($slot_row->id);
+                                            break;
+                                        }
                                     }
                                 }
                                 $dienst_von = $dienst->von_zeit ?? ($dienst->zeit_von ?? '');
@@ -1152,7 +1163,7 @@ if ($dienst_start_dt !== null && $dienst_end_dt !== null) {
                                     <td class="col-aktion">
                                         <?php if ($anmeldung_aktiv && $first_free_slot_id > 0): ?>
                                             <?php $dienst_btn_color = $dp_get_verein_color($dienst); ?>
-                                            <button type="button" class="dp-btn-anmelden" style="--dp-btn-accent:<?php echo esc_attr($dienst_btn_color); ?>;" onclick="return dpOpenTakeoverModal(<?php echo $first_free_slot_id; ?>, <?php echo intval($dienst->id); ?>, event);">Übernehmen</button>
+                                            <button type="button" class="dp-btn-anmelden" style="--dp-btn-accent:<?php echo esc_attr($dienst_btn_color); ?>;" onclick="return dpOpenTakeoverModal(<?php echo $first_free_slot_id; ?>, <?php echo intval($dienst->id); ?>, event, <?php echo intval($second_free_slot_id); ?>, <?php echo intval($dienst->splittbar ?? 0); ?>);">Übernehmen</button>
                                         <?php elseif ($freie_slots === 0): ?>
                                             <span class="dp-grey-text">Voll</span>
                                         <?php else: ?>
@@ -1350,15 +1361,18 @@ window.dpCloseLoginModal = function() {
     jQuery('body').css('overflow', 'auto');
 };
 
-window.dpOpenTakeoverModal = function(slotId, dienstId, event) {
+window.dpOpenTakeoverModal = function(slotId, dienstId, event, slot2Id, isSplittbar) {
     if (event) {
         event.preventDefault();
         event.stopPropagation();
     }
 
-    slotId = parseInt(slotId || '0', 10);
-    dienstId = parseInt(dienstId || '0', 10);
-    window.dpTrace('Klick auf Frei', { slotId: slotId, dienstId: dienstId });
+    slotId      = parseInt(slotId      || '0', 10);
+    dienstId    = parseInt(dienstId    || '0', 10);
+    slot2Id     = parseInt(slot2Id     || '0', 10);
+    isSplittbar = parseInt(isSplittbar || '0', 10);
+    var showSplitChoice = (isSplittbar === 1 && slot2Id > 0);
+    window.dpTrace('Klick auf Frei', { slotId: slotId, dienstId: dienstId, slot2Id: slot2Id, splittbar: isSplittbar });
 
     if (!slotId || !dienstId) {
         window.dpTrace('Abbruch: ungültige IDs', { slotId: slotId, dienstId: dienstId });
@@ -1375,11 +1389,20 @@ window.dpOpenTakeoverModal = function(slotId, dienstId, event) {
     }
 
     if (window.dpLoggedIn) {
-        return window.dpOpenLoggedInModal(slotId, dienstId, event);
+        return window.dpOpenLoggedInModal(slotId, dienstId, event, slot2Id, showSplitChoice);
     }
 
     jQuery('#dp-slot-id').val(slotId);
     jQuery('#dp-dienst-id').val(dienstId);
+    if (showSplitChoice) {
+        jQuery('#dp-split-group').show();
+        jQuery('input[name="dp_split_wahl"][value="first"]').prop('checked', true);
+        jQuery('#dp-split-group').off('change.split').on('change.split', 'input[name="dp_split_wahl"]', function() {
+            jQuery('#dp-slot-id').val(this.value === 'second' ? slot2Id : slotId);
+        });
+    } else {
+        jQuery('#dp-split-group').hide();
+    }
     if (typeof window.dpToggleCreateUserConsent === 'function') {
         window.dpToggleCreateUserConsent();
     }
@@ -1422,7 +1445,7 @@ window.closeAnmeldeModal = function() {
     }
 };
 
-window.dpOpenLoggedInModal = function(slotId, dienstId, event) {
+window.dpOpenLoggedInModal = function(slotId, dienstId, event, slot2Id, showSplitChoice) {
     if (event) {
         event.preventDefault();
         event.stopPropagation();
@@ -1434,8 +1457,18 @@ window.dpOpenLoggedInModal = function(slotId, dienstId, event) {
         return false;
     }
 
+    slot2Id = parseInt(slot2Id || '0', 10);
     jQuery('#dp-li-slot-id').val(slotId);
     jQuery('#dp-li-dienst-id').val(dienstId);
+    if (showSplitChoice) {
+        jQuery('#dp-li-split-group').show();
+        jQuery('input[name="dp_li_split_wahl"][value="first"]').prop('checked', true);
+        jQuery('#dp-li-split-group').off('change.split').on('change.split', 'input[name="dp_li_split_wahl"]', function() {
+            jQuery('#dp-li-slot-id').val(this.value === 'second' ? slot2Id : slotId);
+        });
+    } else {
+        jQuery('#dp-li-split-group').hide();
+    }
 
     if (window.dpCanManageDienste) {
         var select = document.getElementById('dp-li-mitarbeiter-id');
@@ -2232,6 +2265,13 @@ document.addEventListener('DOMContentLoaded', function() {
                     <input type="email" id="dp-email" name="email">
                 </div>
                 
+                <div id="dp-split-group" class="dp-form-group" style="display:none; background:#f0f9ff; border:1px solid #7dd3fc; border-radius:6px; padding:12px 14px;">
+                    <label><strong>&#x2702;&#xFE0F; Welche Hälfte möchten Sie übernehmen?</strong></label>
+                    <div class="dp-radio-row" style="margin-top:8px; gap:20px;">
+                        <label><input type="radio" name="dp_split_wahl" value="first" checked> 1. Hälfte</label>
+                        <label><input type="radio" name="dp_split_wahl" value="second"> 2. Hälfte</label>
+                    </div>
+                </div>
                 <div class="dp-form-group">
                     <label for="dp-besonderheiten">Besonderheiten / Anmerkungen</label>
                     <textarea id="dp-besonderheiten" name="besonderheiten" rows="3"></textarea>
@@ -2379,6 +2419,13 @@ document.addEventListener('DOMContentLoaded', function() {
                     </div>
                 </div>
 
+                <div id="dp-li-split-group" class="dp-form-group" style="display:none; background:#f0f9ff; border:1px solid #7dd3fc; border-radius:6px; padding:12px 14px;">
+                    <label><strong>&#x2702;&#xFE0F; Welche Hälfte möchten Sie übernehmen?</strong></label>
+                    <div class="dp-radio-row" style="margin-top:8px; gap:20px;">
+                        <label><input type="radio" name="dp_li_split_wahl" value="first" checked> 1. Hälfte</label>
+                        <label><input type="radio" name="dp_li_split_wahl" value="second"> 2. Hälfte</label>
+                    </div>
+                </div>
                 <div class="dp-form-group">
                     <label for="dp-li-anpassung">Anpassung / Hinweis (optional)</label>
                     <textarea id="dp-li-anpassung" name="anpassung" rows="3" placeholder="Optionaler Hinweis zur Übernahme oder Anpassung"></textarea>
