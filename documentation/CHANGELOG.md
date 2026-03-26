@@ -11,6 +11,14 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ---
 
+## [0.9.5.59] - 2026-03-26 🔗 Frontend: Verein-Chip als Link
+
+### ✨ Neu
+
+- **Verein-Badge im Veranstaltungs-Header ist jetzt klickbar**: Die Vereins-Chips im Titel-Header von `veranstaltung-verein.php` werden zu `<a>`-Links gerendert, wenn für den Verein eine Seite (`seite_id`) hinterlegt ist. Ohne Seite bleibt der Chip ein `<div>` wie bisher. Gilt für Einzel-Verein-Ansicht und die Mehrfach-Vereins-Anzeige (`verein_id=0`).
+
+---
+
 ## [0.9.5.58] - 2026-03-26 🗄️ Debug: DB-Strukturansicht
 
 ### ✨ Neu

@@ -332,10 +332,16 @@ if ($dienst_start_dt !== null && $dienst_end_dt !== null) {
                         $verein_bg_start = $dp_hex_to_rgba($verein_color, 0.18);
                         $verein_bg_end = $dp_hex_to_rgba($verein_color, 0.35);
                         ?>
-                        <div class="dp-header-chip" style="background: linear-gradient(135deg, <?php echo esc_attr($verein_bg_start); ?> 0%, <?php echo esc_attr($verein_bg_end); ?> 100%); border-color: <?php echo esc_attr($verein_color); ?>; color: #0f172a;">
+                        <?php
+                        $chip_is_link = !empty($verein->seite_id);
+                        $chip_tag     = $chip_is_link ? 'a' : 'div';
+                        $chip_xclass  = $chip_is_link ? ' dp-header-chip-link' : '';
+                        $chip_href    = $chip_is_link ? ' href="' . esc_url(get_permalink((int)$verein->seite_id)) . '"' : '';
+                        ?>
+                        <<?php echo $chip_tag; ?> class="dp-header-chip<?php echo $chip_xclass; ?>" style="background: linear-gradient(135deg, <?php echo esc_attr($verein_bg_start); ?> 0%, <?php echo esc_attr($verein_bg_end); ?> 100%); border-color: <?php echo esc_attr($verein_color); ?>; color: #0f172a;"<?php echo $chip_href; ?>>
                             <span class="dashicons dashicons-groups" style="font-size: 16px;"></span>
                             <span title="<?php echo esc_attr($verein->name); ?>"><?php echo esc_html(!empty($verein->kuerzel) ? $verein->kuerzel : $dp_get_verein_abbrev($verein->name)); ?></span>
-                        </div>
+                        </<?php echo $chip_tag; ?>>
                     <?php elseif ($verein_id == 0 && !empty($alle_vereine_in_services)): ?>
                         <?php foreach ($alle_vereine_in_services as $vid => $vname): ?>
                             <?php
@@ -347,10 +353,16 @@ if ($dienst_start_dt !== null && $dienst_end_dt !== null) {
                             $v_bg_start = $dp_hex_to_rgba($v_color, 0.18);
                             $v_bg_end = $dp_hex_to_rgba($v_color, 0.35);
                             ?>
-                            <div class="dp-header-chip" style="background: linear-gradient(135deg, <?php echo esc_attr($v_bg_start); ?> 0%, <?php echo esc_attr($v_bg_end); ?> 100%); border-color: <?php echo esc_attr($v_color); ?>; color: #0f172a;">
+                            <?php
+                            $vchip_is_link = !empty($v_obj->seite_id);
+                            $vchip_tag     = $vchip_is_link ? 'a' : 'div';
+                            $vchip_xclass  = $vchip_is_link ? ' dp-header-chip-link' : '';
+                            $vchip_href    = $vchip_is_link ? ' href="' . esc_url(get_permalink((int)$v_obj->seite_id)) . '"' : '';
+                            ?>
+                            <<?php echo $vchip_tag; ?> class="dp-header-chip<?php echo $vchip_xclass; ?>" style="background: linear-gradient(135deg, <?php echo esc_attr($v_bg_start); ?> 0%, <?php echo esc_attr($v_bg_end); ?> 100%); border-color: <?php echo esc_attr($v_color); ?>; color: #0f172a;"<?php echo $vchip_href; ?>>
                                 <span class="dashicons dashicons-groups" style="font-size: 14px;"></span>
                                 <span title="<?php echo esc_attr($vname); ?>"><?php echo esc_html(!empty($v_obj->kuerzel) ? $v_obj->kuerzel : $dp_get_verein_abbrev($vname)); ?></span>
-                            </div>
+                            </<?php echo $vchip_tag; ?>>
                         <?php endforeach; ?>
                     <?php endif; ?>
 
