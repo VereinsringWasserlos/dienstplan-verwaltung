@@ -332,16 +332,10 @@ if ($dienst_start_dt !== null && $dienst_end_dt !== null) {
                         $verein_bg_start = $dp_hex_to_rgba($verein_color, 0.18);
                         $verein_bg_end = $dp_hex_to_rgba($verein_color, 0.35);
                         ?>
-                        <?php
-                        // Einzel-Verein: kein Link – wir sind bereits auf der gefilterten Veranstaltungsseite
-                        $chip_tag    = 'div';
-                        $chip_xclass = '';
-                        $chip_href   = '';
-                        ?>
-                        <<?php echo $chip_tag; ?> class="dp-header-chip<?php echo $chip_xclass; ?>" style="background: linear-gradient(135deg, <?php echo esc_attr($verein_bg_start); ?> 0%, <?php echo esc_attr($verein_bg_end); ?> 100%); border-color: <?php echo esc_attr($verein_color); ?>; color: #0f172a;"<?php echo $chip_href; ?>>
+                        <div class="dp-header-chip" style="background: linear-gradient(135deg, <?php echo esc_attr($verein_bg_start); ?> 0%, <?php echo esc_attr($verein_bg_end); ?> 100%); border-color: <?php echo esc_attr($verein_color); ?>; color: #0f172a;">
                             <span class="dashicons dashicons-groups" style="font-size: 16px;"></span>
                             <span title="<?php echo esc_attr($verein->name); ?>"><?php echo esc_html(!empty($verein->kuerzel) ? $verein->kuerzel : $dp_get_verein_abbrev($verein->name)); ?></span>
-                        </<?php echo $chip_tag; ?>>
+                        </div>
                     <?php elseif ($verein_id == 0 && !empty($alle_vereine_in_services)): ?>
                         <?php foreach ($alle_vereine_in_services as $vid => $vname): ?>
                             <?php
@@ -353,16 +347,10 @@ if ($dienst_start_dt !== null && $dienst_end_dt !== null) {
                             $v_bg_start = $dp_hex_to_rgba($v_color, 0.18);
                             $v_bg_end = $dp_hex_to_rgba($v_color, 0.35);
                             ?>
-                            <?php
-                            // Jeder Verein-Chip verlinkt auf diese Veranstaltungsseite gefiltert für diesen Verein
-                            $vchip_tag   = 'a';
-                            $vchip_xclass = ' dp-header-chip-link';
-                            $vchip_href  = ' href="' . esc_url(add_query_arg('verein_id', $vid, get_permalink(get_the_ID()))) . '"';
-                            ?>
-                            <<?php echo $vchip_tag; ?> class="dp-header-chip<?php echo $vchip_xclass; ?>" style="background: linear-gradient(135deg, <?php echo esc_attr($v_bg_start); ?> 0%, <?php echo esc_attr($v_bg_end); ?> 100%); border-color: <?php echo esc_attr($v_color); ?>; color: #0f172a;"<?php echo $vchip_href; ?>>
+                            <div class="dp-header-chip" style="background: linear-gradient(135deg, <?php echo esc_attr($v_bg_start); ?> 0%, <?php echo esc_attr($v_bg_end); ?> 100%); border-color: <?php echo esc_attr($v_color); ?>; color: #0f172a;">
                                 <span class="dashicons dashicons-groups" style="font-size: 14px;"></span>
                                 <span title="<?php echo esc_attr($vname); ?>"><?php echo esc_html(!empty($v_obj->kuerzel) ? $v_obj->kuerzel : $dp_get_verein_abbrev($vname)); ?></span>
-                            </<?php echo $vchip_tag; ?>>
+                            </div>
                         <?php endforeach; ?>
                     <?php endif; ?>
 
