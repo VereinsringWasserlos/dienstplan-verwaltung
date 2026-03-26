@@ -11,6 +11,14 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ---
 
+## [0.9.5.58] - 2026-03-26 🗄️ Debug: DB-Strukturansicht
+
+### ✨ Neu
+
+- **Debug-Seite: Aktuelle Datenbankstruktur**: Neuer Abschnitt zeigt alle Plugin-Tabellen (`dp_`-Präfix) als ausklappbare Detailblöcke. Jede Tabelle zeigt Zeilenanzahl, alle Spalten mit Typ/Null/Key/Default/Extra sowie alle Indizes — direkt per `SHOW FULL COLUMNS` und `SHOW INDEX` aus der laufenden DB abgerufen.
+
+---
+
 ## [0.9.5.57] - 2026-03-26 🐛 Frontend: Verein-Kürzel aus DB statt generiert
 
 ### 🐛 Bugfixes

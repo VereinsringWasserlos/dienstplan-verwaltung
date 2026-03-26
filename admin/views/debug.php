@@ -480,6 +480,95 @@ foreach ($stats as $count) {
         </div>
     </div>
     
+    <!-- DB-Struktur -->
+    <div class="card" style="margin-top: 2rem;">
+        <h2>🗄️ Aktuelle Datenbankstruktur</h2>
+        <p style="color: #666; margin-bottom: 1.5rem;">
+            Alle Tabellen des Plugins mit Spalten, Typen und Constraints — direkt aus der laufenden Datenbank.
+        </p>
+        <?php
+        $db_tables = $wpdb->get_col("SHOW TABLES LIKE '{$wpdb->prefix}dp_%'");
+        sort($db_tables);
+        foreach ($db_tables as $full_table_name):
+            $short_name = str_replace($wpdb->prefix . 'dp_', '', $full_table_name);
+            $columns    = $wpdb->get_results("SHOW FULL COLUMNS FROM `{$full_table_name}`");
+            $indexes    = $wpdb->get_results("SHOW INDEX FROM `{$full_table_name}`");
+            $row_count  = $wpdb->get_var("SELECT COUNT(*) FROM `{$full_table_name}`");
+
+            // Indexes gruppieren
+            $idx_map = array();
+            foreach ($indexes as $idx) {
+                $idx_map[$idx->Key_name][] = $idx->Column_name;
+            }
+        ?>
+        <details style="margin-bottom: 1rem; border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden;">
+            <summary style="padding: 0.75rem 1rem; background: #f0f6fc; cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 0.75rem; list-style: none;">
+                <span style="font-family: monospace; color: #2271b1;"><?php echo esc_html($wpdb->prefix . 'dp_' . $short_name); ?></span>
+                <span style="background: #2271b1; color: #fff; border-radius: 999px; padding: 0 0.55rem; font-size: 0.78rem; font-weight: 700;"><?php echo number_format((int)$row_count, 0, ',', '.'); ?> Zeilen</span>
+                <span style="color: #666; font-size: 0.82rem; font-weight: 400;"><?php echo count($columns); ?> Spalten</span>
+            </summary>
+            <div style="padding: 1rem;">
+                <table class="wp-list-table widefat fixed striped" style="font-size: 0.85rem;">
+                    <thead>
+                        <tr>
+                            <th style="width: 22%;">Spalte</th>
+                            <th style="width: 20%;">Typ</th>
+                            <th style="width: 8%;">Null</th>
+                            <th style="width: 10%;">Key</th>
+                            <th style="width: 20%;">Default</th>
+                            <th style="width: 20%;">Extra</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($columns as $col): ?>
+                        <tr>
+                            <td>
+                                <strong style="font-family: monospace;">
+                                    <?php if ($col->Key === 'PRI'): ?>
+                                        <span style="color: #b32d2e;" title="Primary Key">🔑</span>
+                                    <?php elseif ($col->Key === 'MUL'): ?>
+                                        <span title="Index">⚡</span>
+                                    <?php elseif ($col->Key === 'UNI'): ?>
+                                        <span title="Unique">✨</span>
+                                    <?php endif; ?>
+                                    <?php echo esc_html($col->Field); ?>
+                                </strong>
+                            </td>
+                            <td><code style="font-size: 0.8rem; background: #f3f4f6; padding: 1px 4px; border-radius: 3px;"><?php echo esc_html($col->Type); ?></code></td>
+                            <td style="color: <?php echo $col->Null === 'YES' ? '#d97706' : '#666'; ?>;"><?php echo esc_html($col->Null); ?></td>
+                            <td>
+                                <?php if ($col->Key): ?>
+                                    <span style="background: <?php echo $col->Key === 'PRI' ? '#fee2e2' : ($col->Key === 'UNI' ? '#dbeafe' : '#f3f4f6'); ?>; color: <?php echo $col->Key === 'PRI' ? '#b32d2e' : ($col->Key === 'UNI' ? '#1d4ed8' : '#4b5563'); ?>; border-radius: 3px; padding: 1px 5px; font-size: 0.78rem; font-weight: 700;"><?php echo esc_html($col->Key); ?></span>
+                                <?php endif; ?>
+                            </td>
+                            <td style="color: #666; font-style: <?php echo $col->Default === null ? 'italic' : 'normal'; ?>;"><?php echo $col->Default === null ? 'NULL' : esc_html($col->Default); ?></td>
+                            <td style="color: #666; font-size: 0.78rem;"><?php echo esc_html($col->Extra); ?></td>
+                        </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+
+                <?php if (!empty($idx_map)): ?>
+                <div style="margin-top: 1rem;">
+                    <strong style="font-size: 0.85rem; color: #4b5563;">Indizes:</strong>
+                    <div style="display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.4rem;">
+                        <?php foreach ($idx_map as $idx_name => $idx_cols): ?>
+                            <span style="background: #f3f4f6; border: 1px solid #d1d5db; border-radius: 4px; padding: 2px 8px; font-size: 0.78rem; font-family: monospace;">
+                                <?php echo $idx_name === 'PRIMARY' ? '🔑 PRIMARY' : esc_html($idx_name); ?>
+                                <span style="color: #6b7280;">(<?php echo esc_html(implode(', ', $idx_cols)); ?>)</span>
+                            </span>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+                <?php endif; ?>
+            </div>
+        </details>
+        <?php endforeach; ?>
+        <?php if (empty($db_tables)): ?>
+            <p style="color: #dc2626;">Keine Plugin-Tabellen gefunden (Präfix: <?php echo esc_html($wpdb->prefix); ?>dp_).</p>
+        <?php endif; ?>
+    </div>
+
     <!-- Quick Actions -->
     <div class="card" style="margin-top: 2rem;">
         <h2>⚡ Quick Actions</h2>
