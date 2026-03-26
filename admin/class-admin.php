@@ -7015,15 +7015,45 @@ class Dienstplan_Admin {
             $current_ids[] = intval($current_id);
         }
 
+        // Rollen-Hierarchie: Diese Rollen werden nie heruntergestuft
+        $higher_roles = array(
+            Dienstplan_Roles::ROLE_GENERAL_ADMIN,
+            Dienstplan_Roles::ROLE_EVENT_ADMIN,
+            'administrator',
+        );
+
         foreach ($current_ids as $current_id) {
             if (!in_array($current_id, $desired_ids, true)) {
                 $db->delete_direct_user_verein_assignment($current_id, $verein_id);
+
+                // Rolle entfernen wenn User keinem anderen Verein mehr als Verantwortlicher zugeordnet ist
+                global $wpdb;
+                $vv_table = $wpdb->prefix . $this->db_prefix . 'verein_verantwortliche';
+                $other_count = (int) $wpdb->get_var($wpdb->prepare(
+                    "SELECT COUNT(*) FROM {$vv_table} WHERE user_id = %d AND verein_id != %d",
+                    $current_id,
+                    $verein_id
+                ));
+                if ($other_count === 0) {
+                    $user = new WP_User($current_id);
+                    if ($user->exists() &&
+                        in_array(Dienstplan_Roles::ROLE_CLUB_ADMIN, (array) $user->roles, true) &&
+                        !array_intersect($higher_roles, (array) $user->roles)) {
+                        $user->set_role('subscriber');
+                    }
+                }
             }
         }
 
         foreach ($desired_ids as $desired_id) {
             if (!in_array($desired_id, $current_ids, true)) {
                 $db->assign_direct_user_to_verein($desired_id, $verein_id);
+
+                // Vereins-Admin-Rolle setzen wenn der User keine höhere Dienstplan-Rolle hat
+                $user = new WP_User($desired_id);
+                if ($user->exists() && !array_intersect($higher_roles, (array) $user->roles)) {
+                    $user->set_role(Dienstplan_Roles::ROLE_CLUB_ADMIN);
+                }
             }
         }
     }

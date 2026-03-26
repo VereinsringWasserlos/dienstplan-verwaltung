@@ -11,6 +11,14 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ---
 
+## [0.9.5.53] - 2026-03-26 🔐 Rollen-Zuweisung beim Verein-Verantwortlichen-Fix
+
+### 🐛 Bugfixes
+
+- **Rolle fehlte beim Verein-Zuweisung**: Wenn ein bestehender WordPress-User als Verantwortlicher einem Verein zugewiesen wurde, erhielt er die Rolle `dpv2_club_admin` (Vereins-Admin) nicht automatisch. Die Funktion `sync_direct_verein_user_assignments()` hat bislang nur den DB-Eintrag gesetzt. Jetzt wird beim Hinzufügen die Rolle gesetzt (sofern keine höhere Rolle wie `dpv2_event_admin`, `dpv2_general_admin` oder `administrator` vorhanden ist). Beim Entfernen aus dem letzten Verein wird die Rolle wieder auf `subscriber` zurückgesetzt.
+
+---
+
 ## [0.9.5.52] - 2026-03-27 👤 Neuer-Mitarbeiter im Frontend-Modal + Datenschutz-URL
 
 ### ✨ Neu
