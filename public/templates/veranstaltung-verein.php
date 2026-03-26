@@ -1306,6 +1306,7 @@ window.dpTrace = function(message, payload) {
 window.dpTrace('Script geladen: veranstaltung-verein');
 window.dpLoggedIn = <?php echo $is_logged_in ? 'true' : 'false'; ?>;
 window.dpCanManageDienste = <?php echo $can_manage_dienste ? 'true' : 'false'; ?>;
+<?php if ($can_manage_dienste): ?>window.dpAdminNonce = '<?php echo esc_js(wp_create_nonce('dp_ajax_nonce')); ?>';<?php endif; ?>
 window.dpCurrentMitarbeiterId = <?php echo intval($current_mitarbeiter_id); ?>;
 window.dpLoggedInPrefill = <?php echo wp_json_encode(array(
     'vorname' => $current_mitarbeiter->vorname ?? ($current_user_obj ? $current_user_obj->display_name : ''),
@@ -2120,6 +2121,74 @@ document.addEventListener('DOMContentLoaded', function() {
         jQuery(document).on('change', '#dp-li-mitarbeiter-id', function() {
             window.dpApplyAdminMitarbeiterSelection();
         });
+
+        // Neuer Mitarbeiter anlegen – Toggle
+        jQuery(document).on('click', '#dp-li-new-ma-toggle', function() {
+            jQuery('#dp-li-new-ma-form').slideToggle(150);
+            jQuery('#dp-li-new-ma-msg').text('');
+        });
+        jQuery(document).on('click', '#dp-li-new-ma-cancel', function() {
+            jQuery('#dp-li-new-ma-form').slideUp(150);
+            jQuery('#dp-li-new-ma-vorname, #dp-li-new-ma-nachname, #dp-li-new-ma-email, #dp-li-new-ma-telefon').val('');
+            jQuery('#dp-li-new-ma-msg').text('');
+        });
+        jQuery(document).on('click', '#dp-li-new-ma-save', function() {
+            var vorname  = jQuery.trim(jQuery('#dp-li-new-ma-vorname').val());
+            var nachname = jQuery.trim(jQuery('#dp-li-new-ma-nachname').val());
+            var email    = jQuery.trim(jQuery('#dp-li-new-ma-email').val());
+            var telefon  = jQuery.trim(jQuery('#dp-li-new-ma-telefon').val());
+            var msg      = jQuery('#dp-li-new-ma-msg');
+
+            if (!vorname || !nachname) {
+                msg.css('color','#d63638').text('Vorname und Nachname sind Pflicht.');
+                return;
+            }
+
+            var dpConfig = window.dpPublic || window.dpAjax || null;
+            if (!dpConfig || !dpConfig.ajaxurl || !dpConfig.nonce) {
+                msg.css('color','#d63638').text('Konfiguration fehlt. Seite neu laden.');
+                return;
+            }
+
+            var btn = jQuery(this);
+            btn.prop('disabled', true).text('Wird angelegt…');
+            msg.css('color','#666').text('');
+
+            jQuery.post(dpConfig.ajaxurl, {
+                action: 'dp_add_mitarbeiter',
+                nonce:  (window.dpAdminNonce || dpConfig.nonce),
+                vorname:  vorname,
+                nachname: nachname,
+                email:    email,
+                telefon:  telefon,
+                verein_id: 0
+            }, function(res) {
+                if (res && res.success && res.data && res.data.id) {
+                    var newId   = res.data.id;
+                    var label   = vorname + ' ' + nachname + (email ? ' (' + email + ')' : '');
+                    var newOpt  = jQuery('<option></option>')
+                        .val(newId)
+                        .text(label)
+                        .attr('data-vorname', vorname)
+                        .attr('data-nachname', nachname)
+                        .attr('data-email', email)
+                        .attr('data-telefon', telefon);
+                    jQuery('#dp-li-mitarbeiter-id').append(newOpt).val(newId).trigger('change');
+
+                    jQuery('#dp-li-new-ma-form').slideUp(150);
+                    jQuery('#dp-li-new-ma-vorname, #dp-li-new-ma-nachname, #dp-li-new-ma-email, #dp-li-new-ma-telefon').val('');
+                    msg.css('color','#00a32a').text('✓ ' + vorname + ' ' + nachname + ' angelegt und ausgewählt.');
+                    setTimeout(function(){ msg.text(''); }, 4000);
+                } else {
+                    var errMsg = (res && res.data && res.data.message) ? res.data.message : 'Fehler beim Anlegen.';
+                    msg.css('color','#d63638').text(errMsg);
+                }
+            }).fail(function() {
+                msg.css('color','#d63638').text('Serverfehler. Bitte erneut versuchen.');
+            }).always(function() {
+                btn.prop('disabled', false).text('Anlegen & auswählen');
+            });
+        });
     }
 
     jQuery(document).on('click', '#dp-login-modal', function(e) {
@@ -2180,7 +2249,15 @@ document.addEventListener('DOMContentLoaded', function() {
                     <div class="dp-form-group dp-datenschutz-wrap" id="dp-datenschutz-wrap" style="display:none;">
                         <label class="dp-checkbox-label">
                             <input type="checkbox" id="dp-create-user-datenschutz" name="create_user_datenschutz" value="1">
-                            Ich habe die Datenschutzerklärung gelesen und stimme der Erstellung eines Benutzerkontos zu.
+                            Ich habe die
+                            <?php
+                            $dp_dsgvo_url = get_option('dp_datenschutz_url', '');
+                            if (!empty($dp_dsgvo_url)):
+                            ?><a href="<?php echo esc_url($dp_dsgvo_url); ?>" target="_blank" rel="noopener">Datenschutzerklärung</a><?php
+                            else:
+                            ?>Datenschutzerklärung<?php
+                            endif;
+                            ?> gelesen und stimme der Erstellung eines Benutzerkontos zu.
                         </label>
                     </div>
                 <?php else: ?>
@@ -2258,6 +2335,38 @@ document.addEventListener('DOMContentLoaded', function() {
                                 </option>
                             <?php endforeach; ?>
                         </select>
+                    </div>
+                    <!-- Neuen Mitarbeiter anlegen -->
+                    <div class="dp-form-group">
+                        <button type="button" id="dp-li-new-ma-toggle" class="button button-secondary" style="font-size:0.85em;">
+                            + Neuen Mitarbeiter anlegen
+                        </button>
+                    </div>
+                    <div id="dp-li-new-ma-form" style="display:none; background:#f6f7f7; border:1px solid #ddd; border-radius:4px; padding:12px 14px; margin-bottom:12px;">
+                        <p style="margin:0 0 8px; font-weight:600;">Neuen Mitarbeiter anlegen</p>
+                        <table style="width:100%; border-collapse:collapse;">
+                            <tr>
+                                <td style="padding:4px 8px 4px 0; width:110px;"><label for="dp-li-new-ma-vorname">Vorname *</label></td>
+                                <td><input type="text" id="dp-li-new-ma-vorname" class="regular-text" style="width:100%;"></td>
+                            </tr>
+                            <tr>
+                                <td style="padding:4px 8px 4px 0;"><label for="dp-li-new-ma-nachname">Nachname *</label></td>
+                                <td><input type="text" id="dp-li-new-ma-nachname" class="regular-text" style="width:100%;"></td>
+                            </tr>
+                            <tr>
+                                <td style="padding:4px 8px 4px 0;"><label for="dp-li-new-ma-email">E-Mail</label></td>
+                                <td><input type="email" id="dp-li-new-ma-email" class="regular-text" style="width:100%;"></td>
+                            </tr>
+                            <tr>
+                                <td style="padding:4px 8px 4px 0;"><label for="dp-li-new-ma-telefon">Telefon</label></td>
+                                <td><input type="text" id="dp-li-new-ma-telefon" class="regular-text" style="width:100%;"></td>
+                            </tr>
+                        </table>
+                        <p style="margin:10px 0 0;">
+                            <button type="button" id="dp-li-new-ma-save" class="button button-primary">Anlegen &amp; auswählen</button>
+                            <button type="button" id="dp-li-new-ma-cancel" class="button" style="margin-left:6px;">Abbrechen</button>
+                            <span id="dp-li-new-ma-msg" style="margin-left:10px; font-weight:600;"></span>
+                        </p>
                     </div>
                 <?php endif; ?>
 

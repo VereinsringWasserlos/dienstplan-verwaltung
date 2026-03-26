@@ -11,6 +11,19 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ---
 
+## [0.9.5.52] - 2026-03-27 👤 Neuer-Mitarbeiter im Frontend-Modal + Datenschutz-URL
+
+### ✨ Neu
+
+- **Neuen Mitarbeiter direkt im Frontend anlegen**: Admins sehen im „Dienst übernehmen"-Modal (eingeloggt) jetzt einen „+ Neuen Mitarbeiter anlegen"-Button. Über ein Inline-Formular (Vor-/Nachname*, E-Mail, Telefon) kann ein neuer Mitarbeiter angelegt und sofort ausgewählt werden.
+- **Datenschutz-URL in Einstellungen**: Unter Einstellungen → Allgemein gibt es jetzt Felder für Datenschutzerklärung-URL und Impressum-URL. Die Datenschutz-URL wird im Anmelde-Modal als klickbarer Link angezeigt.
+
+### 🐛 Bugfixes
+
+- **Nonce-Konflikt behoben**: Für Admin-AJAX-Aktionen im Frontend (z.B. Mitarbeiter anlegen) wird `dp_ajax_nonce` separat als `window.dpAdminNonce` ausgegeben, sodass der Handler in `class-admin.php` die Nonce korrekt validieren kann.
+
+---
+
 ## [0.9.5.51] - 2026-03-26 📧 Eingebaute SMTP-Konfiguration
 
 ### ✨ Neu

@@ -65,6 +65,28 @@ $active_tab = isset($_GET['tab']) ? $_GET['tab'] : 'general';
                                 </select>
                             </td>
                         </tr>
+                        <tr>
+                            <th scope="row">
+                                <label for="dp_datenschutz_url">Datenschutzerklärung (URL)</label>
+                            </th>
+                            <td>
+                                <input type="url" name="dp_datenschutz_url" id="dp_datenschutz_url" class="regular-text"
+                                       value="<?php echo esc_attr(get_option('dp_datenschutz_url', '')); ?>"
+                                       placeholder="https://example.de/datenschutz">
+                                <p class="description">Link zur Datenschutzseite – wird im Frontend-Buchungsformular als klickbarer Link angezeigt.</p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th scope="row">
+                                <label for="dp_impressum_url">Impressum (URL)</label>
+                            </th>
+                            <td>
+                                <input type="url" name="dp_impressum_url" id="dp_impressum_url" class="regular-text"
+                                       value="<?php echo esc_attr(get_option('dp_impressum_url', '')); ?>"
+                                       placeholder="https://example.de/impressum">
+                                <p class="description">Optional – Impressums-Link für das Frontend.</p>
+                            </td>
+                        </tr>
                     </table>
                     
                     <p class="submit">
@@ -78,6 +100,8 @@ $active_tab = isset($_GET['tab']) ? $_GET['tab'] : 'general';
                 if (isset($_POST['save_general']) && check_admin_referer('dp_settings', 'dp_settings_nonce')) {
                     update_option('dp_site_name', sanitize_text_field($_POST['site_name']));
                     update_option('dp_date_format', sanitize_text_field($_POST['date_format']));
+                    update_option('dp_datenschutz_url', esc_url_raw(wp_unslash($_POST['dp_datenschutz_url'] ?? '')));
+                    update_option('dp_impressum_url',   esc_url_raw(wp_unslash($_POST['dp_impressum_url']   ?? '')));
                     echo '<div class="notice notice-success"><p>' . __('Einstellungen gespeichert!', 'dienstplan-verwaltung') . '</p></div>';
                 }
                 ?>
