@@ -115,9 +115,37 @@ $documents = array(
     ),
 );
 
-// Aktives Dokument aus GET-Parameter
-// Ausgewähltes Dokument laden
-$active_doc = isset($_GET['doc']) ? sanitize_key($_GET['doc']) : 'readme';
+// === Rollen-Erkennung ===
+$is_super_admin = current_user_can('manage_options');
+$is_club_admin  = Dienstplan_Roles::is_restricted_club_admin();
+
+if ($is_super_admin) {
+    $role_label = 'WordPress-Admin';
+    $role_color = '#2271b1';
+    $role_icon  = '&#x1F451;'; // 👑
+} elseif ($is_club_admin) {
+    $role_label = 'Vereins-Admin';
+    $role_color = '#7c3aed';
+    $role_icon  = '&#x1F3DB;'; // 🏛️
+} else {
+    $role_label = 'Veranstaltungs-Admin';
+    $role_color = '#059669';
+    $role_icon  = '&#x1F4C5;'; // 📅
+}
+
+// Dokumente die ausschließlich für WordPress-Admins sichtbar sind
+if (!$is_super_admin) {
+    $admin_only = array('readme', 'version-090', 'roadmap', 'screenshots', 'changelog', 'database', 'structure', 'css-components', 'test-plan');
+    foreach ($admin_only as $k) {
+        unset($documents[$k]);
+    }
+}
+
+// Aktives Dokument – sicherstellen, dass es für die aktuelle Rolle existiert
+$active_doc = isset($_GET['doc']) ? sanitize_key($_GET['doc']) : ($is_super_admin ? 'readme' : 'quick-start');
+if (!isset($documents[$active_doc])) {
+    $active_doc = $is_super_admin ? 'readme' : 'quick-start';
+}
 
 // Markdown-Parsing-Funktion (vereinfacht)
 function dp_parse_markdown($content) {
@@ -200,6 +228,9 @@ function dp_parse_markdown($content) {
     <h1>
         <span class="dashicons dashicons-book" style="font-size: 32px; width: 32px; height: 32px; margin-right: 10px;"></span>
         Dokumentation
+        <span style="display:inline-block; margin-left:16px; padding:4px 12px; font-size:13px; font-weight:600; border-radius:20px; background:<?php echo esc_attr($role_color); ?>18; color:<?php echo esc_attr($role_color); ?>; border:1px solid <?php echo esc_attr($role_color); ?>55; vertical-align:middle; line-height:1.4;">
+            <?php echo $role_icon; ?>&nbsp;<?php echo esc_html($role_label); ?>
+        </span>
     </h1>
     
     <div class="dp-documentation-container" style="display: flex; gap: 20px; margin-top: 20px;">
@@ -230,6 +261,7 @@ function dp_parse_markdown($content) {
                 <?php endif; ?>
             <?php endforeach; ?>
             
+            <?php if ($is_super_admin): ?>
             <h3 style="margin-top: 20px; padding-bottom: 10px; border-bottom: 2px solid #2271b1;">🔧 Technisch</h3>
             <?php foreach ($documents as $key => $doc): ?>
                 <?php if ($doc['category'] === 'technical'): ?>
@@ -241,12 +273,13 @@ function dp_parse_markdown($content) {
                     </a>
                 <?php endif; ?>
             <?php endforeach; ?>
+            <?php endif; ?>
             
             <div style="margin-top: 30px; padding: 15px; background: #f0f6fc; border-left: 3px solid #2271b1;">
                 <h4 style="margin-top: 0;">ℹ️ Info</h4>
                 <p style="margin: 0; font-size: 12px; line-height: 1.5;">
-                    <strong>Version:</strong> 0.4.7<br>
-                    <strong>Stand:</strong> November 2025
+                    <strong>Version:</strong> <?php echo esc_html(DIENSTPLAN_VERSION); ?><br>
+                    <strong>Ihre Rolle:</strong> <?php echo $role_icon; ?> <?php echo esc_html($role_label); ?>
                 </p>
             </div>
         </div>
