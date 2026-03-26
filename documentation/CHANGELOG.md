@@ -11,6 +11,15 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ---
 
+## [0.9.5.56] - 2026-03-26 🔒 Dashboard: Debug & Statistik für Vereins-Admin ausgeblendet
+
+### 🐛 Bugfixes
+
+- **Dashboard-Kachel 'Debug & Wartung' ohne Berechtigung sichtbar**: Fehlender `manage_options`-Guard ergaenzt. Kachel jetzt nur noch für WordPress-Administratoren sichtbar.
+- **Dashboard-Kachel 'Event-Statistik' für eingeschränkte Vereins-Admins sichtbar**: Die Statistik-Seite ist per Menue-Registrierung fuer `is_restricted_club_admin` gesperrt, die Dashboard-Kachel fehlte aber die entsprechende Prüfung. Ergaenzt durch `!$is_restricted_club_admin`-Bedingung.
+
+---
+
 ## [0.9.5.55] - 2026-03-26 🔒 Vereins-Admin: Nav-Buttons Veranstaltungen & Bereiche ausgeblendet
 
 ### 🐛 Bugfixes

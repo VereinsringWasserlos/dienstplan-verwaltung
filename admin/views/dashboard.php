@@ -130,8 +130,8 @@ $is_hauptadmin = current_user_can('manage_options') || current_user_can(Dienstpl
         </a>
         <?php endif; ?>
 
-        <!-- Event-Statistik (nur Admins) -->
-        <?php if ($is_admin_user): ?>
+        <!-- Event-Statistik (nur Admins, nicht für eingeschränkte Vereins-Admins) -->
+        <?php if ($is_admin_user && (!isset($is_restricted_club_admin) || !$is_restricted_club_admin)): ?>
         <a href="<?php echo admin_url('admin.php?page=dienstplan-statistik'); ?>" class="dashboard-admin-card card-timeline">
             <div class="dashboard-admin-card-header">
                 <span class="dashicons dashicons-chart-line dashboard-admin-card-icon"></span>
@@ -173,6 +173,7 @@ $is_hauptadmin = current_user_can('manage_options') || current_user_can(Dienstpl
         <?php endif; ?>
 
         <!-- Debug -->
+        <?php if (current_user_can('manage_options')): ?>
         <a href="<?php echo admin_url('admin.php?page=dienstplan-debug'); ?>" class="dashboard-admin-card card-debug">
             <div class="dashboard-admin-card-header">
                 <span class="dashicons dashicons-admin-tools dashboard-admin-card-icon"></span>
@@ -180,6 +181,7 @@ $is_hauptadmin = current_user_can('manage_options') || current_user_can(Dienstpl
             </div>
             <p class="dashboard-admin-card-description"><?php _e('Tabellen leeren, Statistiken & Wartung', 'dienstplan-verwaltung'); ?></p>
         </a>
+        <?php endif; ?>
         
     </div>
 
