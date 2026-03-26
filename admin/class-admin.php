@@ -7493,7 +7493,12 @@ class Dienstplan_Admin {
         if ($sent) {
             wp_send_json_success(array('message' => 'Test-Mail erfolgreich an ' . esc_html($to) . ' gesendet.'));
         } else {
-            wp_send_json_error(array('message' => 'E-Mail konnte nicht gesendet werden. Bitte WordPress-Mailkonfiguration prüfen (z.&nbsp;B. SMTP-Plugin).'));
+            global $phpmailer;
+            $error_info = '';
+            if (isset($phpmailer) && !empty($phpmailer->ErrorInfo)) {
+                $error_info = ' Fehlerdetail: ' . $phpmailer->ErrorInfo;
+            }
+            wp_send_json_error(array('message' => 'E-Mail konnte nicht gesendet werden.' . $error_info));
         }
     }
 }
