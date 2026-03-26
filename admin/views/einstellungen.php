@@ -139,6 +139,19 @@ $active_tab = isset($_GET['tab']) ? $_GET['tab'] : 'general';
                                        value="<?php echo esc_attr(get_option('dp_mail_from_email', '')); ?>"
                                        placeholder="dienstplan@<?php echo esc_html(wp_parse_url(home_url(), PHP_URL_HOST)); ?>">
                                 <p class="description">Verwende eine Adresse der eigenen Domain, damit Mails nicht im Spam landen (<abbr title="Sender Policy Framework">SPF</abbr>/<abbr title="DomainKeys Identified Mail">DKIM</abbr>).</p>
+                                <?php
+                                $from_email_saved = get_option('dp_mail_from_email', '');
+                                $site_host        = wp_parse_url(home_url(), PHP_URL_HOST);
+                                // Warnung wenn From-Domain eine fremde Domain ist (z.B. @web.de, @gmail.com)
+                                if (!empty($from_email_saved)) {
+                                    $from_domain = strtolower(substr($from_email_saved, strpos($from_email_saved, '@') + 1));
+                                    // Prüfe ob From-Domain ein Suffix der Site-Domain ist
+                                    $site_root = preg_replace('/^[^.]+\./', '', $site_host); // z.B. vereinsring-wasserlos.de
+                                    if ($from_domain !== $site_host && $from_domain !== $site_root && !str_ends_with($site_host, '.' . $from_domain)) {
+                                        echo '<p class="description" style="color:#d63638; margin-top:6px;">⚠️ <strong>Achtung:</strong> Die Absender-Domain <code>' . esc_html($from_domain) . '</code> stimmt nicht mit der Server-Domain überein. Der Server darf keine Mails als <em>' . esc_html($from_domain) . '</em> versenden (SPF-Fehler) – Mails werden vom Empfänger abgelehnt oder landen im Spam. Verwende stattdessen eine Adresse wie <code>dienstplan@' . esc_html($site_root ?: $site_host) . '</code>.</p>';
+                                    }
+                                }
+                                ?>
                             </td>
                         </tr>
                         <tr>
