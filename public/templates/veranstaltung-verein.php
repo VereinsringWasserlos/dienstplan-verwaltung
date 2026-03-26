@@ -334,7 +334,7 @@ if ($dienst_start_dt !== null && $dienst_end_dt !== null) {
                         ?>
                         <div class="dp-header-chip" style="background: linear-gradient(135deg, <?php echo esc_attr($verein_bg_start); ?> 0%, <?php echo esc_attr($verein_bg_end); ?> 100%); border-color: <?php echo esc_attr($verein_color); ?>; color: #0f172a;">
                             <span class="dashicons dashicons-groups" style="font-size: 16px;"></span>
-                            <span title="<?php echo esc_attr($verein->name); ?>"><?php echo esc_html($dp_get_verein_abbrev($verein->name)); ?></span>
+                            <span title="<?php echo esc_attr($verein->name); ?>"><?php echo esc_html(!empty($verein->kuerzel) ? $verein->kuerzel : $dp_get_verein_abbrev($verein->name)); ?></span>
                         </div>
                     <?php elseif ($verein_id == 0 && !empty($alle_vereine_in_services)): ?>
                         <?php foreach ($alle_vereine_in_services as $vid => $vname): ?>
@@ -349,7 +349,7 @@ if ($dienst_start_dt !== null && $dienst_end_dt !== null) {
                             ?>
                             <div class="dp-header-chip" style="background: linear-gradient(135deg, <?php echo esc_attr($v_bg_start); ?> 0%, <?php echo esc_attr($v_bg_end); ?> 100%); border-color: <?php echo esc_attr($v_color); ?>; color: #0f172a;">
                                 <span class="dashicons dashicons-groups" style="font-size: 14px;"></span>
-                                <span title="<?php echo esc_attr($vname); ?>"><?php echo esc_html($dp_get_verein_abbrev($vname)); ?></span>
+                                <span title="<?php echo esc_attr($vname); ?>"><?php echo esc_html(!empty($v_obj->kuerzel) ? $v_obj->kuerzel : $dp_get_verein_abbrev($vname)); ?></span>
                             </div>
                         <?php endforeach; ?>
                     <?php endif; ?>

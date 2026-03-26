@@ -11,6 +11,14 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ---
 
+## [0.9.5.57] - 2026-03-26 🐛 Frontend: Verein-Kürzel aus DB statt generiert
+
+### 🐛 Bugfixes
+
+- **Titel-Header in `veranstaltung-verein.php` zeigte generierte Abkürzungen**: Die Funktion `$dp_get_verein_abbrev()` erzeugte Initialen aus dem Vereinsnamen (z.B. "FFW" aus "Freiwillige Feuerwehr Wasserlos") anstatt das gespeicherte `kuerzel`-Feld aus der DB zu nutzen. Fix: Beide Stellen (einzelner Verein + Mehrfach-Vereine bei `verein_id=0`) nutzen jetzt `$verein->kuerzel` bzw. `$v_obj->kuerzel`, mit `$dp_get_verein_abbrev()` nur noch als Fallback wenn kein Kürzel gespeichert ist.
+
+---
+
 ## [0.9.5.56] - 2026-03-26 🔒 Dashboard: Debug & Statistik für Vereins-Admin ausgeblendet
 
 ### 🐛 Bugfixes
