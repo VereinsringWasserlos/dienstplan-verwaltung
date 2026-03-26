@@ -11,6 +11,14 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ---
 
+## [0.9.5.55] - 2026-03-26 🔒 Vereins-Admin: Nav-Buttons Veranstaltungen & Bereiche ausgeblendet
+
+### 🐛 Bugfixes
+
+- **Vereins-Admin sah Veranstaltungen und Bereiche & Tätigkeiten im Page-Header-Nav**: Die `$can_show_nav_item`-Funktion in `page-header.php` prüfte nur Capabilities, nicht aber `is_restricted_club_admin`. Da `dpv2_club_admin` die Capability `dpv2_manage_events` hat, wurden beide Buttons trotzdem angezeigt. Fix: Neue statische Methode `Dienstplan_Roles::is_restricted_club_admin()` hinzugefügt; `page-header.php` blendet für eingeschränkte Vereins-Admins die Navigation zu `dienstplan-veranstaltungen` und `dienstplan-bereiche` aus.
+
+---
+
 ## [0.9.5.54] - 2026-03-26 🔒 Vereins-Admin: Veranstaltungen & Bereiche ausgeblendet
 
 ### 🐛 Bugfixes

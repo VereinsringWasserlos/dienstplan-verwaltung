@@ -67,6 +67,13 @@ $can_show_nav_item = function($item) {
             || Dienstplan_Roles::can_manage_settings();
     }
 
+    // Eingeschränkte Vereins-Admins dürfen Veranstaltungen und Bereiche nicht sehen.
+    if (in_array($target_page, array('dienstplan-veranstaltungen', 'dienstplan-bereiche'), true)) {
+        if (Dienstplan_Roles::is_restricted_club_admin()) {
+            return false;
+        }
+    }
+
     $required_capabilities = array(
         'dienstplan-vereine' => Dienstplan_Roles::CAP_MANAGE_CLUBS,
         'dienstplan-veranstaltungen' => Dienstplan_Roles::CAP_MANAGE_EVENTS,

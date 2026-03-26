@@ -261,6 +261,17 @@ class Dienstplan_Roles {
     }
     
     /**
+     * Prüft, ob der aktuelle Benutzer ein eingeschränkter Vereins-Admin ist.
+     * Vereins-Admins haben manage_clubs, aber weder manage_options noch manage_settings.
+     */
+    public static function is_restricted_club_admin() {
+        if (!current_user_can(self::CAP_MANAGE_CLUBS)) {
+            return false;
+        }
+        return !current_user_can('manage_options') && !current_user_can(self::CAP_MANAGE_SETTINGS);
+    }
+
+    /**
      * Prüfe ob Benutzer Veranstaltungen verwalten darf
      */
     public static function can_manage_events() {
