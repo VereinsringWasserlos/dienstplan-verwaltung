@@ -53,7 +53,7 @@ $is_hauptadmin = current_user_can('manage_options') || current_user_can(Dienstpl
         <?php endif; ?>
         
         <!-- Veranstaltungen -->
-        <?php if (Dienstplan_Roles::can_manage_events() || current_user_can('manage_options')): ?>
+        <?php if ((!isset($is_restricted_club_admin) || !$is_restricted_club_admin) && (Dienstplan_Roles::can_manage_events() || current_user_can('manage_options'))): ?>
         <a href="<?php echo admin_url('admin.php?page=dienstplan-veranstaltungen'); ?>" class="dashboard-admin-card card-veranstaltungen">
             <div class="dashboard-admin-card-header">
                 <span class="dashicons dashicons-calendar-alt dashboard-admin-card-icon"></span>
@@ -73,6 +73,7 @@ $is_hauptadmin = current_user_can('manage_options') || current_user_can(Dienstpl
         </a>
 
         <!-- Bereiche & Tätigkeiten -->
+        <?php if (!isset($is_restricted_club_admin) || !$is_restricted_club_admin): ?>
         <a href="<?php echo admin_url('admin.php?page=dienstplan-bereiche'); ?>" class="dashboard-admin-card card-bereiche">
             <div class="dashboard-admin-card-header">
                 <span class="dashicons dashicons-category dashboard-admin-card-icon"></span>
@@ -80,6 +81,7 @@ $is_hauptadmin = current_user_can('manage_options') || current_user_can(Dienstpl
             </div>
             <p class="dashboard-admin-card-description"><?php _e('Arbeitsbereiche und Aufgaben verwalten', 'dienstplan-verwaltung'); ?></p>
         </a>
+        <?php endif; // !is_restricted_club_admin ?>
         
         <!-- Mitarbeiter -->
         <a href="<?php echo admin_url('admin.php?page=dienstplan-mitarbeiter'); ?>" class="dashboard-admin-card card-mitarbeiter">

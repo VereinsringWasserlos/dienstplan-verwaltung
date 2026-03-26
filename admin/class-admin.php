@@ -488,8 +488,8 @@ class Dienstplan_Admin {
             );
         }
         
-        // Veranstaltungen
-        if (Dienstplan_Roles::can_manage_events() || current_user_can('manage_options')) {
+        // Veranstaltungen (nicht für eingeschränkte Vereins-Admins)
+        if ((Dienstplan_Roles::can_manage_events() || current_user_can('manage_options')) && !$this->is_restricted_club_admin()) {
             add_submenu_page(
                 '',
                 __('Veranstaltungen', 'dienstplan-verwaltung'),
@@ -509,8 +509,8 @@ class Dienstplan_Admin {
             );
         }
         
-        // Bereiche & Tätigkeiten
-        if (Dienstplan_Roles::can_manage_events() || current_user_can('manage_options')) {
+        // Bereiche & Tätigkeiten (nicht für eingeschränkte Vereins-Admins)
+        if ((Dienstplan_Roles::can_manage_events() || current_user_can('manage_options')) && !$this->is_restricted_club_admin()) {
             add_submenu_page(
                 '',
                 __('Bereiche & Tätigkeiten', 'dienstplan-verwaltung'),
@@ -939,6 +939,8 @@ class Dienstplan_Admin {
         
         // Lade letzte Dienste
         $letzte_dienste = $db->get_recent_dienste(5);
+
+        $is_restricted_club_admin = $this->is_restricted_club_admin();
         
         include_once DIENSTPLAN_PLUGIN_PATH . 'admin/views/dashboard.php';
     }
@@ -953,6 +955,9 @@ class Dienstplan_Admin {
     }
     
     public function display_veranstaltungen() {
+        if ($this->is_restricted_club_admin()) {
+            wp_die(__('Keine Berechtigung.', 'dienstplan-verwaltung'));
+        }
         require_once DIENSTPLAN_PLUGIN_PATH . 'includes/class-database.php';
         $db = new Dienstplan_Database($this->db_prefix);
         $veranstaltungen = $this->get_scoped_veranstaltungen($db);
@@ -1043,6 +1048,9 @@ class Dienstplan_Admin {
     }
     
     public function display_bereiche_taetigkeiten() {
+        if ($this->is_restricted_club_admin()) {
+            wp_die(__('Keine Berechtigung.', 'dienstplan-verwaltung'));
+        }
         require_once DIENSTPLAN_PLUGIN_PATH . 'includes/class-database.php';
         $db = new Dienstplan_Database($this->db_prefix);
         include_once DIENSTPLAN_PLUGIN_PATH . 'admin/views/bereiche-taetigkeiten.php';
@@ -2737,7 +2745,7 @@ class Dienstplan_Admin {
     public function ajax_create_event_page() {
         check_ajax_referer('dp_ajax_nonce', 'nonce');
         
-        if (!Dienstplan_Roles::can_manage_events() && !current_user_can('manage_options')) {
+        if ((!Dienstplan_Roles::can_manage_events() && !current_user_can('manage_options')) || $this->is_restricted_club_admin()) {
             wp_send_json_error(array('message' => 'Keine Berechtigung'));
         }
         

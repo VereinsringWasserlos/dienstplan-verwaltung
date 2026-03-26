@@ -11,6 +11,14 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ---
 
+## [0.9.5.54] - 2026-03-26 🔒 Vereins-Admin: Veranstaltungen & Bereiche ausgeblendet
+
+### 🐛 Bugfixes
+
+- **Vereins-Admin sah Veranstaltungen und Bereiche & Tätigkeiten**: Weil `dpv2_club_admin` die Capability `dpv2_manage_events` hat, konnte er auf diese Seiten zugreifen und Seiten für Veranstaltungen erstellen. Jetzt gilt: Eingeschränkte Vereins-Admins (`is_restricted_club_admin`) werden aus dem Menü, den Display-Handlern und dem AJAX-Handler `ajax_create_event_page()` herausgefiltert. Auf dem Dashboard werden Veranstaltungen- und Bereiche-Kacheln ebenfalls nicht mehr angezeigt. Dienste, Mitarbeiter und Dienst-Übersicht bleiben weiterhin zugänglich (auf eigene Vereinsdaten eingeschränkt).
+
+---
+
 ## [0.9.5.53] - 2026-03-26 🔐 Rollen-Zuweisung beim Verein-Verantwortlichen-Fix
 
 ### 🐛 Bugfixes
