@@ -143,6 +143,40 @@ class Dienstplan_Verwaltung {
                 return $args;
             }, 20);
         }
+
+        // SMTP-Konfiguration (sofern aktiviert)
+        if (get_option('dp_smtp_enabled', 0)) {
+            $smtp_host = get_option('dp_smtp_host', '');
+            if (!empty($smtp_host)) {
+                add_action('phpmailer_init', function($phpmailer) use ($smtp_host) {
+                    $smtp_port       = (int) get_option('dp_smtp_port', 587);
+                    $smtp_encryption = get_option('dp_smtp_encryption', 'tls');
+                    $smtp_auth       = (bool) get_option('dp_smtp_auth', 1);
+                    $smtp_user       = get_option('dp_smtp_user', '');
+                    $smtp_pass       = get_option('dp_smtp_pass', '');
+
+                    $phpmailer->isSMTP();
+                    $phpmailer->Host       = $smtp_host;
+                    $phpmailer->Port       = $smtp_port;
+                    $phpmailer->SMTPDebug  = 0;
+
+                    if ($smtp_encryption === 'ssl') {
+                        $phpmailer->SMTPSecure = 'ssl';
+                    } elseif ($smtp_encryption === 'tls') {
+                        $phpmailer->SMTPSecure = 'tls';
+                    } else {
+                        $phpmailer->SMTPSecure = '';
+                        $phpmailer->SMTPAutoTLS = false;
+                    }
+
+                    if ($smtp_auth && !empty($smtp_user)) {
+                        $phpmailer->SMTPAuth = true;
+                        $phpmailer->Username = $smtp_user;
+                        $phpmailer->Password = $smtp_pass;
+                    }
+                }, 10, 1);
+            }
+        }
     }
 
     /**

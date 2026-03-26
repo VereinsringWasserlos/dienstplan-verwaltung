@@ -94,6 +94,18 @@ $active_tab = isset($_GET['tab']) ? $_GET['tab'] : 'general';
             update_option('dp_mail_enable_booking',           isset($_POST['dp_mail_enable_booking']) ? 1 : 0);
             update_option('dp_mail_enable_portal_invite',     isset($_POST['dp_mail_enable_portal_invite']) ? 1 : 0);
             update_option('dp_mail_enable_dienste_uebersicht',isset($_POST['dp_mail_enable_dienste_uebersicht']) ? 1 : 0);
+            // SMTP
+            update_option('dp_smtp_enabled',    isset($_POST['dp_smtp_enabled']) ? 1 : 0);
+            update_option('dp_smtp_host',       sanitize_text_field(wp_unslash($_POST['dp_smtp_host'] ?? '')));
+            update_option('dp_smtp_port',       absint($_POST['dp_smtp_port'] ?? 587));
+            update_option('dp_smtp_encryption', in_array($_POST['dp_smtp_encryption'] ?? '', ['tls','ssl','none']) ? $_POST['dp_smtp_encryption'] : 'tls');
+            update_option('dp_smtp_auth',       isset($_POST['dp_smtp_auth']) ? 1 : 0);
+            update_option('dp_smtp_user',       sanitize_text_field(wp_unslash($_POST['dp_smtp_user'] ?? '')));
+            // Passwort nur überschreiben wenn nicht leer
+            $new_pass = wp_unslash($_POST['dp_smtp_pass'] ?? '');
+            if ($new_pass !== '') {
+                update_option('dp_smtp_pass', $new_pass);
+            }
             echo '<div class="notice notice-success is-dismissible"><p><strong>E-Mail-Einstellungen gespeichert.</strong></p></div>';
         }
         ?>
@@ -183,6 +195,97 @@ $active_tab = isset($_GET['tab']) ? $_GET['tab'] : 'general';
 
                     <p class="submit">
                         <button type="submit" name="save_email_settings" class="button button-primary">Einstellungen speichern</button>
+                    </p>
+                </form>
+            </div>
+        </div>
+
+        <!-- SMTP-Konfiguration -->
+        <div class="dp-card" style="margin-top:1.5rem;">
+            <div class="dp-card-header">
+                <h2><span class="dashicons dashicons-admin-network" style="vertical-align:middle; margin-right:6px;"></span>SMTP-Konfiguration</h2>
+            </div>
+            <div class="dp-card-body">
+                <p class="description" style="margin-bottom:1.5rem;">
+                    Wenn PHP&apos;s <code>mail()</code>-Funktion auf deinem Server nicht verfügbar ist, kannst du hier einen externen SMTP-Server konfigurieren.
+                    Diese Einstellung gilt plugin-weit für alle vom Dienstplan-Plugin versendeten Mails.<br>
+                    <strong>Tipp (netcup):</strong> SMTP-Host <code>mail.vereinsring-wasserlos.de</code>, Port <code>587</code>, Verschlüsselung <code>STARTTLS</code>, Benutzername = E-Mail-Adresse des Postfachs.
+                </p>
+                <form method="post" action="">
+                    <?php wp_nonce_field('dp_email_settings', 'dp_email_nonce'); ?>
+                    <table class="form-table">
+                        <tr>
+                            <th scope="row">SMTP aktivieren</th>
+                            <td>
+                                <label>
+                                    <input type="checkbox" id="dp_smtp_enabled" name="dp_smtp_enabled" value="1"
+                                           <?php checked(get_option('dp_smtp_enabled', 0), 1); ?>>
+                                    SMTP für den E-Mail-Versand verwenden
+                                </label>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th scope="row"><label for="dp_smtp_host">SMTP-Host</label></th>
+                            <td>
+                                <input type="text" id="dp_smtp_host" name="dp_smtp_host" class="regular-text"
+                                       value="<?php echo esc_attr(get_option('dp_smtp_host', '')); ?>"
+                                       placeholder="mail.example.de">
+                            </td>
+                        </tr>
+                        <tr>
+                            <th scope="row"><label for="dp_smtp_port">Port</label></th>
+                            <td>
+                                <input type="number" id="dp_smtp_port" name="dp_smtp_port" class="small-text"
+                                       value="<?php echo esc_attr(get_option('dp_smtp_port', 587)); ?>"
+                                       min="1" max="65535">
+                                <p class="description">587 = STARTTLS &nbsp;|&nbsp; 465 = SSL/TLS &nbsp;|&nbsp; 25 = unverschlüsselt</p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th scope="row"><label for="dp_smtp_encryption">Verschlüsselung</label></th>
+                            <td>
+                                <select id="dp_smtp_encryption" name="dp_smtp_encryption">
+                                    <option value="tls"  <?php selected(get_option('dp_smtp_encryption', 'tls'), 'tls'); ?>>STARTTLS (empfohlen)</option>
+                                    <option value="ssl"  <?php selected(get_option('dp_smtp_encryption', 'tls'), 'ssl'); ?>>SSL/TLS</option>
+                                    <option value="none" <?php selected(get_option('dp_smtp_encryption', 'tls'), 'none'); ?>>Keine</option>
+                                </select>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th scope="row">SMTP-Authentifizierung</th>
+                            <td>
+                                <label>
+                                    <input type="checkbox" id="dp_smtp_auth" name="dp_smtp_auth" value="1"
+                                           <?php checked(get_option('dp_smtp_auth', 1), 1); ?>>
+                                    Benutzername und Passwort verwenden
+                                </label>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th scope="row"><label for="dp_smtp_user">Benutzername</label></th>
+                            <td>
+                                <input type="text" id="dp_smtp_user" name="dp_smtp_user" class="regular-text"
+                                       value="<?php echo esc_attr(get_option('dp_smtp_user', '')); ?>"
+                                       placeholder="dienstplan@example.de"
+                                       autocomplete="new-password">
+                                <p class="description">Meist die vollständige E-Mail-Adresse des Postfachs.</p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th scope="row"><label for="dp_smtp_pass">Passwort</label></th>
+                            <td>
+                                <input type="password" id="dp_smtp_pass" name="dp_smtp_pass" class="regular-text"
+                                       value=""
+                                       placeholder="<?php echo get_option('dp_smtp_pass', '') !== '' ? '(gespeichert – leer lassen um nicht zu ändern)' : ''; ?>"
+                                       autocomplete="new-password">
+                                <?php if (get_option('dp_smtp_pass', '') !== ''): ?>
+                                    <p class="description" style="color:#00a32a;">&#10003; Passwort ist gespeichert. Leer lassen um es beizubehalten.</p>
+                                <?php endif; ?>
+                            </td>
+                        </tr>
+                    </table>
+                    <p class="submit">
+                        <button type="submit" name="save_email_settings" class="button button-primary">SMTP-Einstellungen speichern</button>
                     </p>
                 </form>
             </div>

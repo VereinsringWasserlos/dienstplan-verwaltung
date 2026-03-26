@@ -11,6 +11,16 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ---
 
+## [0.9.5.51] - 2026-03-26 📧 Eingebaute SMTP-Konfiguration
+
+### ✨ Neu
+
+- **SMTP-Konfiguration direkt im Plugin**: Unter Einstellungen → E-Mail-Versand gibt es jetzt eine eigene SMTP-Sektion. Dort können Host, Port, Verschlüsselung (STARTTLS/SSL/Keine), Authentifizierung sowie Benutzername und Passwort hinterlegt werden. Eintragen und speichern genügt – kein externes SMTP-Plugin mehr nötig.
+- **`phpmailer_init`-Hook**: Das Plugin hängt sich in WordPress' PHPMailer-Initialisierung ein und konfiguriert den SMTP-Transport automatisch, wenn SMTP aktiviert ist.
+- Passwort-Feld wird beim Speichern **nur überschrieben wenn nicht leer** – sicheres erneutes Speichern ohne versehentliches Löschen.
+
+---
+
 ## [0.9.5.50] - 2026-03-25 🔧 Updater: robusteres Umbenennen nach Update
 
 ### 🐛 Bugfixes
