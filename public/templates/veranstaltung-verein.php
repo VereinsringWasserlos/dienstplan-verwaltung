@@ -333,10 +333,10 @@ if ($dienst_start_dt !== null && $dienst_end_dt !== null) {
                         $verein_bg_end = $dp_hex_to_rgba($verein_color, 0.35);
                         ?>
                         <?php
-                        $chip_is_link = !empty($verein->seite_id);
-                        $chip_tag     = $chip_is_link ? 'a' : 'div';
-                        $chip_xclass  = $chip_is_link ? ' dp-header-chip-link' : '';
-                        $chip_href    = $chip_is_link ? ' href="' . esc_url(get_permalink((int)$verein->seite_id)) . '"' : '';
+                        // Einzel-Verein: kein Link – wir sind bereits auf der gefilterten Veranstaltungsseite
+                        $chip_tag    = 'div';
+                        $chip_xclass = '';
+                        $chip_href   = '';
                         ?>
                         <<?php echo $chip_tag; ?> class="dp-header-chip<?php echo $chip_xclass; ?>" style="background: linear-gradient(135deg, <?php echo esc_attr($verein_bg_start); ?> 0%, <?php echo esc_attr($verein_bg_end); ?> 100%); border-color: <?php echo esc_attr($verein_color); ?>; color: #0f172a;"<?php echo $chip_href; ?>>
                             <span class="dashicons dashicons-groups" style="font-size: 16px;"></span>
@@ -354,10 +354,10 @@ if ($dienst_start_dt !== null && $dienst_end_dt !== null) {
                             $v_bg_end = $dp_hex_to_rgba($v_color, 0.35);
                             ?>
                             <?php
-                            $vchip_is_link = !empty($v_obj->seite_id);
-                            $vchip_tag     = $vchip_is_link ? 'a' : 'div';
-                            $vchip_xclass  = $vchip_is_link ? ' dp-header-chip-link' : '';
-                            $vchip_href    = $vchip_is_link ? ' href="' . esc_url(get_permalink((int)$v_obj->seite_id)) . '"' : '';
+                            // Jeder Verein-Chip verlinkt auf diese Veranstaltungsseite gefiltert für diesen Verein
+                            $vchip_tag   = 'a';
+                            $vchip_xclass = ' dp-header-chip-link';
+                            $vchip_href  = ' href="' . esc_url(add_query_arg('verein_id', $vid, get_permalink(get_the_ID()))) . '"';
                             ?>
                             <<?php echo $vchip_tag; ?> class="dp-header-chip<?php echo $vchip_xclass; ?>" style="background: linear-gradient(135deg, <?php echo esc_attr($v_bg_start); ?> 0%, <?php echo esc_attr($v_bg_end); ?> 100%); border-color: <?php echo esc_attr($v_color); ?>; color: #0f172a;"<?php echo $vchip_href; ?>>
                                 <span class="dashicons dashicons-groups" style="font-size: 14px;"></span>
