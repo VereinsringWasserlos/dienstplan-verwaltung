@@ -17,6 +17,13 @@ $filter_status = isset($_GET['status']) ? sanitize_text_field($_GET['status']) :
 $filter_mitarbeiter = isset($_GET['mitarbeiter']) ? intval($_GET['mitarbeiter']) : 0;
 $filter_mitarbeiter_name = '';
 
+$mitarbeiter_filter_liste = $db->get_mitarbeiter_with_stats(
+    $selected_verein,
+    $selected_veranstaltung,
+    '',
+    $scoped_verein_ids
+);
+
 if ($filter_mitarbeiter > 0) {
     $filter_mitarbeiter_obj = $db->get_mitarbeiter($filter_mitarbeiter);
     if ($filter_mitarbeiter_obj) {
@@ -173,13 +180,27 @@ $nav_items = [
                     </option>
                 </select>
             </div>
+
+            <div style="flex: 1; min-width: 240px;">
+                <label for="filter-mitarbeiter" style="display: block; margin-bottom: 0.5rem; font-weight: 600;">
+                    <?php _e('Mitarbeiter', 'dienstplan-verwaltung'); ?>
+                </label>
+                <select id="filter-mitarbeiter" name="mitarbeiter" class="regular-text" style="width: 100%;">
+                    <option value=""><?php _e('-- Alle --', 'dienstplan-verwaltung'); ?></option>
+                    <?php foreach ((array) $mitarbeiter_filter_liste as $mf): ?>
+                        <option value="<?php echo intval($mf->id); ?>" <?php selected($filter_mitarbeiter, intval($mf->id)); ?>>
+                            <?php echo esc_html(trim(($mf->vorname ?? '') . ' ' . ($mf->nachname ?? ''))); ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
             
             <div>
                 <button type="submit" class="button button-primary">
                     <span class="dashicons dashicons-search"></span>
                     <?php _e('Filtern', 'dienstplan-verwaltung'); ?>
                 </button>
-                <?php if ($selected_veranstaltung > 0): ?>
+                <?php if ($selected_veranstaltung > 0 || $selected_verein > 0 || $filter_status !== '' || $filter_mitarbeiter > 0): ?>
                     <a href="?page=dienstplan-dienste" class="button">
                         <?php _e('Filter zurücksetzen', 'dienstplan-verwaltung'); ?>
                     </a>
