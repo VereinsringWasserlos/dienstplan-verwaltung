@@ -997,6 +997,7 @@ class Dienstplan_Admin {
     }
     
     public function display_users() {
+        $this->run_role_assignment_sanity_check();
         $all_users = get_users();
         $dp_users = Dienstplan_Roles::get_all_dp_users();
         $user_page_type = 'admins';
@@ -7081,14 +7082,12 @@ class Dienstplan_Admin {
         foreach ($desired_ids as $desired_id) {
             if (!in_array($desired_id, $current_ids, true)) {
                 $db->assign_direct_user_to_verein($desired_id, $verein_id);
+            }
 
-                // Vereins-Admin-Rolle setzen wenn der User keine höhere Dienstplan-Rolle hat
-                $user = new WP_User($desired_id);
-                if ($user->exists() && !array_intersect($higher_roles, (array) $user->roles)) {
-                    if (!in_array(Dienstplan_Roles::ROLE_CLUB_ADMIN, (array) $user->roles, true)) {
-                        $user->add_role(Dienstplan_Roles::ROLE_CLUB_ADMIN);
-                    }
-                }
+            // Vereins-Admin-Rolle immer ergänzen, wenn User als Vereins-Verantwortlicher zugewiesen ist
+            $user = new WP_User($desired_id);
+            if ($user->exists() && !in_array(Dienstplan_Roles::ROLE_CLUB_ADMIN, (array) $user->roles, true)) {
+                $user->add_role(Dienstplan_Roles::ROLE_CLUB_ADMIN);
             }
         }
     }
@@ -7120,9 +7119,6 @@ class Dienstplan_Admin {
         );
 
         foreach ($desired_ids as $user_id) {
-            if (in_array($user_id, $previous_ids, true)) {
-                continue;
-            }
 
             $user = new WP_User($user_id);
             if (!$user->exists()) {
@@ -7159,6 +7155,36 @@ class Dienstplan_Admin {
 
             if (empty((array) $user->roles)) {
                 $user->set_role('subscriber');
+            }
+        }
+    }
+
+    /**
+     * Sanity-Check: zieht fehlende Rollen aus Verein-/Veranstaltungs-Zuordnungen nach.
+     *
+     * @return void
+     */
+    private function run_role_assignment_sanity_check() {
+        global $wpdb;
+
+        $prefix = $wpdb->prefix . $this->db_prefix;
+        $verein_table = $prefix . 'verein_verantwortliche';
+        $veranstaltung_table = $prefix . 'veranstaltung_verantwortliche';
+
+        $club_user_ids = array_map('intval', (array) $wpdb->get_col("SELECT DISTINCT user_id FROM {$verein_table} WHERE user_id > 0"));
+        $event_user_ids = array_map('intval', (array) $wpdb->get_col("SELECT DISTINCT user_id FROM {$veranstaltung_table} WHERE user_id > 0"));
+
+        foreach ($club_user_ids as $user_id) {
+            $user = new WP_User($user_id);
+            if ($user->exists() && !in_array(Dienstplan_Roles::ROLE_CLUB_ADMIN, (array) $user->roles, true)) {
+                $user->add_role(Dienstplan_Roles::ROLE_CLUB_ADMIN);
+            }
+        }
+
+        foreach ($event_user_ids as $user_id) {
+            $user = new WP_User($user_id);
+            if ($user->exists() && !in_array(Dienstplan_Roles::ROLE_EVENT_ADMIN, (array) $user->roles, true)) {
+                $user->add_role(Dienstplan_Roles::ROLE_EVENT_ADMIN);
             }
         }
     }

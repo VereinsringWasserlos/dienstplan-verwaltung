@@ -332,6 +332,9 @@ class Dienstplan_Roles {
                 self::ROLE_GENERAL_ADMIN,
                 self::ROLE_EVENT_ADMIN,
                 self::ROLE_CLUB_ADMIN,
+                self::LEGACY_ROLE_GENERAL_ADMIN,
+                self::LEGACY_ROLE_EVENT_ADMIN,
+                self::LEGACY_ROLE_CLUB_ADMIN,
             )
         ));
         
@@ -434,6 +437,7 @@ class Dienstplan_Roles {
         if (!$user) return '';
         
         $roles = array();
+        $wp_roles = function_exists('wp_roles') ? wp_roles() : null;
         foreach ($user->roles as $role) {
             switch ($role) {
                 case 'administrator':
@@ -462,6 +466,13 @@ class Dienstplan_Roles {
                     break;
                 case self::LEGACY_ROLE_CREW:
                     $roles[] = __('Crew-Mitglied (Legacy)', 'dienstplan-verwaltung');
+                    break;
+                default:
+                    if ($wp_roles && isset($wp_roles->roles[$role]['name'])) {
+                        $roles[] = $wp_roles->roles[$role]['name'];
+                    } else {
+                        $roles[] = $role;
+                    }
                     break;
             }
         }
