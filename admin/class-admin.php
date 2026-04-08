@@ -7539,4 +7539,17 @@ class Dienstplan_Admin {
             wp_send_json_error(array('message' => 'E-Mail konnte nicht gesendet werden.' . $error_info));
         }
     }
+
+    /**
+     * AJAX: Mail-Debug-Log leeren
+     */
+    public function ajax_clear_mail_log() {
+        check_ajax_referer('dp_ajax_nonce', 'nonce');
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(array('message' => 'Keine Berechtigung.'));
+            return;
+        }
+        delete_option('dp_mail_debug_log');
+        wp_send_json_success(array('message' => 'Mail-Log geleert.'));
+    }
 }

@@ -69,6 +69,7 @@ class Dienstplan_Verwaltung {
         $this->define_admin_hooks();
         $this->define_public_hooks();
         $this->setup_mail_filters();
+        $this->setup_mail_log();
         $this->check_database_updates();
     }
 
@@ -177,6 +178,45 @@ class Dienstplan_Verwaltung {
                 }, 10, 1);
             }
         }
+    }
+
+    /**
+     * Mail-Log: jeden wp_mail-Versand in wp_options aufzeichnen (max. 100 Einträge).
+     */
+    private function setup_mail_log() {
+        // wp_mail_succeeded / wp_mail_failed ab WP 5.9
+        add_action('wp_mail_succeeded', function($mail_data) {
+            self::append_mail_log_entry($mail_data, 'ok');
+        });
+        add_action('wp_mail_failed', function($wp_error) {
+            $data = method_exists($wp_error, 'get_error_data') ? (array) $wp_error->get_error_data() : array();
+            $data['error'] = $wp_error->get_error_message();
+            self::append_mail_log_entry($data, 'fehler');
+        });
+    }
+
+    /**
+     * Hilfsmethode: einen Eintrag in den Mail-Log schreiben.
+     */
+    public static function append_mail_log_entry(array $mail_data, $status = 'ok') {
+        $log = get_option('dp_mail_debug_log', array());
+        if (!is_array($log)) {
+            $log = array();
+        }
+        $to = $mail_data['to'] ?? '';
+        if (is_array($to)) {
+            $to = implode(', ', $to);
+        }
+        array_unshift($log, array(
+            'time'    => current_time('mysql'),
+            'to'      => $to,
+            'subject' => $mail_data['subject'] ?? '',
+            'status'  => $status,
+            'error'   => $mail_data['error'] ?? '',
+        ));
+        // Max. 100 Einträge behalten
+        $log = array_slice($log, 0, 100);
+        update_option('dp_mail_debug_log', $log, false);
     }
 
     /**
@@ -304,6 +344,7 @@ class Dienstplan_Verwaltung {
 
         // AJAX: Test-Mail
         $this->loader->add_action('wp_ajax_dp_send_test_mail', $plugin_admin, 'ajax_send_test_mail');
+        $this->loader->add_action('wp_ajax_dp_clear_mail_log', $plugin_admin, 'ajax_clear_mail_log');
         
         // Import/Export AJAX Actions
         // Export wird über admin_init in class-admin.php handle_export() behandelt
