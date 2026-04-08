@@ -215,31 +215,36 @@ uasort($dienste_nach_tagen, function($a, $b) {
                                     // Keine Slots vorhanden
                                     echo '<span style="color: #dc2626; font-weight: 600; font-size: 0.85rem;">⚠️ Keine Slots!</span>';
                                 } else {
-                                    // Zähle besetzte Slots
+                                    // Zähle besetzte Slots, Namen aus JOIN-Feldern
                                     $gesamt_count = count($slots);
                                     $mitarbeiter_namen = array();
                                     
                                     foreach ($slots as $slot) {
-                                        if (!empty($slot->mitarbeiter_id)) {
+                                        if (!empty($slot->mitarbeiter_id) && !empty($slot->mitarbeiter_vorname)) {
                                             $besetzt_count++;
-                                            $mitarbeiter = $db->get_mitarbeiter($slot->mitarbeiter_id);
-                                            if ($mitarbeiter) {
-                                                $mitarbeiter_namen[] = $mitarbeiter->vorname . ' ' . $mitarbeiter->nachname;
-                                            }
+                                            $mitarbeiter_namen[] = $slot->mitarbeiter_vorname . ' ' . $slot->mitarbeiter_nachname;
+                                        } elseif (!empty($slot->mitarbeiter_id)) {
+                                            $besetzt_count++;
                                         }
                                     }
                                     
                                     // Status-Badge
                                     $status_color = $besetzt_count == $gesamt_count ? '#10b981' : ($besetzt_count > 0 ? '#f59e0b' : '#ef4444');
                                     $status_text = $besetzt_count . ' / ' . $gesamt_count . ' besetzt';
-                                    $tooltip = !empty($mitarbeiter_namen) ? implode(', ', $mitarbeiter_namen) : 'Keine Mitarbeiter zugewiesen';
                                     ?>
                                     <span class="status-badge" 
-                                          style="background: <?php echo $status_color; ?>; color: #fff; padding: 0.35rem 0.65rem; border-radius: 3px; font-size: 0.8rem; font-weight: 600; cursor: help; display: inline-block;" 
-                                          title="<?php echo esc_attr($tooltip); ?>">
+                                          style="background: <?php echo $status_color; ?>; color: #fff; padding: 0.35rem 0.65rem; border-radius: 3px; font-size: 0.8rem; font-weight: 600; display: inline-block;">
                                         <?php echo $status_text; ?>
                                     </span>
-                                    <?php
+                                    <?php if (!empty($mitarbeiter_namen)): ?>
+                                        <div style="margin-top: 4px; display: flex; flex-wrap: wrap; gap: 2px;">
+                                            <?php foreach ($mitarbeiter_namen as $ma_name): ?>
+                                                <span style="background: #f0f9ff; border: 1px solid #bae6fd; color: #0369a1; padding: 1px 6px; border-radius: 3px; font-size: 0.75rem; white-space: nowrap;">
+                                                    <?php echo esc_html($ma_name); ?>
+                                                </span>
+                                            <?php endforeach; ?>
+                                        </div>
+                                    <?php endif;
                                 }
                                 ?>
                             </td>
