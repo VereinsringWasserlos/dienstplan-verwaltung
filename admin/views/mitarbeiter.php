@@ -107,6 +107,33 @@ $nav_items = [
 
 <?php
 ksort($mitarbeiter_nach_vereinen);
+
+$get_dienst_count_for_verein = function($ma, $verein_id) {
+    $verein_id = intval($verein_id);
+
+    if ($verein_id <= 0) {
+        return intval($ma->dienst_count ?? 0);
+    }
+
+    $raw_map = isset($ma->dienst_count_by_verein) ? (string) $ma->dienst_count_by_verein : '';
+    if ($raw_map === '') {
+        return intval($ma->dienst_count ?? 0);
+    }
+
+    $entries = explode(',', $raw_map);
+    foreach ($entries as $entry) {
+        $parts = explode(':', $entry, 2);
+        if (count($parts) !== 2) {
+            continue;
+        }
+
+        if (intval($parts[0]) === $verein_id) {
+            return intval($parts[1]);
+        }
+    }
+
+    return 0;
+};
 ?>
     
     <?php if (isset($_GET['message'])): ?>
@@ -353,7 +380,7 @@ ksort($mitarbeiter_nach_vereinen);
                                             </td>
                                             <td style="text-align: center;">
                                                 <span style="display: inline-block; padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.85rem; font-weight: 600; background: #dbeafe; color: #1e40af;">
-                                                    <?php echo $ma->dienst_count ?? 0; ?>
+                                                    <?php echo $get_dienst_count_for_verein($ma, $verein_id); ?>
                                                 </span>
                                             </td>
                                             <td style="text-align: center; position: relative; white-space: nowrap; min-width: 220px;">

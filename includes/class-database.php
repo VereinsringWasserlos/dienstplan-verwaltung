@@ -2049,19 +2049,41 @@ class Dienstplan_Database {
 
         $stats_sql .= ' GROUP BY s.mitarbeiter_id';
 
+        $club_stats_sql = "SELECT x.mitarbeiter_id,
+                GROUP_CONCAT(CONCAT(x.verein_id, ':', x.dienst_count) ORDER BY x.verein_id SEPARATOR ',') as dienst_count_by_verein
+            FROM (
+                SELECT s.mitarbeiter_id,
+                       d.verein_id,
+                       COUNT(DISTINCT s.id) as dienst_count
+                FROM {$this->prefix}dienst_slots s
+                INNER JOIN {$this->prefix}dienste d ON s.dienst_id = d.id
+                WHERE s.mitarbeiter_id IS NOT NULL
+                  AND d.verein_id IS NOT NULL
+                  AND d.verein_id > 0";
+
+        if (!empty($stats_where)) {
+            $club_stats_sql .= ' AND ' . implode(' AND ', $stats_where);
+        }
+
+        $club_stats_sql .= ' GROUP BY s.mitarbeiter_id, d.verein_id
+            ) x
+            GROUP BY x.mitarbeiter_id';
+
         $sql = "SELECT m.*,
                 COALESCE(stats.total_dienste, 0) as total_dienste,
                 COALESCE(stats.aktive_dienste, 0) as aktive_dienste,
             COALESCE(stats.total_dienste, 0) as dienst_count,
+                COALESCE(club_stats.dienst_count_by_verein, '') as dienst_count_by_verein,
                 clubs.verein_ids,
                 clubs.verein_namen,
                 clubs.vereine
             FROM {$this->prefix}mitarbeiter m
             LEFT JOIN ({$clubs_sql}) clubs ON clubs.mitarbeiter_id = m.id
             LEFT JOIN ({$stats_sql}) stats ON stats.mitarbeiter_id = m.id
+            LEFT JOIN ({$club_stats_sql}) club_stats ON club_stats.mitarbeiter_id = m.id
             WHERE 1=1";
 
-        $sql_params = array_merge($sql_params, $club_params, $stats_params);
+        $sql_params = array_merge($sql_params, $club_params, $stats_params, $stats_params);
 
         if ($requires_club_match) {
             $sql .= ' AND clubs.mitarbeiter_id IS NOT NULL';
