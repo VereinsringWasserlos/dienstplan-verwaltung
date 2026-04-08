@@ -143,18 +143,15 @@ if ($selected_veranstaltung > 0) {
             }
         }
         
-        // Lade zugewiesene Mitarbeiter über Slots
+        // Lade zugewiesene Mitarbeiter über Slots (JOIN-Felder direkt verwenden)
         $mitarbeiter_liste = array();
         $slots = $db->get_dienst_slots($dienst->id);
         foreach ($slots as $slot) {
-            if (!empty($slot->mitarbeiter_id)) {
-                $mitarbeiter = $db->get_mitarbeiter($slot->mitarbeiter_id);
-                if ($mitarbeiter) {
-                    $mitarbeiter_liste[] = array(
-                        'name' => $mitarbeiter->vorname . ' ' . $mitarbeiter->nachname,
-                        'initial' => strtoupper(substr($mitarbeiter->vorname, 0, 1) . substr($mitarbeiter->nachname, 0, 1))
-                    );
-                }
+            if (!empty($slot->mitarbeiter_id) && !empty($slot->mitarbeiter_vorname)) {
+                $mitarbeiter_liste[] = array(
+                    'name' => $slot->mitarbeiter_vorname . ' ' . $slot->mitarbeiter_nachname,
+                    'initial' => strtoupper(substr($slot->mitarbeiter_vorname, 0, 1) . substr($slot->mitarbeiter_nachname, 0, 1))
+                );
             }
         }
         
@@ -312,8 +309,11 @@ $bereiche = $db->get_bereiche();
                                     <th style="position: sticky; left: 220px; z-index: 21; background: #f6f7f7; min-width: 80px; max-width: 80px; padding: 8px; border-right: 2px solid #c3c4c7; font-size: 11px; font-weight: 600;">
                                         Verein
                                     </th>
-                                    <th style="position: sticky; left: 300px; z-index: 21; background: #f6f7f7; min-width: 100px; max-width: 100px; padding: 8px; border-right: 3px solid #666; font-size: 11px; font-weight: 600;">
+                                    <th style="position: sticky; left: 300px; z-index: 21; background: #f6f7f7; min-width: 100px; max-width: 100px; padding: 8px; border-right: 2px solid #c3c4c7; font-size: 11px; font-weight: 600;">
                                         Zeit
+                                    </th>
+                                    <th style="position: sticky; left: 400px; z-index: 21; background: #f6f7f7; min-width: 160px; max-width: 160px; padding: 8px; border-right: 3px solid #666; font-size: 11px; font-weight: 600;">
+                                        Personal
                                     </th>
                                     
                                     <!-- Zeitslots (30-Minuten-Schritte) -->
@@ -344,7 +344,7 @@ $bereiche = $db->get_bereiche();
                                 ?>
                                     <!-- Tag-Header -->
                                     <tr style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
-                                        <td colspan="4" style="position: sticky; left: 0; z-index: 10; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 12px; color: #fff; font-weight: 700; font-size: 13px; border-right: 3px solid #666;">
+                                        <td colspan="5" style="position: sticky; left: 0; z-index: 10; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 12px; color: #fff; font-weight: 700; font-size: 13px; border-right: 3px solid #666;">
                                             <span class="dashicons dashicons-calendar-alt" style="font-size: 16px; vertical-align: middle;"></span>
                                             Tag <?php echo $tag->tag_nummer; ?>: <?php echo date_i18n('l, d.m.Y', strtotime($tag->tag_datum)); ?>
                                             <span style="background: rgba(255,255,255,0.2); padding: 2px 8px; border-radius: 12px; margin-left: 8px; font-size: 11px;">
@@ -357,15 +357,12 @@ $bereiche = $db->get_bereiche();
                                     <?php 
                                     $tag_index = 0;
                                     foreach ($tag_dienste as $dienst): 
-                                        // Lade Slots und Mitarbeiter
+                                        // Lade Slots und Mitarbeiter (nutze JOIN-Felder direkt)
                                         $slots = $db->get_dienst_slots($dienst->id);
                                         $mitarbeiter_namen = array();
                                         foreach ($slots as $slot) {
-                                            if (!empty($slot->mitarbeiter_id)) {
-                                                $ma = $db->get_mitarbeiter($slot->mitarbeiter_id);
-                                                if ($ma) {
-                                                    $mitarbeiter_namen[] = $ma->vorname . ' ' . $ma->nachname;
-                                                }
+                                            if (!empty($slot->mitarbeiter_id) && !empty($slot->mitarbeiter_vorname)) {
+                                                $mitarbeiter_namen[] = $slot->mitarbeiter_vorname . ' ' . strtoupper(substr($slot->mitarbeiter_nachname, 0, 1)) . '.';
                                             }
                                         }
                                         
@@ -398,8 +395,19 @@ $bereiche = $db->get_bereiche();
                                                     <?php echo esc_html($dienst->verein_kuerzel ?: $dienst->verein_name); ?>
                                                 </span>
                                             </td>
-                                            <td style="position: sticky; left: 300px; z-index: 10; background: <?php echo $row_bg; ?>; padding: 6px; border-right: 3px solid #666; font-size: 11px; font-weight: 600; white-space: nowrap;">
+                                            <td style="position: sticky; left: 300px; z-index: 10; background: <?php echo $row_bg; ?>; padding: 6px; border-right: 2px solid #c3c4c7; font-size: 11px; font-weight: 600; white-space: nowrap;">
                                                 <?php echo date('H:i', strtotime($dienst->von_zeit)); ?>-<?php echo date('H:i', strtotime($dienst->bis_zeit)); ?>
+                                            </td>
+                                            <td style="position: sticky; left: 400px; z-index: 10; background: <?php echo $row_bg; ?>; padding: 4px 6px; border-right: 3px solid #666; font-size: 11px; overflow: hidden;">
+                                                <?php if (!empty($mitarbeiter_namen)): ?>
+                                                    <div style="display: flex; flex-wrap: wrap; gap: 2px;">
+                                                        <?php foreach ($mitarbeiter_namen as $ma_name): ?>
+                                                            <span style="background: <?php echo esc_attr($dienst->bereich_farbe); ?>22; color: #1f2937; border: 1px solid <?php echo esc_attr($dienst->bereich_farbe); ?>55; padding: 1px 5px; border-radius: 3px; font-size: 10px; white-space: nowrap;"><?php echo esc_html($ma_name); ?></span>
+                                                        <?php endforeach; ?>
+                                                    </div>
+                                                <?php else: ?>
+                                                    <span style="color: #9ca3af; font-size: 10px;">—</span>
+                                                <?php endif; ?>
                                             </td>
                                             
                                             <!-- Timeline-Zellen -->
