@@ -86,7 +86,11 @@ if ($is_logged_in) {
     }
 }
 
-if ($is_logged_in && in_array(Dienstplan_Roles::ROLE_CREW, $current_user->roles, true)) {
+if ($is_logged_in && in_array(Dienstplan_Roles::ROLE_CREW, $current_user->roles, true)
+    && !current_user_can('manage_options')
+    && !Dienstplan_Roles::can_manage_clubs()
+    && !Dienstplan_Roles::can_manage_events()
+    && !Dienstplan_Roles::can_manage_settings()) {
     if (empty($crew_allowed_verein_ids)) {
         $aktuelle_veranstaltungen = array();
     } else {

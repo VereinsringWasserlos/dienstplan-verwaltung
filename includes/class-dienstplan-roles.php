@@ -262,13 +262,28 @@ class Dienstplan_Roles {
     
     /**
      * Prüft, ob der aktuelle Benutzer ein eingeschränkter Vereins-Admin ist.
-     * Vereins-Admins haben manage_clubs, aber weder manage_options noch manage_settings.
+     * Nur "reine" Vereins-Admins ohne höhere Rolle gelten als eingeschränkt.
+     * Nutzer mit mehreren Rollen (z.B. club_admin + event_admin) erhalten die
+     * kombinierten Rechte der mächtigsten Rolle.
      */
     public static function is_restricted_club_admin() {
         if (!current_user_can(self::CAP_MANAGE_CLUBS)) {
             return false;
         }
-        return !current_user_can('manage_options') && !current_user_can(self::CAP_MANAGE_SETTINGS);
+        if (current_user_can('manage_options') || current_user_can(self::CAP_MANAGE_SETTINGS)) {
+            return false;
+        }
+        // Wenn User zusätzlich eine höhere Rolle hat, gilt er als uneingeschränkt
+        $user = wp_get_current_user();
+        if (!$user || empty($user->roles)) {
+            return true;
+        }
+        $higher_roles = array(
+            'administrator',
+            self::ROLE_GENERAL_ADMIN,
+            self::ROLE_EVENT_ADMIN,
+        );
+        return empty(array_intersect($higher_roles, (array) $user->roles));
     }
 
     /**

@@ -43,9 +43,20 @@ class Dienstplan_Admin {
         if (current_user_can('manage_options')) {
             return true;
         }
-
-        // Haupt-Admin (Settings-Recht) ist ebenfalls uneingeschränkt.
-        return current_user_can(Dienstplan_Roles::CAP_MANAGE_SETTINGS);
+        if (current_user_can(Dienstplan_Roles::CAP_MANAGE_SETTINGS)) {
+            return true;
+        }
+        // Wenn User zusätzlich Event-Admin oder General-Admin ist, gilt er als uneingeschränkt
+        $user = wp_get_current_user();
+        if (!$user || empty($user->roles)) {
+            return false;
+        }
+        $higher_roles = array(
+            'administrator',
+            Dienstplan_Roles::ROLE_GENERAL_ADMIN,
+            Dienstplan_Roles::ROLE_EVENT_ADMIN,
+        );
+        return !empty(array_intersect($higher_roles, (array) $user->roles));
     }
 
     /**
