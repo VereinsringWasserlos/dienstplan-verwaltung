@@ -2052,6 +2052,7 @@ class Dienstplan_Database {
         $sql = "SELECT m.*,
                 COALESCE(stats.total_dienste, 0) as total_dienste,
                 COALESCE(stats.aktive_dienste, 0) as aktive_dienste,
+            COALESCE(stats.total_dienste, 0) as dienst_count,
                 clubs.verein_ids,
                 clubs.verein_namen,
                 clubs.vereine
