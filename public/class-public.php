@@ -425,7 +425,12 @@ class Dienstplan_Public {
 
             // Optional: Direkt bei Dienst-Eintragung Portal-User anlegen/verknüpfen
             $mitarbeiter = $db->get_mitarbeiter($mitarbeiter_id);
-            $email_for_user = !empty($_POST['email']) ? sanitize_email($_POST['email']) : '';
+            // E-Mail: aus POST falls angegeben, sonst aus dem Mitarbeiter-Datensatz
+            $email_for_user = !empty($_POST['email'])
+                ? sanitize_email($_POST['email'])
+                : (!empty($mitarbeiter->email) && strpos($mitarbeiter->email, '@dienstplan.local') === false
+                    ? sanitize_email($mitarbeiter->email)
+                    : '');
             $wpdb = $db->get_wpdb();
             $prefix = $db->get_prefix();
             $dienst_for_slot = $wpdb->get_row($wpdb->prepare(
