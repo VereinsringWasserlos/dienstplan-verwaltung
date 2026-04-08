@@ -7040,6 +7040,8 @@ class Dienstplan_Admin {
         $higher_roles = array(
             Dienstplan_Roles::ROLE_GENERAL_ADMIN,
             Dienstplan_Roles::ROLE_EVENT_ADMIN,
+            Dienstplan_Roles::LEGACY_ROLE_GENERAL_ADMIN,
+            Dienstplan_Roles::LEGACY_ROLE_EVENT_ADMIN,
             'administrator',
         );
 
@@ -7058,9 +7060,13 @@ class Dienstplan_Admin {
                 if ($other_count === 0) {
                     $user = new WP_User($current_id);
                     if ($user->exists() &&
-                        in_array(Dienstplan_Roles::ROLE_CLUB_ADMIN, (array) $user->roles, true) &&
+                        (in_array(Dienstplan_Roles::ROLE_CLUB_ADMIN, (array) $user->roles, true) || in_array(Dienstplan_Roles::LEGACY_ROLE_CLUB_ADMIN, (array) $user->roles, true)) &&
                         !array_intersect($higher_roles, (array) $user->roles)) {
-                        $user->set_role('subscriber');
+                        $user->remove_role(Dienstplan_Roles::ROLE_CLUB_ADMIN);
+                        $user->remove_role(Dienstplan_Roles::LEGACY_ROLE_CLUB_ADMIN);
+                        if (empty((array) $user->roles)) {
+                            $user->set_role('subscriber');
+                        }
                     }
                 }
             }
@@ -7073,7 +7079,9 @@ class Dienstplan_Admin {
                 // Vereins-Admin-Rolle setzen wenn der User keine höhere Dienstplan-Rolle hat
                 $user = new WP_User($desired_id);
                 if ($user->exists() && !array_intersect($higher_roles, (array) $user->roles)) {
-                    $user->set_role(Dienstplan_Roles::ROLE_CLUB_ADMIN);
+                    if (!in_array(Dienstplan_Roles::ROLE_CLUB_ADMIN, (array) $user->roles, true)) {
+                        $user->add_role(Dienstplan_Roles::ROLE_CLUB_ADMIN);
+                    }
                 }
             }
         }
