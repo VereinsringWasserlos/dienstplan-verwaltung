@@ -138,6 +138,7 @@
         let html = '<table class="wp-list-table widefat fixed striped">';
         html += '<thead><tr>';
         html += '<th>Veranstaltung</th>';
+        html += '<th>Verein</th>';
         html += '<th>Tag</th>';
         html += '<th>Tätigkeit</th>';
         html += '<th>Bereich</th>';
@@ -156,6 +157,7 @@
             
             html += '<tr>';
             html += '<td><strong>' + textOrDash(dienst.veranstaltung_name) + '</strong></td>';
+            html += '<td>' + textOrDash(dienst.verein_name) + '</td>';
             html += '<td>' + datumFormatiert + '</td>';
             html += '<td>' + textOrDash(dienst.taetigkeit_name) + '</td>';
             html += '<td><span style="display: inline-block; width: 12px; height: 12px; border-radius: 2px; background: ' + bereichFarbe + '; margin-right: 0.5rem;"></span>' + textOrDash(dienst.bereich_name) + '</td>';

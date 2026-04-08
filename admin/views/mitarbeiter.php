@@ -134,23 +134,6 @@ $get_dienst_count_for_verein = function($ma, $verein_id) {
 
     return 0;
 };
-
-$get_dienste_filter_url = function($ma, $verein_id = 0) use ($filter_veranstaltung) {
-    $args = array(
-        'page' => 'dienstplan-dienste',
-        'mitarbeiter' => intval($ma->id ?? 0),
-    );
-
-    if ($filter_veranstaltung > 0) {
-        $args['veranstaltung'] = intval($filter_veranstaltung);
-    }
-
-    if (intval($verein_id) > 0) {
-        $args['verein'] = intval($verein_id);
-    }
-
-    return add_query_arg($args, admin_url('admin.php'));
-};
 ?>
     
     <?php if (isset($_GET['message'])): ?>
@@ -396,11 +379,12 @@ $get_dienste_filter_url = function($ma, $verein_id = 0) use ($filter_veranstaltu
                                                 <?php endif; ?>
                                             </td>
                                             <td style="text-align: center;">
-                                                <a href="<?php echo esc_url($get_dienste_filter_url($ma, $verein_id)); ?>"
+                                                <button type="button"
+                                                   onclick="openMitarbeiterDiensteModal(<?php echo intval($ma->id); ?>); return false;"
                                                    title="<?php esc_attr_e('Dienste dieses Mitarbeiters anzeigen', 'dienstplan-verwaltung'); ?>"
-                                                   style="display: inline-block; padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.85rem; font-weight: 600; background: #dbeafe; color: #1e40af; text-decoration: none;">
+                                                   style="display: inline-block; padding: 0.2rem 0.75rem; border-radius: 12px; font-size: 0.85rem; font-weight: 600; background: #dbeafe; color: #1e40af; text-decoration: none; border: 1px solid #bfdbfe; cursor: pointer;">
                                                     <?php echo $get_dienst_count_for_verein($ma, $verein_id); ?>
-                                                </a>
+                                                </button>
                                             </td>
                                             <td style="text-align: center; position: relative; white-space: nowrap; min-width: 220px;">
                                                 <div style="display: flex; gap: 4px; flex-wrap: nowrap; justify-content: center; align-items: center;">
@@ -494,11 +478,12 @@ $get_dienste_filter_url = function($ma, $verein_id = 0) use ($filter_veranstaltu
                                             <?php endif; ?>
                                         </td>
                                         <td style="text-align: center;">
-                                            <a href="<?php echo esc_url($get_dienste_filter_url($ma, 0)); ?>"
+                                            <button type="button"
+                                               onclick="openMitarbeiterDiensteModal(<?php echo intval($ma->id); ?>); return false;"
                                                title="<?php esc_attr_e('Dienste dieses Mitarbeiters anzeigen', 'dienstplan-verwaltung'); ?>"
-                                               style="display: inline-block; padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.85rem; font-weight: 600; background: #dbeafe; color: #1e40af; text-decoration: none;">
+                                               style="display: inline-block; padding: 0.2rem 0.75rem; border-radius: 12px; font-size: 0.85rem; font-weight: 600; background: #dbeafe; color: #1e40af; text-decoration: none; border: 1px solid #bfdbfe; cursor: pointer;">
                                                 <?php echo $ma->dienst_count ?? 0; ?>
-                                            </a>
+                                            </button>
                                         </td>
                                         <td style="text-align: center; position: relative; white-space: nowrap; min-width: 220px;">
                                             <div style="display: flex; gap: 4px; flex-wrap: nowrap; justify-content: center; align-items: center;">
