@@ -7409,7 +7409,9 @@ class Dienstplan_Admin {
                 get_bloginfo('name')
             );
             
-            wp_mail($mitarbeiter->email, $email_subject, $email_body);
+            if (get_option('dp_mail_enable_portal_invite', 1)) {
+                wp_mail($mitarbeiter->email, $email_subject, $email_body);
+            }
             $success_count++;
         }
         
