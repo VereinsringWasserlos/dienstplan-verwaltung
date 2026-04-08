@@ -6,7 +6,7 @@
 
 if (!defined('ABSPATH')) exit;
 
-$is_restricted_club_admin = Dienstplan_Roles::can_manage_clubs() && !current_user_can('manage_options') && !current_user_can(Dienstplan_Roles::CAP_MANAGE_SETTINGS);
+$is_restricted_club_admin = Dienstplan_Roles::is_restricted_club_admin();
 
 // Filter-Parameter
 $filter_verein = isset($_GET['filter_verein']) ? intval($_GET['filter_verein']) : 0;

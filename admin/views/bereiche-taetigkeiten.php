@@ -7,7 +7,7 @@
 if (!defined('ABSPATH')) exit;
 
 $bereiche = $db->get_bereiche();
-$is_restricted_club_admin = Dienstplan_Roles::can_manage_clubs() && !current_user_can('manage_options') && !current_user_can(Dienstplan_Roles::CAP_MANAGE_SETTINGS);
+$is_restricted_club_admin = Dienstplan_Roles::is_restricted_club_admin();
 
 // Setup für Page-Header Partial
 $page_title = __('Bereiche & Tätigkeiten', 'dienstplan-verwaltung');
