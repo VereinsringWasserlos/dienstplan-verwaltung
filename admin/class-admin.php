@@ -55,6 +55,8 @@ class Dienstplan_Admin {
             'administrator',
             Dienstplan_Roles::ROLE_GENERAL_ADMIN,
             Dienstplan_Roles::ROLE_EVENT_ADMIN,
+            Dienstplan_Roles::LEGACY_ROLE_GENERAL_ADMIN,
+            Dienstplan_Roles::LEGACY_ROLE_EVENT_ADMIN,
         );
         return !empty(array_intersect($higher_roles, (array) $user->roles));
     }
