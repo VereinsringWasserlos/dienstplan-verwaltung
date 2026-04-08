@@ -127,6 +127,7 @@ $active_tab = $mail_page_mode ? 'email' : (isset($_GET['tab']) ? $_GET['tab'] : 
             update_option('dp_mail_enable_booking',           isset($_POST['dp_mail_enable_booking']) ? 1 : 0);
             update_option('dp_mail_enable_portal_invite',     isset($_POST['dp_mail_enable_portal_invite']) ? 1 : 0);
             update_option('dp_mail_enable_dienste_uebersicht',isset($_POST['dp_mail_enable_dienste_uebersicht']) ? 1 : 0);
+            Dienstplan_Mail_Templates::save_templates_from_post($_POST);
             // SMTP
             update_option('dp_smtp_enabled',    isset($_POST['dp_smtp_enabled']) ? 1 : 0);
             update_option('dp_smtp_host',       sanitize_text_field(wp_unslash($_POST['dp_smtp_host'] ?? '')));
@@ -238,6 +239,48 @@ $active_tab = $mail_page_mode ? 'email' : (isset($_GET['tab']) ? $_GET['tab'] : 
                             </td>
                         </tr>
                     </table>
+
+                    <hr style="margin: 1.5rem 0;">
+                    <h3 style="margin-top:0;">E-Mail-Vorlagen</h3>
+                    <p class="description" style="margin-bottom:1rem;">
+                        Passe Betreff und Text pro Mail-Typ an. Verfuegbare Platzhalter koennen direkt im Text verwendet werden.
+                    </p>
+                    <?php $template_definitions = Dienstplan_Mail_Templates::get_definitions(); ?>
+                    <?php foreach ($template_definitions as $template_key => $template): ?>
+                        <?php
+                        $subject_option = 'dp_mail_tpl_' . $template_key . '_subject';
+                        $body_option = 'dp_mail_tpl_' . $template_key . '_body';
+                        $subject_value = get_option($subject_option, $template['subject_default']);
+                        $body_value = get_option($body_option, $template['body_default']);
+                        ?>
+                        <div style="border:1px solid #dcdcde; border-radius:8px; padding:16px; margin-bottom:14px; background:#fff;">
+                            <h4 style="margin:0 0 6px 0;"><?php echo esc_html($template['label']); ?></h4>
+                            <p class="description" style="margin-top:0; margin-bottom:10px;"><?php echo esc_html($template['description']); ?></p>
+                            <p style="margin: 0 0 8px 0;">
+                                <label for="<?php echo esc_attr($subject_option); ?>"><strong>Betreff</strong></label><br>
+                                <input
+                                    type="text"
+                                    id="<?php echo esc_attr($subject_option); ?>"
+                                    name="<?php echo esc_attr($subject_option); ?>"
+                                    class="regular-text"
+                                    style="width:100%; max-width: 820px;"
+                                    value="<?php echo esc_attr($subject_value); ?>"
+                                >
+                            </p>
+                            <p style="margin: 0 0 8px 0;">
+                                <label for="<?php echo esc_attr($body_option); ?>"><strong>Text</strong></label><br>
+                                <textarea
+                                    id="<?php echo esc_attr($body_option); ?>"
+                                    name="<?php echo esc_attr($body_option); ?>"
+                                    rows="9"
+                                    style="width:100%; max-width: 820px;"
+                                ><?php echo esc_textarea($body_value); ?></textarea>
+                            </p>
+                            <p class="description" style="margin:0;">
+                                Platzhalter: <?php echo esc_html(implode(', ', array_map(function($placeholder) { return '{{' . $placeholder . '}}'; }, $template['placeholders']))); ?>
+                            </p>
+                        </div>
+                    <?php endforeach; ?>
 
                     <p class="submit">
                         <button type="submit" name="save_email_settings" class="button button-primary">Einstellungen speichern</button>

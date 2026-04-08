@@ -3208,19 +3208,16 @@ class Dienstplan_Admin {
                         // Sende E-Mail mit Login-Daten
                         $portal_page_id = get_option('dienstplan_portal_page_id', 0);
                         $login_url = $portal_page_id ? get_permalink($portal_page_id) : wp_login_url();
-                        
-                        $email_subject = sprintf(__('[%s] Zugang zum Dienstplan-Portal', 'dienstplan-verwaltung'), get_bloginfo('name'));
-                        
-                        $email_body = sprintf(
-                            __("Hallo %s,\n\nfür dich wurde ein Zugang zum Dienstplan-Portal erstellt.\n\nHier sind deine Login-Daten:\n\nBenutzername: %s\nPasswort: %s\n\nPortal-Link: %s\n\nBitte ändere dein Passwort nach dem ersten Login.\n\nViele Grüße\n%s", 'dienstplan-verwaltung'),
-                            $vorname,
-                            $username,
-                            $password,
-                            $login_url,
-                            get_bloginfo('name')
-                        );
-                        
-                        $email_sent = wp_mail($email, $email_subject, $email_body);
+
+                        $mail_template = Dienstplan_Mail_Templates::get_template('portal_invite', array(
+                            'vorname' => $vorname,
+                            'username' => $username,
+                            'password' => $password,
+                            'portal_link' => $login_url,
+                            'site_name' => get_option('dp_site_name', get_bloginfo('name')),
+                        ));
+
+                        $email_sent = wp_mail($email, $mail_template['subject'], $mail_template['body']);
                         
                         if ($email_sent) {
                             $portal_message = ' Portal-Zugriff aktiviert und Login-Daten versendet.';
@@ -6850,20 +6847,17 @@ class Dienstplan_Admin {
         // Sende E-Mail mit Login-Daten
         $portal_page_id = get_option('dienstplan_portal_page_id', 0);
         $login_url = $portal_page_id ? get_permalink($portal_page_id) : wp_login_url();
-        
-        $email_subject = sprintf(__('[%s] Zugang zum Dienstplan-Portal', 'dienstplan-verwaltung'), get_bloginfo('name'));
-        
-        $email_body = sprintf(
-            __("Hallo %s,\n\nfür dich wurde ein Zugang zum Dienstplan-Portal erstellt.\n\nHier sind deine Login-Daten:\n\nBenutzername: %s\nPasswort: %s\n\nPortal-Link: %s\n\nBitte ändere dein Passwort nach dem ersten Login.\n\nViele Grüße\n%s", 'dienstplan-verwaltung'),
-            $mitarbeiter->vorname,
-            $username,
-            $password,
-            $login_url,
-            get_bloginfo('name')
-        );
-        
+
+        $mail_template = Dienstplan_Mail_Templates::get_template('portal_invite', array(
+            'vorname' => $mitarbeiter->vorname,
+            'username' => $username,
+            'password' => $password,
+            'portal_link' => $login_url,
+            'site_name' => get_option('dp_site_name', get_bloginfo('name')),
+        ));
+
         $email_sent = get_option('dp_mail_enable_portal_invite', 1)
-            ? wp_mail($mitarbeiter->email, $email_subject, $email_body)
+            ? wp_mail($mitarbeiter->email, $mail_template['subject'], $mail_template['body'])
             : false;
         $invite_disabled = !get_option('dp_mail_enable_portal_invite', 1);
         
@@ -6963,24 +6957,21 @@ class Dienstplan_Admin {
         // Sende E-Mail mit neuen Login-Daten
         $portal_page_id = get_option('dienstplan_portal_page_id', 0);
         $login_url = $portal_page_id ? get_permalink($portal_page_id) : wp_login_url();
-        
-        $email_subject = sprintf(__('[%s] Neue Login-Daten für das Dienstplan-Portal', 'dienstplan-verwaltung'), get_bloginfo('name'));
-        
-        $email_body = sprintf(
-            __("Hallo %s,\n\nwie gewünscht erhältst du hier neue Login-Daten für das Dienstplan-Portal:\n\nBenutzername: %s\nNeues Passwort: %s\n\nPortal-Link: %s\n\nBitte ändere dein Passwort nach dem Login.\n\nViele Grüße\n%s", 'dienstplan-verwaltung'),
-            $mitarbeiter->vorname,
-            $user->user_login,
-            $new_password,
-            $login_url,
-            get_bloginfo('name')
-        );
+
+        $mail_template = Dienstplan_Mail_Templates::get_template('portal_reset_credentials', array(
+            'vorname' => $mitarbeiter->vorname,
+            'username' => $user->user_login,
+            'password' => $new_password,
+            'portal_link' => $login_url,
+            'site_name' => get_option('dp_site_name', get_bloginfo('name')),
+        ));
         
         if (!get_option('dp_mail_enable_portal_invite', 1)) {
             wp_send_json_success(array('message' => 'Passwort wurde zurückgesetzt. E-Mail-Versand ist in den Einstellungen deaktiviert.'));
             return;
         }
 
-        $email_sent = wp_mail($mitarbeiter->email, $email_subject, $email_body);
+        $email_sent = wp_mail($mitarbeiter->email, $mail_template['subject'], $mail_template['body']);
         
         if ($email_sent) {
             wp_send_json_success(array(
@@ -7266,48 +7257,50 @@ class Dienstplan_Admin {
 
         $subject = sprintf('[%s] Deine Dienst-Übersicht', get_bloginfo('name'));
 
-        $body  = 'Hallo ' . $ma->vorname . ",\n\n";
-        $body .= "hier ist deine aktuelle Übersicht aller zugewiesenen Dienste:\n\n";
-        $body .= str_repeat('-', 50) . "\n";
+        $diensteliste = str_repeat('-', 50) . "\n";
 
         $current_event = '';
         foreach ($dienste as $d) {
             if ($d->veranstaltung !== $current_event) {
                 $current_event = $d->veranstaltung;
-                $body .= "\n📅 Veranstaltung: " . $current_event . "\n";
+                $diensteliste .= "\nVeranstaltung: " . $current_event . "\n";
                 if ($d->verein) {
-                    $body .= "   Verein: " . $d->verein . "\n";
+                    $diensteliste .= "Verein: " . $d->verein . "\n";
                 }
-                $body .= str_repeat('-', 40) . "\n";
+                $diensteliste .= str_repeat('-', 40) . "\n";
             }
             $datum  = $d->tag_datum ? date_i18n('d.m.Y (l)', strtotime($d->tag_datum)) : 'N/A';
             $von    = $d->von_zeit  ? substr($d->von_zeit,  0, 5) : '';
             $bis    = $d->bis_zeit  ? substr($d->bis_zeit,  0, 5) : '';
-            $body  .= "  • {$datum}";
+            $diensteliste .= "- {$datum}";
             if ($von && $bis) {
-                $body .= ", {$von} – {$bis} Uhr";
+                $diensteliste .= ", {$von} - {$bis} Uhr";
             }
-            $body .= "\n";
+            $diensteliste .= "\n";
             if ($d->taetigkeit) {
-                $body .= "    Tätigkeit: {$d->taetigkeit}";
+                $diensteliste .= "  Taetigkeit: {$d->taetigkeit}";
                 if ($d->bereich) {
-                    $body .= " ({$d->bereich})";
+                    $diensteliste .= " ({$d->bereich})";
                 }
-                $body .= "\n";
+                $diensteliste .= "\n";
             }
         }
 
-        $body .= "\n" . str_repeat('-', 50) . "\n";
-        $body .= "Gesamt: " . count($dienste) . " Dienst" . (count($dienste) !== 1 ? 'e' : '') . "\n\n";
-        $body .= "Bei Fragen wende dich bitte an den Veranstalter.\n\n";
-        $body .= "Viele Grüße\n" . get_bloginfo('name');
+        $diensteliste .= "\n" . str_repeat('-', 50);
+
+        $mail_template = Dienstplan_Mail_Templates::get_template('dienste_uebersicht', array(
+            'vorname' => $ma->vorname,
+            'diensteliste' => $diensteliste,
+            'total_dienste' => count($dienste),
+            'site_name' => get_option('dp_site_name', get_bloginfo('name')),
+        ));
 
         if (!get_option('dp_mail_enable_dienste_uebersicht', 1)) {
             wp_send_json_error(array('message' => 'E-Mail-Versand für Dienste-Übersicht ist in den Einstellungen deaktiviert.'));
             return;
         }
 
-        $sent = wp_mail($ma->email, $subject, $body);
+        $sent = wp_mail($ma->email, $mail_template['subject'], $mail_template['body']);
 
         if ($sent) {
             wp_send_json_success(array(
@@ -7413,19 +7406,17 @@ class Dienstplan_Admin {
             // Sende E-Mail
             $portal_page_id = get_option('dienstplan_portal_page_id', 0);
             $login_url = $portal_page_id ? get_permalink($portal_page_id) : wp_login_url();
-            
-            $email_subject = sprintf(__('[%s] Zugang zum Dienstplan-Portal', 'dienstplan-verwaltung'), get_bloginfo('name'));
-            $email_body = sprintf(
-                __("Hallo %s,\n\nfür dich wurde ein Zugang zum Dienstplan-Portal erstellt.\n\nHier sind deine Login-Daten:\n\nBenutzername: %s\nPasswort: %s\n\nPortal-Link: %s\n\nBitte ändere dein Passwort nach dem ersten Login.\n\nViele Grüße\n%s", 'dienstplan-verwaltung'),
-                $mitarbeiter->vorname,
-                $username,
-                $password,
-                $login_url,
-                get_bloginfo('name')
-            );
+
+            $mail_template = Dienstplan_Mail_Templates::get_template('portal_invite', array(
+                'vorname' => $mitarbeiter->vorname,
+                'username' => $username,
+                'password' => $password,
+                'portal_link' => $login_url,
+                'site_name' => get_option('dp_site_name', get_bloginfo('name')),
+            ));
             
             if (get_option('dp_mail_enable_portal_invite', 1)) {
-                wp_mail($mitarbeiter->email, $email_subject, $email_body);
+                wp_mail($mitarbeiter->email, $mail_template['subject'], $mail_template['body']);
             }
             $success_count++;
         }

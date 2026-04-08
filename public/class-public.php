@@ -476,26 +476,33 @@ class Dienstplan_Public {
                     $tag_datum_mail = $tag_mail ? date_i18n('d.m.Y', strtotime($tag_mail->datum)) : 'N/A';
                     $vorname_mail  = $mitarbeiter->vorname ?? '';
                     $nachname_mail = $mitarbeiter->nachname ?? '';
-                    $subject_mail = 'Bestätigung Ihrer Anmeldung - ' . $dienst_mail->veranstaltung;
-                    $body  = "Hallo {$vorname_mail} {$nachname_mail},\n\n";
-                    $body .= "vielen Dank für Ihre Anmeldung!\n\n";
-                    $body .= "Details zu Ihrem Dienst:\n";
-                    $body .= "Veranstaltung: {$dienst_mail->veranstaltung}\n";
-                    $body .= "Verein: {$dienst_mail->verein}\n";
-                    $body .= "Datum: {$tag_datum_mail}\n";
-                    $body .= "Uhrzeit: " . substr($slot_mail->von_zeit, 0, 5) . " - " . substr($slot_mail->bis_zeit, 0, 5) . " Uhr\n";
-                    $body .= "Tätigkeit: {$dienst_mail->taetigkeit}\n";
-                    $body .= "Bereich: {$dienst_mail->bereich}\n\n";
                     if (!empty($dienst_mail->beschreibung)) {
-                        $body .= "Beschreibung: {$dienst_mail->beschreibung}\n\n";
+                        $beschreibung_block = "Beschreibung: {$dienst_mail->beschreibung}\n\n";
+                    } else {
+                        $beschreibung_block = '';
                     }
                     $source_url_mail = !empty($_POST['source_url']) ? esc_url_raw($_POST['source_url']) : '';
                     if (!empty($source_url_mail)) {
-                        $body .= "Zurück zur Veranstaltungsseite:\n" . $source_url_mail . "\n\n";
+                        $source_url_block = "Zurueck zur Veranstaltungsseite:\n" . $source_url_mail . "\n\n";
+                    } else {
+                        $source_url_block = '';
                     }
-                    $body .= "Bei Fragen oder Änderungen wenden Sie sich bitte an den Veranstalter.\n\n";
-                    $body .= "Mit freundlichen Grüßen\nIhr Dienstplan-Team";
-                    wp_mail($email_for_user, $subject_mail, $body);
+
+                    $mail_template = Dienstplan_Mail_Templates::get_template('booking_confirmation', array(
+                        'vorname' => $vorname_mail,
+                        'nachname' => $nachname_mail,
+                        'veranstaltung' => $dienst_mail->veranstaltung ?? '',
+                        'verein' => $dienst_mail->verein ?? '',
+                        'datum' => $tag_datum_mail,
+                        'von_zeit' => substr($slot_mail->von_zeit, 0, 5),
+                        'bis_zeit' => substr($slot_mail->bis_zeit, 0, 5),
+                        'taetigkeit' => $dienst_mail->taetigkeit ?? '',
+                        'bereich' => $dienst_mail->bereich ?? '',
+                        'beschreibung_block' => $beschreibung_block,
+                        'source_url_block' => $source_url_block,
+                    ));
+
+                    wp_mail($email_for_user, $mail_template['subject'], $mail_template['body']);
                 }
             }
 
@@ -1020,17 +1027,15 @@ class Dienstplan_Public {
 
             $portal_page_id = get_option('dienstplan_portal_page_id', 0);
             $login_url = $portal_page_id ? get_permalink($portal_page_id) : wp_login_url();
-            $subject = sprintf(__('[%s] Zugang zum Dienstplan-Portal', 'dienstplan-verwaltung'), get_bloginfo('name'));
-            $body = sprintf(
-                __("Hallo %s,\n\nfür dich wurde automatisch ein Zugang zum Dienstplan-Portal erstellt.\n\nBenutzername: %s\nPasswort: %s\n\nPortal-Link: %s\n\nBitte ändere dein Passwort nach dem ersten Login.\n\nViele Grüße\n%s", 'dienstplan-verwaltung'),
-                $mitarbeiter->vorname,
-                $username,
-                $password,
-                $login_url,
-                get_bloginfo('name')
-            );
+            $mail_template = Dienstplan_Mail_Templates::get_template('portal_invite', array(
+                'vorname' => $mitarbeiter->vorname,
+                'username' => $username,
+                'password' => $password,
+                'portal_link' => $login_url,
+                'site_name' => get_option('dp_site_name', get_bloginfo('name')),
+            ));
             if (get_option('dp_mail_enable_portal_invite', 1)) {
-                wp_mail($email, $subject, $body);
+                wp_mail($email, $mail_template['subject'], $mail_template['body']);
             }
         }
 
@@ -1401,32 +1406,34 @@ class Dienstplan_Public {
             ));
             
             $tag_datum = $tag ? date_i18n('d.m.Y', strtotime($tag->datum)) : 'N/A';
-            
-            $to = $email;
-            $subject = 'Bestätigung Ihrer Anmeldung - ' . $dienst->veranstaltung;
-            $message = "Hallo {$vorname} {$nachname},\n\n";
-            $message .= "vielen Dank für Ihre Anmeldung!\n\n";
-            $message .= "Details zu Ihrem Dienst:\n";
-            $message .= "Veranstaltung: {$dienst->veranstaltung}\n";
-            $message .= "Verein: {$dienst->verein}\n";
-            $message .= "Datum: {$tag_datum}\n";
-            $message .= "Uhrzeit: " . substr($slot->von_zeit, 0, 5) . " - " . substr($slot->bis_zeit, 0, 5) . " Uhr\n";
-            $message .= "Tätigkeit: {$dienst->taetigkeit}\n";
-            $message .= "Bereich: {$dienst->bereich}\n\n";
-            
+
             if ($dienst->beschreibung) {
-                $message .= "Beschreibung: {$dienst->beschreibung}\n\n";
+                $beschreibung_block = "Beschreibung: {$dienst->beschreibung}\n\n";
+            } else {
+                $beschreibung_block = '';
             }
             
             if (!empty($source_url)) {
-                $message .= "Zurück zur Veranstaltungsseite:\n";
-                $message .= $source_url . "\n\n";
+                $source_url_block = "Zurueck zur Veranstaltungsseite:\n" . $source_url . "\n\n";
+            } else {
+                $source_url_block = '';
             }
-            $message .= "Bei Fragen oder Änderungen wenden Sie sich bitte an den Veranstalter.\n\n";
-            $message .= "Mit freundlichen Grüßen\n";
-            $message .= "Ihr Dienstplan-Team";
-            
-            wp_mail($to, $subject, $message);
+
+            $mail_template = Dienstplan_Mail_Templates::get_template('booking_confirmation', array(
+                'vorname' => $vorname,
+                'nachname' => $nachname,
+                'veranstaltung' => $dienst->veranstaltung ?? '',
+                'verein' => $dienst->verein ?? '',
+                'datum' => $tag_datum,
+                'von_zeit' => substr($slot->von_zeit, 0, 5),
+                'bis_zeit' => substr($slot->bis_zeit, 0, 5),
+                'taetigkeit' => $dienst->taetigkeit ?? '',
+                'bereich' => $dienst->bereich ?? '',
+                'beschreibung_block' => $beschreibung_block,
+                'source_url_block' => $source_url_block,
+            ));
+
+            wp_mail($email, $mail_template['subject'], $mail_template['body']);
         }
         
         $success_msg = 'Anmeldung erfolgreich!';
