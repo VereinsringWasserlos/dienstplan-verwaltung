@@ -445,9 +445,62 @@ class Dienstplan_Public {
             
             // Setze Cookie als Fallback
             setcookie('dp_mitarbeiter_id', $mitarbeiter_id, time() + WEEK_IN_SECONDS, COOKIEPATH, COOKIE_DOMAIN, is_ssl(), true);
-            
+
+            // Bestätigungs-E-Mail senden
+            if (!empty($email_for_user) && get_option('dp_mail_enable_booking', 1)) {
+                $slot_id_mail = intval($_POST['slot_id']);
+                $slot_mail = $wpdb->get_row($wpdb->prepare(
+                    "SELECT * FROM {$prefix}dienst_slots WHERE id = %d",
+                    $slot_id_mail
+                ));
+                $dienst_mail = $wpdb->get_row($wpdb->prepare(
+                    "SELECT d.*, v.titel as veranstaltung, ve.name as verein, t.name as taetigkeit, b.name as bereich
+                     FROM {$prefix}dienste d
+                     LEFT JOIN {$prefix}veranstaltungen v ON d.veranstaltung_id = v.id
+                     LEFT JOIN {$prefix}vereine ve ON d.verein_id = ve.id
+                     LEFT JOIN {$prefix}taetigkeiten t ON d.taetigkeit_id = t.id
+                     LEFT JOIN {$prefix}bereiche b ON d.bereich_id = b.id
+                     WHERE d.id = (SELECT dienst_id FROM {$prefix}dienst_slots WHERE id = %d)",
+                    $slot_id_mail
+                ));
+                if ($dienst_mail && $slot_mail) {
+                    $tag_mail = $wpdb->get_row($wpdb->prepare(
+                        "SELECT datum FROM {$prefix}veranstaltung_tage WHERE id = %d",
+                        $dienst_mail->tag_id
+                    ));
+                    $tag_datum_mail = $tag_mail ? date_i18n('d.m.Y', strtotime($tag_mail->datum)) : 'N/A';
+                    $vorname_mail  = $mitarbeiter->vorname ?? '';
+                    $nachname_mail = $mitarbeiter->nachname ?? '';
+                    $subject_mail = 'Bestätigung Ihrer Anmeldung - ' . $dienst_mail->veranstaltung;
+                    $body  = "Hallo {$vorname_mail} {$nachname_mail},\n\n";
+                    $body .= "vielen Dank für Ihre Anmeldung!\n\n";
+                    $body .= "Details zu Ihrem Dienst:\n";
+                    $body .= "Veranstaltung: {$dienst_mail->veranstaltung}\n";
+                    $body .= "Verein: {$dienst_mail->verein}\n";
+                    $body .= "Datum: {$tag_datum_mail}\n";
+                    $body .= "Uhrzeit: " . substr($slot_mail->von_zeit, 0, 5) . " - " . substr($slot_mail->bis_zeit, 0, 5) . " Uhr\n";
+                    $body .= "Tätigkeit: {$dienst_mail->taetigkeit}\n";
+                    $body .= "Bereich: {$dienst_mail->bereich}\n\n";
+                    if (!empty($dienst_mail->beschreibung)) {
+                        $body .= "Beschreibung: {$dienst_mail->beschreibung}\n\n";
+                    }
+                    $source_url_mail = !empty($_POST['source_url']) ? esc_url_raw($_POST['source_url']) : '';
+                    if (!empty($source_url_mail)) {
+                        $body .= "Zurück zur Veranstaltungsseite:\n" . $source_url_mail . "\n\n";
+                    }
+                    $body .= "Bei Fragen oder Änderungen wenden Sie sich bitte an den Veranstalter.\n\n";
+                    $body .= "Mit freundlichen Grüßen\nIhr Dienstplan-Team";
+                    wp_mail($email_for_user, $subject_mail, $body);
+                }
+            }
+
+            $success_msg = 'Sie wurden erfolgreich eingetragen!';
+            if (!empty($email_for_user)) {
+                $success_msg .= ' Sie erhalten in Kürze eine Bestätigungs-E-Mail.';
+            }
+
             wp_send_json_success(array(
-                'message' => 'Sie wurden erfolgreich eingetragen!',
+                'message' => $success_msg,
                 'mitarbeiter_id' => $mitarbeiter_id
             ));
             exit; // Wichtig: Verhindere weiteren Output
