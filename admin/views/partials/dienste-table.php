@@ -5,7 +5,7 @@
 if (!defined('ABSPATH')) exit;
 
 if (!isset($is_restricted_club_admin)) {
-    $is_restricted_club_admin = Dienstplan_Roles::can_manage_clubs() && !current_user_can('manage_options') && !current_user_can(Dienstplan_Roles::CAP_MANAGE_SETTINGS);
+    $is_restricted_club_admin = Dienstplan_Roles::is_restricted_club_admin();
 }
 
 // Gruppiere Dienste nach Tagen
