@@ -2425,10 +2425,16 @@ class Dienstplan_Admin {
             
             // Verantwortliche speichern
             if ($result) {
+                $previous_verantwortliche_rows = $db->get_veranstaltung_verantwortliche($veranstaltung_id);
+                $previous_verantwortliche = array_map(function($row) {
+                    return intval($row->user_id ?? 0);
+                }, (array) $previous_verantwortliche_rows);
+
                 $verantwortliche = isset($_POST['verantwortliche']) && is_array($_POST['verantwortliche']) 
                     ? array_map('intval', $_POST['verantwortliche']) 
                     : array();
                 $db->save_veranstaltung_verantwortliche($veranstaltung_id, $verantwortliche);
+                $this->sync_event_admin_roles_for_veranstaltung_verantwortliche($veranstaltung_id, $verantwortliche, $previous_verantwortliche);
                 error_log('Verantwortliche gespeichert: ' . print_r($verantwortliche, true));
             }
             
@@ -7083,6 +7089,76 @@ class Dienstplan_Admin {
                         $user->add_role(Dienstplan_Roles::ROLE_CLUB_ADMIN);
                     }
                 }
+            }
+        }
+    }
+
+    /**
+     * Synchronisiert die Event-Admin-Rolle auf Basis der Veranstaltungs-Verantwortlichen.
+     *
+     * @param int $veranstaltung_id
+     * @param int[] $user_ids
+     * @param int[] $previous_user_ids
+     * @return void
+     */
+    private function sync_event_admin_roles_for_veranstaltung_verantwortliche($veranstaltung_id, $user_ids, $previous_user_ids = array()) {
+        $veranstaltung_id = intval($veranstaltung_id);
+        if ($veranstaltung_id <= 0) {
+            return;
+        }
+
+        global $wpdb;
+        $table = $wpdb->prefix . $this->db_prefix . 'veranstaltung_verantwortliche';
+
+        $desired_ids = array_values(array_unique(array_filter(array_map('intval', (array) $user_ids))));
+        $previous_ids = array_values(array_unique(array_filter(array_map('intval', (array) $previous_user_ids))));
+
+        $higher_roles = array(
+            'administrator',
+            Dienstplan_Roles::ROLE_GENERAL_ADMIN,
+            Dienstplan_Roles::LEGACY_ROLE_GENERAL_ADMIN,
+        );
+
+        foreach ($desired_ids as $user_id) {
+            if (in_array($user_id, $previous_ids, true)) {
+                continue;
+            }
+
+            $user = new WP_User($user_id);
+            if (!$user->exists()) {
+                continue;
+            }
+
+            if (!in_array(Dienstplan_Roles::ROLE_EVENT_ADMIN, (array) $user->roles, true)) {
+                $user->add_role(Dienstplan_Roles::ROLE_EVENT_ADMIN);
+            }
+        }
+
+        foreach ($previous_ids as $user_id) {
+            if (in_array($user_id, $desired_ids, true)) {
+                continue;
+            }
+
+            $other_count = (int) $wpdb->get_var($wpdb->prepare(
+                "SELECT COUNT(*) FROM {$table} WHERE user_id = %d AND veranstaltung_id != %d",
+                $user_id,
+                $veranstaltung_id
+            ));
+
+            if ($other_count > 0) {
+                continue;
+            }
+
+            $user = new WP_User($user_id);
+            if (!$user->exists() || !empty(array_intersect($higher_roles, (array) $user->roles))) {
+                continue;
+            }
+
+            $user->remove_role(Dienstplan_Roles::ROLE_EVENT_ADMIN);
+            $user->remove_role(Dienstplan_Roles::LEGACY_ROLE_EVENT_ADMIN);
+
+            if (empty((array) $user->roles)) {
+                $user->set_role('subscriber');
             }
         }
     }
