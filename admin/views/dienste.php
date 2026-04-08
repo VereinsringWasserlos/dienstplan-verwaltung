@@ -14,6 +14,17 @@ $is_restricted_club_admin = Dienstplan_Roles::is_restricted_club_admin();
 $selected_veranstaltung = isset($_GET['veranstaltung']) ? intval($_GET['veranstaltung']) : 0;
 $selected_verein = isset($_GET['verein']) ? intval($_GET['verein']) : 0;
 $filter_status = isset($_GET['status']) ? sanitize_text_field($_GET['status']) : '';
+$filter_mitarbeiter = isset($_GET['mitarbeiter']) ? intval($_GET['mitarbeiter']) : 0;
+$filter_mitarbeiter_name = '';
+
+if ($filter_mitarbeiter > 0) {
+    $filter_mitarbeiter_obj = $db->get_mitarbeiter($filter_mitarbeiter);
+    if ($filter_mitarbeiter_obj) {
+        $filter_mitarbeiter_name = trim(($filter_mitarbeiter_obj->vorname ?? '') . ' ' . ($filter_mitarbeiter_obj->nachname ?? ''));
+    } else {
+        $filter_mitarbeiter = 0;
+    }
+}
 
 // Dienste laden (mit Filtern)
 $dienste = array();
@@ -22,6 +33,18 @@ $scoped_verein_ids = isset($allowed_verein_ids) && is_array($allowed_verein_ids)
     : array();
 if ($selected_veranstaltung > 0) {
     $all_dienste = $db->get_dienste($selected_veranstaltung, $selected_verein, null, $scoped_verein_ids);
+
+    if ($filter_mitarbeiter > 0) {
+        $all_dienste = array_filter($all_dienste, function($d) use ($db, $filter_mitarbeiter) {
+            $slots = $db->get_dienst_slots($d->id);
+            foreach ($slots as $slot) {
+                if (intval($slot->mitarbeiter_id ?? 0) === $filter_mitarbeiter) {
+                    return true;
+                }
+            }
+            return false;
+        });
+    }
     
     // Status-Filter anwenden
     if ($filter_status === 'unvollstaendig') {
@@ -82,9 +105,33 @@ $nav_items = [
             <span class="dashicons dashicons-filter"></span>
             <?php _e('Filter', 'dienstplan-verwaltung'); ?>
         </h3>
+
+        <?php if ($filter_mitarbeiter > 0): ?>
+            <div class="notice notice-info" style="margin: 0 0 1rem 0; padding: 0.75rem 1rem;">
+                <p style="margin: 0; display: flex; align-items: center; gap: 0.75rem;">
+                    <span class="dashicons dashicons-admin-users"></span>
+                    <strong><?php _e('Mitarbeiter-Filter aktiv:', 'dienstplan-verwaltung'); ?></strong>
+                    <span><?php echo esc_html($filter_mitarbeiter_name ?: ('#' . $filter_mitarbeiter)); ?></span>
+                    <?php
+                    $clear_filter_url = add_query_arg(array(
+                        'page' => 'dienstplan-dienste',
+                        'veranstaltung' => $selected_veranstaltung,
+                        'verein' => $selected_verein,
+                        'status' => $filter_status,
+                    ), admin_url('admin.php'));
+                    ?>
+                    <a href="<?php echo esc_url($clear_filter_url); ?>" class="button button-small" style="margin-left: auto;">
+                        <?php _e('Mitarbeiter-Filter entfernen', 'dienstplan-verwaltung'); ?>
+                    </a>
+                </p>
+            </div>
+        <?php endif; ?>
         
         <form method="get" action="" style="display: flex; gap: 1rem; flex-wrap: wrap; align-items: flex-end;">
             <input type="hidden" name="page" value="dienstplan-dienste">
+            <?php if ($filter_mitarbeiter > 0): ?>
+                <input type="hidden" name="mitarbeiter" value="<?php echo intval($filter_mitarbeiter); ?>">
+            <?php endif; ?>
             
             <div style="flex: 1; min-width: 250px;">
                 <label for="filter-veranstaltung" style="display: block; margin-bottom: 0.5rem; font-weight: 600;">

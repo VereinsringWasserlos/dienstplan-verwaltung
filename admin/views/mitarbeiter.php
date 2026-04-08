@@ -134,6 +134,23 @@ $get_dienst_count_for_verein = function($ma, $verein_id) {
 
     return 0;
 };
+
+$get_dienste_filter_url = function($ma, $verein_id = 0) use ($filter_veranstaltung) {
+    $args = array(
+        'page' => 'dienstplan-dienste',
+        'mitarbeiter' => intval($ma->id ?? 0),
+    );
+
+    if ($filter_veranstaltung > 0) {
+        $args['veranstaltung'] = intval($filter_veranstaltung);
+    }
+
+    if (intval($verein_id) > 0) {
+        $args['verein'] = intval($verein_id);
+    }
+
+    return add_query_arg($args, admin_url('admin.php'));
+};
 ?>
     
     <?php if (isset($_GET['message'])): ?>
@@ -379,9 +396,11 @@ $get_dienst_count_for_verein = function($ma, $verein_id) {
                                                 <?php endif; ?>
                                             </td>
                                             <td style="text-align: center;">
-                                                <span style="display: inline-block; padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.85rem; font-weight: 600; background: #dbeafe; color: #1e40af;">
+                                                <a href="<?php echo esc_url($get_dienste_filter_url($ma, $verein_id)); ?>"
+                                                   title="<?php esc_attr_e('Dienste dieses Mitarbeiters anzeigen', 'dienstplan-verwaltung'); ?>"
+                                                   style="display: inline-block; padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.85rem; font-weight: 600; background: #dbeafe; color: #1e40af; text-decoration: none;">
                                                     <?php echo $get_dienst_count_for_verein($ma, $verein_id); ?>
-                                                </span>
+                                                </a>
                                             </td>
                                             <td style="text-align: center; position: relative; white-space: nowrap; min-width: 220px;">
                                                 <div class="dropdown-actions">
@@ -482,9 +501,11 @@ $get_dienst_count_for_verein = function($ma, $verein_id) {
                                             <?php endif; ?>
                                         </td>
                                         <td style="text-align: center;">
-                                            <span style="display: inline-block; padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.85rem; font-weight: 600; background: #dbeafe; color: #1e40af;">
+                                            <a href="<?php echo esc_url($get_dienste_filter_url($ma, 0)); ?>"
+                                               title="<?php esc_attr_e('Dienste dieses Mitarbeiters anzeigen', 'dienstplan-verwaltung'); ?>"
+                                               style="display: inline-block; padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.85rem; font-weight: 600; background: #dbeafe; color: #1e40af; text-decoration: none;">
                                                 <?php echo $ma->dienst_count ?? 0; ?>
-                                            </span>
+                                            </a>
                                         </td>
                                         <td style="text-align: center; position: relative; white-space: nowrap; min-width: 220px;">
                                             <div class="dropdown-actions">
