@@ -583,6 +583,15 @@ class Dienstplan_Admin {
                 'dienstplan-einstellungen',
                 array($this, 'display_settings')
             );
+
+            add_submenu_page(
+                '',
+                __('E-Mail', 'dienstplan-verwaltung'),
+                __('E-Mail', 'dienstplan-verwaltung'),
+                Dienstplan_Roles::CAP_MANAGE_SETTINGS,
+                'dienstplan-mail',
+                array($this, 'display_mail_settings')
+            );
             
         }
 
@@ -697,6 +706,7 @@ class Dienstplan_Admin {
             'dienstplan-dienste' => __('Dienste', 'dienstplan-verwaltung'),
             'dienstplan-overview' => __('Dienst-Übersicht', 'dienstplan-verwaltung'),
             'dienstplan-einstellungen' => __('Einstellungen', 'dienstplan-verwaltung'),
+            'dienstplan-mail' => __('E-Mail', 'dienstplan-verwaltung'),
             'dienstplan-import' => __('Import', 'dienstplan-verwaltung'),
             'dienstplan-export' => __('Export', 'dienstplan-verwaltung'),
             'dienstplan-import-export' => __('Import/Export', 'dienstplan-verwaltung'),
@@ -1104,6 +1114,11 @@ class Dienstplan_Admin {
     public function display_settings() {
         $notifications = new Dienstplan_Notifications($this->db_prefix);
         $current_user_settings = $notifications->get_user_settings(get_current_user_id());
+        include_once DIENSTPLAN_PLUGIN_PATH . 'admin/views/einstellungen.php';
+    }
+
+    public function display_mail_settings() {
+        $mail_page_mode = true;
         include_once DIENSTPLAN_PLUGIN_PATH . 'admin/views/einstellungen.php';
     }
     

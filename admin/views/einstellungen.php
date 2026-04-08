@@ -4,20 +4,28 @@
  */
 if (!defined('ABSPATH')) exit;
 
-$active_tab = isset($_GET['tab']) ? $_GET['tab'] : 'general';
+$mail_page_mode = !empty($mail_page_mode);
+$active_tab = $mail_page_mode ? 'email' : (isset($_GET['tab']) ? $_GET['tab'] : 'general');
 ?>
 
 <div class="wrap">
     <h1 class="wp-heading-inline">
-        <span class="dashicons dashicons-admin-settings"></span>
-        <?php _e('Einstellungen', 'dienstplan-verwaltung'); ?>
+        <span class="dashicons <?php echo $mail_page_mode ? 'dashicons-email-alt' : 'dashicons-admin-settings'; ?>"></span>
+        <?php echo $mail_page_mode ? esc_html__('E-Mail-Bereich', 'dienstplan-verwaltung') : esc_html__('Einstellungen', 'dienstplan-verwaltung'); ?>
     </h1>
-    
+
+    <?php if ($mail_page_mode): ?>
+        <p class="description" style="margin-top:0.5rem; margin-bottom: 1.25rem;">
+            <?php _e('Hier verwaltest du den gesamten E-Mail-Versand des Plugins zentral.', 'dienstplan-verwaltung'); ?>
+        </p>
+    <?php endif; ?>
+
+    <?php if (!$mail_page_mode): ?>
     <h2 class="nav-tab-wrapper" style="margin-top: 1rem; margin-bottom: 2rem;">
         <a href="?page=dienstplan-einstellungen&tab=general" class="nav-tab <?php echo $active_tab == 'general' ? 'nav-tab-active' : ''; ?>">
             <?php _e('Allgemein', 'dienstplan-verwaltung'); ?>
         </a>
-        <a href="?page=dienstplan-einstellungen&tab=email" class="nav-tab <?php echo $active_tab == 'email' ? 'nav-tab-active' : ''; ?>">
+        <a href="?page=dienstplan-mail" class="nav-tab <?php echo $active_tab == 'email' ? 'nav-tab-active' : ''; ?>">
             <span class="dashicons dashicons-email-alt" style="vertical-align: text-top; margin-right: 4px;"></span>
             <?php _e('E-Mail-Versand', 'dienstplan-verwaltung'); ?>
         </a>
@@ -25,6 +33,7 @@ $active_tab = isset($_GET['tab']) ? $_GET['tab'] : 'general';
             <?php _e('Benachrichtigungen', 'dienstplan-verwaltung'); ?>
         </a>
     </h2>
+    <?php endif; ?>
     
     <?php if ($active_tab == 'general'): ?>
         

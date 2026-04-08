@@ -170,6 +170,14 @@ $is_hauptadmin = current_user_can('manage_options') || current_user_can(Dienstpl
             </div>
             <p class="dashboard-admin-card-description"><?php _e('Allgemein, E-Mail-Versand & Benachrichtigungen', 'dienstplan-verwaltung'); ?></p>
         </a>
+
+        <a href="<?php echo admin_url('admin.php?page=dienstplan-mail'); ?>" class="dashboard-admin-card card-settings">
+            <div class="dashboard-admin-card-header">
+                <span class="dashicons dashicons-email-alt dashboard-admin-card-icon"></span>
+                <h3 class="dashboard-admin-card-title"><?php _e('E-Mail-Bereich', 'dienstplan-verwaltung'); ?></h3>
+            </div>
+            <p class="dashboard-admin-card-description"><?php _e('Absender, SMTP und Versandarten zentral verwalten', 'dienstplan-verwaltung'); ?></p>
+        </a>
         <?php endif; ?>
 
         <!-- Debug -->

@@ -82,6 +82,7 @@ $can_show_nav_item = function($item) {
         'dienstplan-dienste' => Dienstplan_Roles::CAP_MANAGE_EVENTS,
         'dienstplan-overview' => Dienstplan_Roles::CAP_MANAGE_EVENTS,
         'dienstplan-einstellungen' => Dienstplan_Roles::CAP_MANAGE_SETTINGS,
+        'dienstplan-mail' => Dienstplan_Roles::CAP_MANAGE_SETTINGS,
         'dienstplan-benutzer' => Dienstplan_Roles::CAP_MANAGE_USERS,
         'dienstplan-dokumentation' => 'read',
         'dienstplan-updates' => 'manage_options',
