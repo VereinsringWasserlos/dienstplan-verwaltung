@@ -344,6 +344,7 @@ class Dienstplan_Verwaltung {
 
         // AJAX: Test-Mail
         $this->loader->add_action('wp_ajax_dp_send_test_mail', $plugin_admin, 'ajax_send_test_mail');
+        $this->loader->add_action('wp_ajax_dp_send_template_test_mail', $plugin_admin, 'ajax_send_template_test_mail');
         $this->loader->add_action('wp_ajax_dp_clear_mail_log', $plugin_admin, 'ajax_clear_mail_log');
         
         // Import/Export AJAX Actions

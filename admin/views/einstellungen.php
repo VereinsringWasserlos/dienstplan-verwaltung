@@ -316,7 +316,7 @@ $nav_items = array(
                         $subject_value = get_option($subject_option, $template['subject_default']);
                         $body_value = get_option($body_option, $template['body_default']);
                         ?>
-                        <div style="border:1px solid #dcdcde; border-radius:8px; padding:16px; margin-bottom:14px; background:#fff;">
+                        <div class="dp-mail-template-card" style="border:1px solid #dcdcde; border-radius:8px; padding:16px; margin-bottom:14px; background:#fff;">
                             <h4 style="margin:0 0 6px 0;"><?php echo esc_html($template['label']); ?></h4>
                             <p class="description" style="margin-top:0; margin-bottom:10px;"><?php echo esc_html($template['description']); ?></p>
                             <p style="margin: 0 0 8px 0;">
@@ -342,6 +342,23 @@ $nav_items = array(
                             <p class="description" style="margin:0;">
                                 Platzhalter: <?php echo esc_html(implode(', ', array_map(function($placeholder) { return '{{' . $placeholder . '}}'; }, $template['placeholders']))); ?>
                             </p>
+                            <div style="margin-top:12px; padding-top:12px; border-top:1px dashed #dcdcde; display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                                <input
+                                    type="email"
+                                    class="regular-text dp-template-test-to"
+                                    style="max-width: 340px;"
+                                    value="<?php echo esc_attr(wp_get_current_user()->user_email); ?>"
+                                    placeholder="test@example.de"
+                                >
+                                <button
+                                    type="button"
+                                    class="button button-secondary dp-send-template-test-mail"
+                                    data-template-key="<?php echo esc_attr($template_key); ?>"
+                                >
+                                    <?php _e('Testmail senden', 'dienstplan-verwaltung'); ?>
+                                </button>
+                                <span class="dp-template-test-result" style="font-weight:600;"></span>
+                            </div>
                         </div>
                     <?php endforeach; ?>
                     <p class="submit">
@@ -350,6 +367,43 @@ $nav_items = array(
                 </form>
             </div>
         </div>
+        <script>
+        (function($) {
+            $('.dp-send-template-test-mail').on('click', function() {
+                var btn = $(this);
+                var row = btn.closest('.dp-mail-template-card');
+                var to = row.find('.dp-template-test-to').val();
+                var result = row.find('.dp-template-test-result');
+                var templateKey = btn.data('template-key');
+
+                if (!to) {
+                    result.css('color', '#d63638').text('Bitte eine Empfaenger-Adresse eingeben.');
+                    return;
+                }
+
+                btn.prop('disabled', true).text('Wird gesendet...');
+                result.css('color', '#666').text('');
+
+                $.post(ajaxurl, {
+                    action: 'dp_send_template_test_mail',
+                    nonce: '<?php echo esc_js(wp_create_nonce('dp_send_template_test_mail')); ?>',
+                    to: to,
+                    template_type: templateKey
+                }, function(res) {
+                    if (res && res.success) {
+                        result.css('color', '#00a32a').text('✓ ' + res.data.message);
+                    } else {
+                        var msg = (res && res.data && res.data.message) ? res.data.message : 'Unbekannter Fehler.';
+                        result.css('color', '#d63638').text('✗ ' + msg);
+                    }
+                }).fail(function() {
+                    result.css('color', '#d63638').text('Serverfehler - bitte Seite neu laden.');
+                }).always(function() {
+                    btn.prop('disabled', false).text('Testmail senden');
+                });
+            });
+        })(jQuery);
+        </script>
         <?php endif; ?>
 
         <?php if ($mail_active_tab === 'smtp'): ?>

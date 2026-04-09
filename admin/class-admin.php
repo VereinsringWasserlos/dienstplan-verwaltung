@@ -7672,6 +7672,74 @@ class Dienstplan_Admin {
     }
 
     /**
+     * AJAX: Test-Mail fuer eine konkrete Vorlage senden
+     */
+    public function ajax_send_template_test_mail() {
+        check_ajax_referer('dp_send_template_test_mail', 'nonce');
+
+        if (!current_user_can('manage_options') && !Dienstplan_Roles::can_manage_events()) {
+            wp_send_json_error(array('message' => 'Keine Berechtigung.'));
+            return;
+        }
+
+        $to = isset($_POST['to']) ? sanitize_email(wp_unslash($_POST['to'])) : '';
+        $template_type = isset($_POST['template_type']) ? sanitize_key(wp_unslash($_POST['template_type'])) : '';
+
+        if (empty($to) || !is_email($to)) {
+            wp_send_json_error(array('message' => 'Ungueltige Empfaenger-Adresse.'));
+            return;
+        }
+
+        $definitions = Dienstplan_Mail_Templates::get_definitions();
+        if (empty($template_type) || !isset($definitions[$template_type])) {
+            wp_send_json_error(array('message' => 'Unbekannter Vorlagen-Typ.'));
+            return;
+        }
+
+        $site_name = get_option('dp_site_name', get_bloginfo('name'));
+        $example_placeholders = array(
+            'vorname' => 'Max',
+            'nachname' => 'Mustermann',
+            'veranstaltung' => 'Beispiel-Event 2026',
+            'verein' => 'Musterverein',
+            'datum' => date_i18n('d.m.Y'),
+            'von_zeit' => '10:00',
+            'bis_zeit' => '14:00',
+            'taetigkeit' => 'Thekendienst',
+            'bereich' => 'Getraenke',
+            'beschreibung_block' => "Beschreibung: Dies ist ein Testversand aus dem Mail-Vorlagenbereich.\n\n",
+            'source_url_block' => "Zurueck zur Veranstaltungsseite:\n" . home_url('/') . "\n\n",
+            'username' => 'max.mustermann',
+            'password' => 'TestPass!123',
+            'portal_link' => home_url('/portal'),
+            'site_name' => $site_name,
+            'diensteliste' => "--------------------------------------------------\nVeranstaltung: Beispiel-Event 2026\nVerein: Musterverein\n----------------------------------------\n- " . date_i18n('d.m.Y (l)') . ", 10:00 - 14:00 Uhr\n  Taetigkeit: Thekendienst (Getraenke)\n\n--------------------------------------------------",
+            'total_dienste' => '1',
+        );
+
+        $mail_template = Dienstplan_Mail_Templates::get_template($template_type, $example_placeholders);
+
+        $reply_to = get_option('dp_mail_reply_to', '');
+        $headers = array('Content-Type: text/plain; charset=UTF-8');
+        if (!empty($reply_to) && is_email($reply_to)) {
+            $headers[] = 'Reply-To: ' . $reply_to;
+        }
+
+        $sent = wp_mail($to, $mail_template['subject'], $mail_template['body'], $headers);
+
+        if ($sent) {
+            wp_send_json_success(array('message' => 'Test-Mail fuer Vorlage "' . $definitions[$template_type]['label'] . '" wurde an ' . esc_html($to) . ' gesendet.'));
+        } else {
+            global $phpmailer;
+            $error_info = '';
+            if (isset($phpmailer) && !empty($phpmailer->ErrorInfo)) {
+                $error_info = ' Fehlerdetail: ' . $phpmailer->ErrorInfo;
+            }
+            wp_send_json_error(array('message' => 'E-Mail konnte nicht gesendet werden.' . $error_info));
+        }
+    }
+
+    /**
      * AJAX: Mail-Debug-Log leeren
      */
     public function ajax_clear_mail_log() {
