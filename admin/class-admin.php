@@ -7229,35 +7229,12 @@ class Dienstplan_Admin {
             return;
         }
 
-        // Dienste laden
-        global $wpdb;
-        $dienste = $wpdb->get_results($wpdb->prepare(
-            "SELECT s.von_zeit, s.bis_zeit,
-                    t.name  AS taetigkeit,
-                    b.name  AS bereich,
-                    ve.name  AS veranstaltung,
-                    ve.seite_id AS veranstaltung_seite_id,
-                    v.name  AS verein,
-                    v.seite_id AS verein_seite_id,
-                    vt.tag_datum AS tag_datum
-             FROM {$wpdb->prefix}dp_dienst_slots s
-             INNER JOIN {$wpdb->prefix}dp_dienste d       ON s.dienst_id       = d.id
-             LEFT  JOIN {$wpdb->prefix}dp_taetigkeiten t  ON d.taetigkeit_id   = t.id
-             LEFT  JOIN {$wpdb->prefix}dp_bereiche b      ON d.bereich_id      = b.id
-             LEFT  JOIN {$wpdb->prefix}dp_vereine v       ON d.verein_id       = v.id
-             LEFT  JOIN {$wpdb->prefix}dp_veranstaltungen ve ON d.veranstaltung_id = ve.id
-             LEFT  JOIN {$wpdb->prefix}dp_veranstaltung_tage vt ON d.tag_id    = vt.id
-             WHERE s.mitarbeiter_id = %d
-             ORDER BY vt.tag_datum ASC, s.von_zeit ASC",
-            $mitarbeiter_id
-        ));
+        $dienste = $db->get_mitarbeiter_dienste($mitarbeiter_id);
 
         if (empty($dienste)) {
             wp_send_json_error(array('message' => 'Für diesen Mitarbeiter sind keine Dienste hinterlegt.'));
             return;
         }
-
-        $subject = sprintf('[%s] Deine Dienst-Übersicht', get_bloginfo('name'));
 
         $diensteliste = str_repeat('-', 50) . "\n";
         $veranstaltungslinks = array();
@@ -7265,19 +7242,24 @@ class Dienstplan_Admin {
 
         $current_event = '';
         foreach ($dienste as $d) {
-            if (!empty($d->veranstaltung_seite_id) && !empty($d->veranstaltung)) {
-                $veranstaltungslinks[$d->veranstaltung] = get_permalink((int) $d->veranstaltung_seite_id);
+            $veranstaltung_name = isset($d->veranstaltung_name) ? (string) $d->veranstaltung_name : '';
+            $verein_name = isset($d->verein_name) ? (string) $d->verein_name : '';
+            $taetigkeit_name = isset($d->taetigkeit_name) ? (string) $d->taetigkeit_name : '';
+            $bereich_name = isset($d->bereich_name) ? (string) $d->bereich_name : '';
+
+            if (!empty($d->veranstaltung_seite_id) && $veranstaltung_name !== '') {
+                $veranstaltungslinks[$veranstaltung_name] = get_permalink((int) $d->veranstaltung_seite_id);
             }
 
-            if (!empty($d->verein_seite_id) && !empty($d->verein)) {
-                $vereinslinks[$d->verein] = get_permalink((int) $d->verein_seite_id);
+            if (!empty($d->verein_seite_id) && $verein_name !== '') {
+                $vereinslinks[$verein_name] = get_permalink((int) $d->verein_seite_id);
             }
 
-            if ($d->veranstaltung !== $current_event) {
-                $current_event = $d->veranstaltung;
+            if ($veranstaltung_name !== $current_event) {
+                $current_event = $veranstaltung_name;
                 $diensteliste .= "\nVeranstaltung: " . $current_event . "\n";
-                if ($d->verein) {
-                    $diensteliste .= "Verein: " . $d->verein . "\n";
+                if ($verein_name !== '') {
+                    $diensteliste .= "Verein: " . $verein_name . "\n";
                 }
                 $diensteliste .= str_repeat('-', 40) . "\n";
             }
@@ -7289,10 +7271,10 @@ class Dienstplan_Admin {
                 $diensteliste .= ", {$von} - {$bis} Uhr";
             }
             $diensteliste .= "\n";
-            if ($d->taetigkeit) {
-                $diensteliste .= "  Taetigkeit: {$d->taetigkeit}";
-                if ($d->bereich) {
-                    $diensteliste .= " ({$d->bereich})";
+            if ($taetigkeit_name !== '') {
+                $diensteliste .= "  Taetigkeit: {$taetigkeit_name}";
+                if ($bereich_name !== '') {
+                    $diensteliste .= " ({$bereich_name})";
                 }
                 $diensteliste .= "\n";
             }
@@ -7332,15 +7314,26 @@ class Dienstplan_Admin {
             return;
         }
 
-        $sent = wp_mail($ma->email, $mail_template['subject'], $mail_template['body']);
+        $headers = array('Content-Type: text/plain; charset=UTF-8');
+        $reply_to = get_option('dp_mail_reply_to', '');
+        if (!empty($reply_to) && is_email($reply_to)) {
+            $headers[] = 'Reply-To: ' . $reply_to;
+        }
+
+        $sent = wp_mail($ma->email, $mail_template['subject'], $mail_template['body'], $headers);
 
         if ($sent) {
             wp_send_json_success(array(
                 'message' => 'Dienste-Übersicht wurde erfolgreich an ' . $ma->email . ' versendet.'
             ));
         } else {
+            global $phpmailer;
+            $error_info = '';
+            if (isset($phpmailer) && !empty($phpmailer->ErrorInfo)) {
+                $error_info = ' Fehlerdetail: ' . $phpmailer->ErrorInfo;
+            }
             wp_send_json_error(array(
-                'message' => 'E-Mail konnte nicht gesendet werden. Bitte WordPress-Mailkonfiguration prüfen.'
+                'message' => 'E-Mail konnte nicht gesendet werden. Bitte WordPress-Mailkonfiguration prüfen.' . $error_info
             ));
         }
     }

@@ -2287,7 +2287,9 @@ class Dienstplan_Database {
     public function get_mitarbeiter_dienste($mitarbeiter_id) {
         $sql = "SELECT ds.*, d.*, 
                 v.name as verein_name,
+                v.seite_id as verein_seite_id,
                 ve.name as veranstaltung_name,
+                ve.seite_id as veranstaltung_seite_id,
                 vt.tag_datum, vt.tag_nummer,
                 b.name as bereich_name, b.farbe as bereich_farbe,
                 t.name as taetigkeit_name
