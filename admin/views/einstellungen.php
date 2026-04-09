@@ -6,13 +6,38 @@ if (!defined('ABSPATH')) exit;
 
 $mail_page_mode = !empty($mail_page_mode);
 $active_tab = $mail_page_mode ? 'email' : (isset($_GET['tab']) ? $_GET['tab'] : 'general');
+$mail_active_tab = isset($_GET['mail_tab']) ? sanitize_key($_GET['mail_tab']) : 'versand';
+
+if (!in_array($mail_active_tab, array('versand', 'templates', 'smtp'), true)) {
+    $mail_active_tab = 'versand';
+}
+
+$page_title = $mail_page_mode ? __('E-Mail-Bereich', 'dienstplan-verwaltung') : __('Einstellungen', 'dienstplan-verwaltung');
+$page_icon = $mail_page_mode ? 'dashicons-email-alt' : 'dashicons-admin-settings';
+$page_class = 'header-dashboard';
+$nav_items = array(
+    array(
+        'label' => __('Dashboard', 'dienstplan-verwaltung'),
+        'url' => admin_url('admin.php?page=dienstplan'),
+        'icon' => 'dashicons-dashboard',
+    ),
+    array(
+        'label' => __('Einstellungen', 'dienstplan-verwaltung'),
+        'url' => admin_url('admin.php?page=dienstplan-einstellungen'),
+        'icon' => 'dashicons-admin-settings',
+        'capability' => Dienstplan_Roles::CAP_MANAGE_SETTINGS,
+    ),
+    array(
+        'label' => __('E-Mail', 'dienstplan-verwaltung'),
+        'url' => admin_url('admin.php?page=dienstplan-mail'),
+        'icon' => 'dashicons-email-alt',
+        'capability' => Dienstplan_Roles::CAP_MANAGE_SETTINGS,
+    ),
+);
 ?>
 
-<div class="wrap">
-    <h1 class="wp-heading-inline">
-        <span class="dashicons <?php echo $mail_page_mode ? 'dashicons-email-alt' : 'dashicons-admin-settings'; ?>"></span>
-        <?php echo $mail_page_mode ? esc_html__('E-Mail-Bereich', 'dienstplan-verwaltung') : esc_html__('Einstellungen', 'dienstplan-verwaltung'); ?>
-    </h1>
+<div class="wrap dienstplan-wrap" style="overflow: visible; position: relative;">
+    <?php include DIENSTPLAN_PLUGIN_PATH . 'admin/views/partials/page-header.php'; ?>
 
     <?php if ($mail_page_mode): ?>
         <p class="description" style="margin-top:0.5rem; margin-bottom: 1.25rem;">
@@ -25,12 +50,29 @@ $active_tab = $mail_page_mode ? 'email' : (isset($_GET['tab']) ? $_GET['tab'] : 
         <a href="?page=dienstplan-einstellungen&tab=general" class="nav-tab <?php echo $active_tab == 'general' ? 'nav-tab-active' : ''; ?>">
             <?php _e('Allgemein', 'dienstplan-verwaltung'); ?>
         </a>
-        <a href="?page=dienstplan-mail" class="nav-tab <?php echo $active_tab == 'email' ? 'nav-tab-active' : ''; ?>">
+        <a href="?page=dienstplan-mail&mail_tab=versand" class="nav-tab <?php echo $active_tab == 'email' ? 'nav-tab-active' : ''; ?>">
             <span class="dashicons dashicons-email-alt" style="vertical-align: text-top; margin-right: 4px;"></span>
             <?php _e('E-Mail-Versand', 'dienstplan-verwaltung'); ?>
         </a>
         <a href="?page=dienstplan-einstellungen&tab=notifications" class="nav-tab <?php echo $active_tab == 'notifications' ? 'nav-tab-active' : ''; ?>">
             <?php _e('Benachrichtigungen', 'dienstplan-verwaltung'); ?>
+        </a>
+    </h2>
+    <?php endif; ?>
+
+    <?php if ($mail_page_mode): ?>
+    <h2 class="nav-tab-wrapper" style="margin-top: 1rem; margin-bottom: 2rem;">
+        <a href="?page=dienstplan-mail&mail_tab=versand" class="nav-tab <?php echo $mail_active_tab === 'versand' ? 'nav-tab-active' : ''; ?>">
+            <span class="dashicons dashicons-megaphone" style="vertical-align: text-top; margin-right: 4px;"></span>
+            <?php _e('Versand', 'dienstplan-verwaltung'); ?>
+        </a>
+        <a href="?page=dienstplan-mail&mail_tab=templates" class="nav-tab <?php echo $mail_active_tab === 'templates' ? 'nav-tab-active' : ''; ?>">
+            <span class="dashicons dashicons-edit" style="vertical-align: text-top; margin-right: 4px;"></span>
+            <?php _e('Vorlagen', 'dienstplan-verwaltung'); ?>
+        </a>
+        <a href="?page=dienstplan-mail&mail_tab=smtp" class="nav-tab <?php echo $mail_active_tab === 'smtp' ? 'nav-tab-active' : ''; ?>">
+            <span class="dashicons dashicons-admin-network" style="vertical-align: text-top; margin-right: 4px;"></span>
+            <?php _e('SMTP & Test', 'dienstplan-verwaltung'); ?>
         </a>
     </h2>
     <?php endif; ?>
@@ -119,16 +161,22 @@ $active_tab = $mail_page_mode ? 'email' : (isset($_GET['tab']) ? $_GET['tab'] : 
         
     <?php elseif ($active_tab == 'email'): ?>
         <?php
-        // Speichern
-        if (isset($_POST['save_email_settings']) && check_admin_referer('dp_email_settings', 'dp_email_nonce')) {
+        if (isset($_POST['save_email_dispatch']) && check_admin_referer('dp_email_settings', 'dp_email_nonce')) {
             update_option('dp_mail_from_name',  sanitize_text_field(wp_unslash($_POST['dp_mail_from_name'] ?? '')));
             update_option('dp_mail_from_email', sanitize_email(wp_unslash($_POST['dp_mail_from_email'] ?? '')));
             update_option('dp_mail_reply_to',   sanitize_email(wp_unslash($_POST['dp_mail_reply_to'] ?? '')));
             update_option('dp_mail_enable_booking',           isset($_POST['dp_mail_enable_booking']) ? 1 : 0);
             update_option('dp_mail_enable_portal_invite',     isset($_POST['dp_mail_enable_portal_invite']) ? 1 : 0);
             update_option('dp_mail_enable_dienste_uebersicht',isset($_POST['dp_mail_enable_dienste_uebersicht']) ? 1 : 0);
+            echo '<div class="notice notice-success is-dismissible"><p><strong>Versand-Einstellungen gespeichert.</strong></p></div>';
+        }
+
+        if (isset($_POST['save_email_templates']) && check_admin_referer('dp_email_settings', 'dp_email_nonce')) {
             Dienstplan_Mail_Templates::save_templates_from_post($_POST);
-            // SMTP
+            echo '<div class="notice notice-success is-dismissible"><p><strong>Mail-Vorlagen gespeichert.</strong></p></div>';
+        }
+
+        if (isset($_POST['save_email_smtp']) && check_admin_referer('dp_email_settings', 'dp_email_nonce')) {
             update_option('dp_smtp_enabled',    isset($_POST['dp_smtp_enabled']) ? 1 : 0);
             update_option('dp_smtp_host',       sanitize_text_field(wp_unslash($_POST['dp_smtp_host'] ?? '')));
             update_option('dp_smtp_port',       absint($_POST['dp_smtp_port'] ?? 587));
@@ -140,11 +188,12 @@ $active_tab = $mail_page_mode ? 'email' : (isset($_GET['tab']) ? $_GET['tab'] : 
             if ($new_pass !== '') {
                 update_option('dp_smtp_pass', $new_pass);
             }
-            echo '<div class="notice notice-success is-dismissible"><p><strong>E-Mail-Einstellungen gespeichert.</strong></p></div>';
+            echo '<div class="notice notice-success is-dismissible"><p><strong>SMTP-Einstellungen gespeichert.</strong></p></div>';
         }
         ?>
 
-        <!-- Absender -->
+        <?php if ($mail_active_tab === 'versand'): ?>
+        <!-- Versand -->
         <div class="dp-card">
             <div class="dp-card-header">
                 <h2><span class="dashicons dashicons-email-alt" style="vertical-align:middle; margin-right:6px;"></span><?php _e('Absender-Konfiguration', 'dienstplan-verwaltung'); ?></h2>
@@ -240,11 +289,25 @@ $active_tab = $mail_page_mode ? 'email' : (isset($_GET['tab']) ? $_GET['tab'] : 
                         </tr>
                     </table>
 
-                    <hr style="margin: 1.5rem 0;">
-                    <h3 style="margin-top:0;">E-Mail-Vorlagen</h3>
-                    <p class="description" style="margin-bottom:1rem;">
-                        Passe Betreff und Text pro Mail-Typ an. Verfuegbare Platzhalter koennen direkt im Text verwendet werden.
+                    <p class="submit">
+                        <button type="submit" name="save_email_dispatch" class="button button-primary">Versand speichern</button>
                     </p>
+                </form>
+            </div>
+        </div>
+        <?php endif; ?>
+
+        <?php if ($mail_active_tab === 'templates'): ?>
+        <div class="dp-card">
+            <div class="dp-card-header">
+                <h2><span class="dashicons dashicons-edit" style="vertical-align:middle; margin-right:6px;"></span><?php _e('E-Mail-Vorlagen', 'dienstplan-verwaltung'); ?></h2>
+            </div>
+            <div class="dp-card-body">
+                <p class="description" style="margin-bottom:1rem;">
+                    Passe Betreff und Text pro Mail-Typ an. Verfuegbare Platzhalter koennen direkt im Text verwendet werden.
+                </p>
+                <form method="post" action="">
+                    <?php wp_nonce_field('dp_email_settings', 'dp_email_nonce'); ?>
                     <?php $template_definitions = Dienstplan_Mail_Templates::get_definitions(); ?>
                     <?php foreach ($template_definitions as $template_key => $template): ?>
                         <?php
@@ -281,14 +344,15 @@ $active_tab = $mail_page_mode ? 'email' : (isset($_GET['tab']) ? $_GET['tab'] : 
                             </p>
                         </div>
                     <?php endforeach; ?>
-
                     <p class="submit">
-                        <button type="submit" name="save_email_settings" class="button button-primary">Einstellungen speichern</button>
+                        <button type="submit" name="save_email_templates" class="button button-primary">Vorlagen speichern</button>
                     </p>
                 </form>
             </div>
         </div>
+        <?php endif; ?>
 
+        <?php if ($mail_active_tab === 'smtp'): ?>
         <!-- SMTP-Konfiguration -->
         <div class="dp-card" style="margin-top:1.5rem;">
             <div class="dp-card-header">
@@ -374,7 +438,7 @@ $active_tab = $mail_page_mode ? 'email' : (isset($_GET['tab']) ? $_GET['tab'] : 
                         </tr>
                     </table>
                     <p class="submit">
-                        <button type="submit" name="save_email_settings" class="button button-primary">SMTP-Einstellungen speichern</button>
+                        <button type="submit" name="save_email_smtp" class="button button-primary">SMTP-Einstellungen speichern</button>
                     </p>
                 </form>
             </div>
@@ -434,6 +498,7 @@ $active_tab = $mail_page_mode ? 'email' : (isset($_GET['tab']) ? $_GET['tab'] : 
             });
         })(jQuery);
         </script>
+        <?php endif; ?>
 
     <?php elseif ($active_tab == 'notifications'): ?>
         
