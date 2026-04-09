@@ -7236,7 +7236,9 @@ class Dienstplan_Admin {
                     t.name  AS taetigkeit,
                     b.name  AS bereich,
                     ve.name  AS veranstaltung,
+                    ve.seite_id AS veranstaltung_seite_id,
                     v.name  AS verein,
+                    v.seite_id AS verein_seite_id,
                     vt.tag_datum AS tag_datum
              FROM {$wpdb->prefix}dp_dienst_slots s
              INNER JOIN {$wpdb->prefix}dp_dienste d       ON s.dienst_id       = d.id
@@ -7258,9 +7260,19 @@ class Dienstplan_Admin {
         $subject = sprintf('[%s] Deine Dienst-Übersicht', get_bloginfo('name'));
 
         $diensteliste = str_repeat('-', 50) . "\n";
+        $veranstaltungslinks = array();
+        $vereinslinks = array();
 
         $current_event = '';
         foreach ($dienste as $d) {
+            if (!empty($d->veranstaltung_seite_id) && !empty($d->veranstaltung)) {
+                $veranstaltungslinks[$d->veranstaltung] = get_permalink((int) $d->veranstaltung_seite_id);
+            }
+
+            if (!empty($d->verein_seite_id) && !empty($d->verein)) {
+                $vereinslinks[$d->verein] = get_permalink((int) $d->verein_seite_id);
+            }
+
             if ($d->veranstaltung !== $current_event) {
                 $current_event = $d->veranstaltung;
                 $diensteliste .= "\nVeranstaltung: " . $current_event . "\n";
@@ -7288,9 +7300,29 @@ class Dienstplan_Admin {
 
         $diensteliste .= "\n" . str_repeat('-', 50);
 
+        $veranstaltungslinks_block = '';
+        if (!empty($veranstaltungslinks)) {
+            $veranstaltungslinks_block = "Veranstaltungsseiten:\n";
+            foreach ($veranstaltungslinks as $label => $url) {
+                $veranstaltungslinks_block .= '- ' . $label . ': ' . $url . "\n";
+            }
+            $veranstaltungslinks_block .= "\n";
+        }
+
+        $vereinslinks_block = '';
+        if (!empty($vereinslinks)) {
+            $vereinslinks_block = "Vereinsseiten:\n";
+            foreach ($vereinslinks as $label => $url) {
+                $vereinslinks_block .= '- ' . $label . ': ' . $url . "\n";
+            }
+            $vereinslinks_block .= "\n";
+        }
+
         $mail_template = Dienstplan_Mail_Templates::get_template('dienste_uebersicht', array(
             'vorname' => $ma->vorname,
             'diensteliste' => $diensteliste,
+            'veranstaltungslinks_block' => $veranstaltungslinks_block,
+            'vereinslinks_block' => $vereinslinks_block,
             'total_dienste' => count($dienste),
             'site_name' => get_option('dp_site_name', get_bloginfo('name')),
         ));
@@ -7708,12 +7740,18 @@ class Dienstplan_Admin {
             'taetigkeit' => 'Thekendienst',
             'bereich' => 'Getraenke',
             'beschreibung_block' => "Beschreibung: Dies ist ein Testversand aus dem Mail-Vorlagenbereich.\n\n",
+            'veranstaltungsseite_url' => home_url('/beispiel-event-2026'),
+            'vereinsseite_url' => home_url('/musterverein'),
+            'veranstaltungsseite_block' => "Veranstaltungsseite:\n" . home_url('/beispiel-event-2026') . "\n\n",
+            'vereinsseite_block' => "Vereinsseite:\n" . home_url('/musterverein') . "\n\n",
             'source_url_block' => "Zurueck zur Veranstaltungsseite:\n" . home_url('/') . "\n\n",
             'username' => 'max.mustermann',
             'password' => 'TestPass!123',
             'portal_link' => home_url('/portal'),
             'site_name' => $site_name,
             'diensteliste' => "--------------------------------------------------\nVeranstaltung: Beispiel-Event 2026\nVerein: Musterverein\n----------------------------------------\n- " . date_i18n('d.m.Y (l)') . ", 10:00 - 14:00 Uhr\n  Taetigkeit: Thekendienst (Getraenke)\n\n--------------------------------------------------",
+            'veranstaltungslinks_block' => "Veranstaltungsseiten:\n- Beispiel-Event 2026: " . home_url('/beispiel-event-2026') . "\n\n",
+            'vereinslinks_block' => "Vereinsseiten:\n- Musterverein: " . home_url('/musterverein') . "\n\n",
             'total_dienste' => '1',
         );
 

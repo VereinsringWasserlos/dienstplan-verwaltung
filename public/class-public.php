@@ -459,7 +459,7 @@ class Dienstplan_Public {
                     $slot_id_mail
                 ));
                 $dienst_mail = $wpdb->get_row($wpdb->prepare(
-                    "SELECT d.*, v.titel as veranstaltung, ve.name as verein, t.name as taetigkeit, b.name as bereich
+                    "SELECT d.*, v.titel as veranstaltung, v.seite_id as veranstaltung_seite_id, ve.name as verein, ve.seite_id as verein_seite_id, t.name as taetigkeit, b.name as bereich
                      FROM {$prefix}dienste d
                      LEFT JOIN {$prefix}veranstaltungen v ON d.veranstaltung_id = v.id
                      LEFT JOIN {$prefix}vereine ve ON d.verein_id = ve.id
@@ -487,6 +487,10 @@ class Dienstplan_Public {
                     } else {
                         $source_url_block = '';
                     }
+                    $veranstaltungsseite_url = !empty($dienst_mail->veranstaltung_seite_id) ? get_permalink((int) $dienst_mail->veranstaltung_seite_id) : '';
+                    $vereinsseite_url = !empty($dienst_mail->verein_seite_id) ? get_permalink((int) $dienst_mail->verein_seite_id) : '';
+                    $veranstaltungsseite_block = $veranstaltungsseite_url ? "Veranstaltungsseite:\n" . $veranstaltungsseite_url . "\n\n" : '';
+                    $vereinsseite_block = $vereinsseite_url ? "Vereinsseite:\n" . $vereinsseite_url . "\n\n" : '';
 
                     $mail_template = Dienstplan_Mail_Templates::get_template('booking_confirmation', array(
                         'vorname' => $vorname_mail,
@@ -498,7 +502,11 @@ class Dienstplan_Public {
                         'bis_zeit' => substr($slot_mail->bis_zeit, 0, 5),
                         'taetigkeit' => $dienst_mail->taetigkeit ?? '',
                         'bereich' => $dienst_mail->bereich ?? '',
+                        'veranstaltungsseite_url' => $veranstaltungsseite_url,
+                        'vereinsseite_url' => $vereinsseite_url,
                         'beschreibung_block' => $beschreibung_block,
+                        'veranstaltungsseite_block' => $veranstaltungsseite_block,
+                        'vereinsseite_block' => $vereinsseite_block,
                         'source_url_block' => $source_url_block,
                     ));
 
@@ -1382,7 +1390,7 @@ class Dienstplan_Public {
         
         // Bestätigungs-E-Mail senden
         $dienst = $wpdb->get_row($wpdb->prepare(
-            "SELECT d.*, v.titel as veranstaltung, ve.name as verein, t.name as taetigkeit, b.name as bereich
+            "SELECT d.*, v.titel as veranstaltung, v.seite_id as veranstaltung_seite_id, ve.name as verein, ve.seite_id as verein_seite_id, t.name as taetigkeit, b.name as bereich
              FROM {$prefix}dienste d
              LEFT JOIN {$prefix}veranstaltungen v ON d.veranstaltung_id = v.id
              LEFT JOIN {$prefix}vereine ve ON d.verein_id = ve.id
@@ -1418,6 +1426,10 @@ class Dienstplan_Public {
             } else {
                 $source_url_block = '';
             }
+            $veranstaltungsseite_url = !empty($dienst->veranstaltung_seite_id) ? get_permalink((int) $dienst->veranstaltung_seite_id) : '';
+            $vereinsseite_url = !empty($dienst->verein_seite_id) ? get_permalink((int) $dienst->verein_seite_id) : '';
+            $veranstaltungsseite_block = $veranstaltungsseite_url ? "Veranstaltungsseite:\n" . $veranstaltungsseite_url . "\n\n" : '';
+            $vereinsseite_block = $vereinsseite_url ? "Vereinsseite:\n" . $vereinsseite_url . "\n\n" : '';
 
             $mail_template = Dienstplan_Mail_Templates::get_template('booking_confirmation', array(
                 'vorname' => $vorname,
@@ -1429,7 +1441,11 @@ class Dienstplan_Public {
                 'bis_zeit' => substr($slot->bis_zeit, 0, 5),
                 'taetigkeit' => $dienst->taetigkeit ?? '',
                 'bereich' => $dienst->bereich ?? '',
+                'veranstaltungsseite_url' => $veranstaltungsseite_url,
+                'vereinsseite_url' => $vereinsseite_url,
                 'beschreibung_block' => $beschreibung_block,
+                'veranstaltungsseite_block' => $veranstaltungsseite_block,
+                'vereinsseite_block' => $vereinsseite_block,
                 'source_url_block' => $source_url_block,
             ));
 

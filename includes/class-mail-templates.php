@@ -21,8 +21,8 @@ class Dienstplan_Mail_Templates {
                 'label' => __('Buchungsbestätigung', 'dienstplan-verwaltung'),
                 'description' => __('Bestätigung nach Dienst-Anmeldung im Frontend.', 'dienstplan-verwaltung'),
                 'subject_default' => __('Bestätigung Ihrer Anmeldung - {{veranstaltung}}', 'dienstplan-verwaltung'),
-                'body_default' => "Hallo {{vorname}} {{nachname}},\n\nvielen Dank fuer Ihre Anmeldung!\n\nDetails zu Ihrem Dienst:\nVeranstaltung: {{veranstaltung}}\nVerein: {{verein}}\nDatum: {{datum}}\nUhrzeit: {{von_zeit}} - {{bis_zeit}} Uhr\nTaetigkeit: {{taetigkeit}}\nBereich: {{bereich}}\n\n{{beschreibung_block}}{{source_url_block}}Bei Fragen oder Aenderungen wenden Sie sich bitte an den Veranstalter.\n\nMit freundlichen Gruessen\nIhr Dienstplan-Team",
-                'placeholders' => array('vorname', 'nachname', 'veranstaltung', 'verein', 'datum', 'von_zeit', 'bis_zeit', 'taetigkeit', 'bereich', 'beschreibung_block', 'source_url_block')
+                'body_default' => "Hallo {{vorname}} {{nachname}},\n\nvielen Dank fuer Ihre Anmeldung!\n\nDetails zu Ihrem Dienst:\nVeranstaltung: {{veranstaltung}}\nVerein: {{verein}}\nDatum: {{datum}}\nUhrzeit: {{von_zeit}} - {{bis_zeit}} Uhr\nTaetigkeit: {{taetigkeit}}\nBereich: {{bereich}}\n\n{{beschreibung_block}}{{veranstaltungsseite_block}}{{vereinsseite_block}}{{source_url_block}}Bei Fragen oder Aenderungen wenden Sie sich bitte an den Veranstalter.\n\nMit freundlichen Gruessen\nIhr Dienstplan-Team",
+                'placeholders' => array('vorname', 'nachname', 'veranstaltung', 'verein', 'datum', 'von_zeit', 'bis_zeit', 'taetigkeit', 'bereich', 'veranstaltungsseite_url', 'vereinsseite_url', 'beschreibung_block', 'veranstaltungsseite_block', 'vereinsseite_block', 'source_url_block')
             ),
             'portal_invite' => array(
                 'label' => __('Portal-Einladung / Zugangsdaten', 'dienstplan-verwaltung'),
@@ -42,8 +42,8 @@ class Dienstplan_Mail_Templates {
                 'label' => __('Dienste-Uebersicht', 'dienstplan-verwaltung'),
                 'description' => __('Manuelle Uebersicht aller zugewiesenen Dienste.', 'dienstplan-verwaltung'),
                 'subject_default' => __('Ihre Dienste-Uebersicht - {{site_name}}', 'dienstplan-verwaltung'),
-                'body_default' => "Hallo {{vorname}},\n\nhier ist deine aktuelle Uebersicht aller zugewiesenen Dienste:\n\n{{diensteliste}}\n\nGesamt: {{total_dienste}} Dienst(e)\n\nBei Fragen wende dich bitte an den Veranstalter.\n\nViele Gruesse\n{{site_name}}",
-                'placeholders' => array('vorname', 'diensteliste', 'total_dienste', 'site_name')
+                'body_default' => "Hallo {{vorname}},\n\nhier ist deine aktuelle Uebersicht aller zugewiesenen Dienste:\n\n{{diensteliste}}\n\n{{veranstaltungslinks_block}}{{vereinslinks_block}}Gesamt: {{total_dienste}} Dienst(e)\n\nBei Fragen wende dich bitte an den Veranstalter.\n\nViele Gruesse\n{{site_name}}",
+                'placeholders' => array('vorname', 'diensteliste', 'veranstaltungslinks_block', 'vereinslinks_block', 'total_dienste', 'site_name')
             ),
         );
     }
