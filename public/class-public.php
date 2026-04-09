@@ -588,6 +588,24 @@ class Dienstplan_Public {
             
             // Prüfe ob Mitarbeiter bereits existiert (per Email)
             $email = !empty($_POST['email']) ? sanitize_email($_POST['email']) : null;
+            $create_user_account = isset($_POST['create_user_account']) && sanitize_text_field(wp_unslash($_POST['create_user_account'])) === '1';
+            $create_user_datenschutz = isset($_POST['create_user_datenschutz']) && sanitize_text_field(wp_unslash($_POST['create_user_datenschutz'])) === '1';
+
+            if (!empty($email) && !is_email($email)) {
+                wp_send_json_error(array('message' => 'Ungültige E-Mail-Adresse.'));
+                return;
+            }
+
+            if ($create_user_account && empty($email)) {
+                wp_send_json_error(array('message' => 'Für die Konto-Anlage ist eine gültige E-Mail-Adresse erforderlich.'));
+                return;
+            }
+
+            if ($create_user_account && !$create_user_datenschutz) {
+                wp_send_json_error(array('message' => 'Bitte bestätige die Datenschutzerklärung für die Kontoerstellung.'));
+                return;
+            }
+
             $mitarbeiter_id = null;
             
             if ($email) {
@@ -718,9 +736,67 @@ class Dienstplan_Public {
                 return;
             }
 
-            // Optional: Direkt bei Dienst-Eintragung Portal-User anlegen/verknüpfen
+            // Optional: Nur bei expliziter Auswahl Portal-User anlegen/verknüpfen
             $mitarbeiter = $db->get_mitarbeiter($mitarbeiter_id);
-            $this->ensure_portal_user_for_mitarbeiter($db, $mitarbeiter, $email, intval($dienst->verein_id));
+            if ($create_user_account) {
+                $this->ensure_portal_user_for_mitarbeiter($db, $mitarbeiter, $email, intval($dienst->verein_id));
+            }
+
+            // Buchungs-Bestätigung senden (auch ohne Account-Anlage, wenn E-Mail vorhanden)
+            $booking_mail_sent = null;
+            if (!empty($email) && get_option('dp_mail_enable_booking', 1)) {
+                $dienst_mail = $wpdb->get_row($wpdb->prepare(
+                    "SELECT d.*, COALESCE(v.titel, v.name) as veranstaltung, v.seite_id as veranstaltung_seite_id,
+                            ve.name as verein, ve.seite_id as verein_seite_id,
+                            t.name as taetigkeit, b.name as bereich, vt.tag_datum
+                     FROM {$prefix}dienste d
+                     LEFT JOIN {$prefix}veranstaltungen v ON d.veranstaltung_id = v.id
+                     LEFT JOIN {$prefix}vereine ve ON d.verein_id = ve.id
+                     LEFT JOIN {$prefix}taetigkeiten t ON d.taetigkeit_id = t.id
+                     LEFT JOIN {$prefix}bereiche b ON d.bereich_id = b.id
+                     LEFT JOIN {$prefix}veranstaltung_tage vt ON d.tag_id = vt.id
+                     WHERE d.id = %d",
+                    $dienst_id
+                ));
+
+                if ($dienst_mail && $free_slot) {
+                    $tag_datum = !empty($dienst_mail->tag_datum) ? date_i18n('d.m.Y', strtotime($dienst_mail->tag_datum)) : 'N/A';
+
+                    $beschreibung_block = !empty($dienst_mail->beschreibung)
+                        ? "Beschreibung: {$dienst_mail->beschreibung}\n\n"
+                        : '';
+
+                    $source_url = !empty($_POST['source_url']) ? esc_url_raw(wp_unslash($_POST['source_url'])) : '';
+                    $source_url_block = !empty($source_url)
+                        ? "Zurueck zur Veranstaltungsseite:\n" . $source_url . "\n\n"
+                        : '';
+
+                    $veranstaltungsseite_url = !empty($dienst_mail->veranstaltung_seite_id) ? get_permalink((int) $dienst_mail->veranstaltung_seite_id) : '';
+                    $vereinsseite_url = !empty($dienst_mail->verein_seite_id) ? get_permalink((int) $dienst_mail->verein_seite_id) : '';
+                    $veranstaltungsseite_block = $veranstaltungsseite_url ? "Veranstaltungsseite:\n" . $veranstaltungsseite_url . "\n\n" : '';
+                    $vereinsseite_block = $vereinsseite_url ? "Vereinsseite:\n" . $vereinsseite_url . "\n\n" : '';
+
+                    $mail_template = Dienstplan_Mail_Templates::get_template('booking_confirmation', array(
+                        'vorname' => sanitize_text_field($_POST['first_name']),
+                        'nachname' => sanitize_text_field($_POST['last_name']),
+                        'veranstaltung' => $dienst_mail->veranstaltung ?? '',
+                        'verein' => $dienst_mail->verein ?? '',
+                        'datum' => $tag_datum,
+                        'von_zeit' => !empty($free_slot->von_zeit) ? substr($free_slot->von_zeit, 0, 5) : '',
+                        'bis_zeit' => !empty($free_slot->bis_zeit) ? substr($free_slot->bis_zeit, 0, 5) : '',
+                        'taetigkeit' => $dienst_mail->taetigkeit ?? '',
+                        'bereich' => $dienst_mail->bereich ?? '',
+                        'veranstaltungsseite_url' => $veranstaltungsseite_url,
+                        'vereinsseite_url' => $vereinsseite_url,
+                        'beschreibung_block' => $beschreibung_block,
+                        'veranstaltungsseite_block' => $veranstaltungsseite_block,
+                        'vereinsseite_block' => $vereinsseite_block,
+                        'source_url_block' => $source_url_block,
+                    ));
+
+                    $booking_mail_sent = wp_mail($email, $mail_template['subject'], $mail_template['body']);
+                }
+            }
             
             // Speichere zusätzlich in dienst_zuweisungen für History
             $zuweisung_data['slot_id'] = $free_slot->id;
@@ -748,14 +824,22 @@ class Dienstplan_Public {
             
             $message = 'Sie wurden erfolgreich für den Dienst angemeldet!';
             if ($split_dienst) {
-                $message = 'Der Dienst wurde geteilt und Sie wurden für Teil ' . $dienst_teil . ' angemeldet!';
+                $message = 'Der Dienst wurde geteilt und Sie wurden für Teil ' . $gewaehlter_slot . ' angemeldet!';
+            }
+
+            if (!empty($email) && get_option('dp_mail_enable_booking', 1)) {
+                if ($booking_mail_sent === true) {
+                    $message .= ' Sie erhalten in Kürze eine Bestätigungs-E-Mail.';
+                } elseif ($booking_mail_sent === false) {
+                    $message .= ' Hinweis: Die Bestätigungs-E-Mail konnte nicht versendet werden.';
+                }
             }
             
             wp_send_json_success(array(
                 'message' => $message,
                 'mitarbeiter_id' => $mitarbeiter_id,
                 'split' => $split_dienst,
-                'teil' => $dienst_teil
+                'teil' => $gewaehlter_slot
             ));
             exit;
             

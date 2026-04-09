@@ -310,8 +310,21 @@ jQuery(document).on('submit', '#dp-anmelde-form', function(e) {
     };
     
     // Validierung
-    if (!formData.vorname || !formData.nachname || !formData.email) {
+    if (!formData.vorname || !formData.nachname) {
         alert('Bitte alle Pflichtfelder ausfüllen.');
+        return;
+    }
+
+    if (formData.email) {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(formData.email)) {
+            alert('Bitte eine gültige E-Mail-Adresse eingeben.');
+            return;
+        }
+    }
+
+    if (formData.create_user_account === '1' && !formData.email) {
+        alert('Für die Konto-Anlage ist eine E-Mail-Adresse erforderlich.');
         return;
     }
 
@@ -332,7 +345,10 @@ jQuery(document).on('submit', '#dp-anmelde-form', function(e) {
         success: function(response) {
             if (response.success) {
                 requestSucceeded = true;
-                alert('Vielen Dank für Ihre Anmeldung! Sie erhalten in Kürze eine Bestätigungs-E-Mail.');
+                const successMessage = (response.data && response.data.message)
+                    ? response.data.message
+                    : 'Vielen Dank für Ihre Anmeldung!';
+                alert(successMessage);
                 closeAnmeldeModal();
                 // Seite neu laden, um aktualisierten Status zu zeigen
                 location.reload();
