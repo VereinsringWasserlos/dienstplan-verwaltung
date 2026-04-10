@@ -58,6 +58,17 @@ class Dienstplan_Public {
         $this->db_prefix = $db_prefix ?? DIENSTPLAN_DB_PREFIX;
     }
 
+    private function log_booking_mail_debug($source, $payload = array()) {
+        if (!is_array($payload)) {
+            $payload = array('payload' => (string) $payload);
+        }
+
+        $payload['source'] = sanitize_key((string) $source);
+        $payload['timestamp'] = current_time('mysql');
+
+        error_log('DP BOOKING MAIL DEBUG: ' . wp_json_encode($payload));
+    }
+
     /**
      * Assets (CSS/JS) für Frontend laden
      *
@@ -454,6 +465,7 @@ class Dienstplan_Public {
             // Bestätigungs-E-Mail senden
             $booking_mail_enabled = (bool) get_option('dp_mail_enable_booking', 1);
             $booking_mail_sent = null;
+            $booking_mail_reason = '';
             if (!empty($email_for_user) && $booking_mail_enabled) {
                 $slot_id_mail = intval($_POST['slot_id']);
                 $slot_mail = $wpdb->get_row($wpdb->prepare(
@@ -461,7 +473,7 @@ class Dienstplan_Public {
                     $slot_id_mail
                 ));
                 $dienst_mail = $wpdb->get_row($wpdb->prepare(
-                    "SELECT d.*, v.titel as veranstaltung, v.seite_id as veranstaltung_seite_id, ve.name as verein, ve.seite_id as verein_seite_id, t.name as taetigkeit, b.name as bereich
+                    "SELECT d.*, COALESCE(v.titel, v.name) as veranstaltung, v.seite_id as veranstaltung_seite_id, ve.name as verein, ve.seite_id as verein_seite_id, t.name as taetigkeit, b.name as bereich
                      FROM {$prefix}dienste d
                      LEFT JOIN {$prefix}veranstaltungen v ON d.veranstaltung_id = v.id
                      LEFT JOIN {$prefix}vereine ve ON d.verein_id = ve.id
@@ -522,15 +534,42 @@ class Dienstplan_Public {
                         array('Content-Type: text/plain; charset=UTF-8')
                     );
 
-                    $booking_mail_sent = Dienstplan_Mail_Queue::enqueue_mail(
+                    if (empty($mail_template['subject']) || empty($mail_template['body'])) {
+                        $booking_mail_reason = 'template_empty';
+                        $booking_mail_sent = false;
+                    } else {
+                        $booking_mail_sent = Dienstplan_Mail_Queue::enqueue_mail(
                         $email_for_user,
                         $mail_template['subject'],
                         $mail_template['body'],
                         $mail_headers,
-                        array('type' => 'buchungsbestaetigung')
+                        array(
+                            'type' => 'buchungsbestaetigung',
+                            'source' => 'frontend_ajax_assign_slot'
+                        )
                     );
+                        if ($booking_mail_sent === false) {
+                            $booking_mail_reason = 'enqueue_failed';
+                        }
+                    }
+                } else {
+                    $booking_mail_sent = false;
+                    $booking_mail_reason = 'dienst_or_slot_missing';
                 }
+            } elseif (empty($email_for_user)) {
+                $booking_mail_reason = 'no_email';
+            } else {
+                $booking_mail_reason = 'booking_disabled';
             }
+
+            $this->log_booking_mail_debug('frontend_ajax_assign_slot', array(
+                'booking_enabled' => $booking_mail_enabled ? 1 : 0,
+                'email_present' => !empty($email_for_user) ? 1 : 0,
+                'slot_id' => intval($_POST['slot_id']),
+                'mitarbeiter_id' => intval($mitarbeiter_id),
+                'result' => is_bool($booking_mail_sent) ? ($booking_mail_sent ? 'success' : 'failed') : 'skipped',
+                'reason' => $booking_mail_reason,
+            ));
 
             $success_msg = 'Sie wurden erfolgreich eingetragen!';
             if (!empty($email_for_user) && $booking_mail_enabled) {
@@ -767,8 +806,10 @@ class Dienstplan_Public {
             }
 
             // Buchungs-Bestätigung senden (auch ohne Account-Anlage, wenn E-Mail vorhanden)
+            $booking_mail_enabled = (bool) get_option('dp_mail_enable_booking', 1);
             $booking_mail_sent = null;
-            if (!empty($email) && get_option('dp_mail_enable_booking', 1)) {
+            $booking_mail_reason = '';
+            if (!empty($email) && $booking_mail_enabled) {
                 $dienst_mail = $wpdb->get_row($wpdb->prepare(
                     "SELECT d.*, COALESCE(v.titel, v.name) as veranstaltung, v.seite_id as veranstaltung_seite_id,
                             ve.name as verein, ve.seite_id as verein_seite_id,
@@ -828,15 +869,42 @@ class Dienstplan_Public {
                         array('Content-Type: text/plain; charset=UTF-8')
                     );
 
-                    $booking_mail_sent = Dienstplan_Mail_Queue::enqueue_mail(
+                    if (empty($mail_template['subject']) || empty($mail_template['body'])) {
+                        $booking_mail_sent = false;
+                        $booking_mail_reason = 'template_empty';
+                    } else {
+                        $booking_mail_sent = Dienstplan_Mail_Queue::enqueue_mail(
                         $email,
                         $mail_template['subject'],
                         $mail_template['body'],
                         $mail_headers,
-                        array('type' => 'buchungsbestaetigung')
+                        array(
+                            'type' => 'buchungsbestaetigung',
+                            'source' => 'frontend_ajax_register_service'
+                        )
                     );
+                        if ($booking_mail_sent === false) {
+                            $booking_mail_reason = 'enqueue_failed';
+                        }
+                    }
+                } else {
+                    $booking_mail_sent = false;
+                    $booking_mail_reason = 'dienst_or_slot_missing';
                 }
+            } elseif (empty($email)) {
+                $booking_mail_reason = 'no_email';
+            } else {
+                $booking_mail_reason = 'booking_disabled';
             }
+
+            $this->log_booking_mail_debug('frontend_ajax_register_service', array(
+                'booking_enabled' => $booking_mail_enabled ? 1 : 0,
+                'email_present' => !empty($email) ? 1 : 0,
+                'dienst_id' => intval($dienst_id),
+                'mitarbeiter_id' => intval($mitarbeiter_id),
+                'result' => is_bool($booking_mail_sent) ? ($booking_mail_sent ? 'success' : 'failed') : 'skipped',
+                'reason' => $booking_mail_reason,
+            ));
             
             // Speichere zusätzlich in dienst_zuweisungen für History
             $zuweisung_data['slot_id'] = $free_slot->id;
@@ -867,12 +935,14 @@ class Dienstplan_Public {
                 $message = 'Der Dienst wurde geteilt und Sie wurden für Teil ' . $gewaehlter_slot . ' angemeldet!';
             }
 
-            if (!empty($email) && get_option('dp_mail_enable_booking', 1)) {
+            if (!empty($email) && $booking_mail_enabled) {
                 if ($booking_mail_sent === true) {
                     $message .= ' Sie erhalten in Kürze eine Bestätigungs-E-Mail.';
                 } elseif ($booking_mail_sent === false) {
                     $message .= ' Hinweis: Die Bestätigungs-E-Mail konnte nicht versendet werden.';
                 }
+            } elseif (!empty($email) && !$booking_mail_enabled) {
+                $message .= ' Hinweis: Buchungsbestätigungen sind derzeit deaktiviert.';
             }
             
             wp_send_json_success(array(
@@ -1582,7 +1652,7 @@ class Dienstplan_Public {
         
         // Bestätigungs-E-Mail senden
         $dienst = $wpdb->get_row($wpdb->prepare(
-            "SELECT d.*, v.titel as veranstaltung, v.seite_id as veranstaltung_seite_id, ve.name as verein, ve.seite_id as verein_seite_id, t.name as taetigkeit, b.name as bereich
+            "SELECT d.*, COALESCE(v.titel, v.name) as veranstaltung, v.seite_id as veranstaltung_seite_id, ve.name as verein, ve.seite_id as verein_seite_id, t.name as taetigkeit, b.name as bereich
              FROM {$prefix}dienste d
              LEFT JOIN {$prefix}veranstaltungen v ON d.veranstaltung_id = v.id
              LEFT JOIN {$prefix}vereine ve ON d.verein_id = ve.id
@@ -1601,6 +1671,7 @@ class Dienstplan_Public {
         
         $booking_mail_enabled = (bool) get_option('dp_mail_enable_booking', 1);
         $booking_mail_sent = null;
+        $booking_mail_reason = '';
         if ($dienst && !empty($email) && $booking_mail_enabled) {
             $tag = $wpdb->get_row($wpdb->prepare(
                 "SELECT datum FROM {$prefix}veranstaltung_tage WHERE id = %d",
@@ -1653,14 +1724,41 @@ class Dienstplan_Public {
                 array('Content-Type: text/plain; charset=UTF-8')
             );
 
-            $booking_mail_sent = Dienstplan_Mail_Queue::enqueue_mail(
-                $email,
-                $mail_template['subject'],
-                $mail_template['body'],
-                $mail_headers,
-                array('type' => 'buchungsbestaetigung')
-            );
+            if (empty($mail_template['subject']) || empty($mail_template['body'])) {
+                $booking_mail_sent = false;
+                $booking_mail_reason = 'template_empty';
+            } else {
+                $booking_mail_sent = Dienstplan_Mail_Queue::enqueue_mail(
+                    $email,
+                    $mail_template['subject'],
+                    $mail_template['body'],
+                    $mail_headers,
+                    array(
+                        'type' => 'buchungsbestaetigung',
+                        'source' => 'frontend_ajax_anmeldung_verein'
+                    )
+                );
+                if ($booking_mail_sent === false) {
+                    $booking_mail_reason = 'enqueue_failed';
+                }
+            }
+        } elseif (empty($dienst)) {
+            $booking_mail_reason = 'dienst_missing';
+        } elseif (empty($email)) {
+            $booking_mail_reason = 'no_email';
+        } else {
+            $booking_mail_reason = 'booking_disabled';
         }
+
+        $this->log_booking_mail_debug('frontend_ajax_anmeldung_verein', array(
+            'booking_enabled' => $booking_mail_enabled ? 1 : 0,
+            'email_present' => !empty($email) ? 1 : 0,
+            'dienst_id' => intval($dienst_id),
+            'slot_id' => intval($slot_id),
+            'mitarbeiter_id' => intval($mitarbeiter_id),
+            'result' => is_bool($booking_mail_sent) ? ($booking_mail_sent ? 'success' : 'failed') : 'skipped',
+            'reason' => $booking_mail_reason,
+        ));
         
         $success_msg = 'Anmeldung erfolgreich!';
                 if (!empty($email) && $booking_mail_enabled) {

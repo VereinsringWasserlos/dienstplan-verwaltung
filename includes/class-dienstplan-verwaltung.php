@@ -216,8 +216,8 @@ class Dienstplan_Verwaltung {
             $this->db_prefix
         );
 
-        // Updater initialisieren
-        $plugin_updater = new Dienstplan_Updater();
+        // Updater mit Verzögerung initialisieren (nach init-Hook und Translations)
+        $this->loader->add_action('admin_init', $this, 'initialize_updater');
 
         // Admin-Menü
         $this->loader->add_action('admin_menu', $plugin_admin, 'add_menu');
@@ -378,7 +378,12 @@ class Dienstplan_Verwaltung {
         // Datenbank-Objekt erstellen für Migrationen
         $database = new Dienstplan_Database($this->db_prefix);
         
-        if (version_compare($db_version, $this->version, '<')) {
+        // Sichere DB-Struktur: Prüfe ob kritische Tabellen existieren, und erstelle sie falls nötig
+        global $wpdb;
+        $vital_table = $wpdb->prefix . $this->db_prefix . 'veranstaltung_tage';
+        $vital_table_exists = $wpdb->get_var("SHOW TABLES LIKE '{$vital_table}'") == $vital_table;
+        
+        if (version_compare($db_version, $this->version, '<') || !$vital_table_exists) {
             $database->install();
             
             // Benachrichtigungssystem installieren
@@ -551,6 +556,18 @@ class Dienstplan_Verwaltung {
         }
         
         return $show_admin_bar;
+    }
+
+    /**
+     * Updater initialisieren (vom admin_init Hook)
+     * 
+     * Wird nach dem init-Hook und Translations-Loading aufgerufen,
+     * um Frühzeitiges Text-Domain-Loading zu vermeiden.
+     *
+     * @since    0.9.5.61
+     */
+    public function initialize_updater() {
+        new Dienstplan_Updater();
     }
 
     /**

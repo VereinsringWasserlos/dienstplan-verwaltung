@@ -5813,8 +5813,8 @@ class Dienstplan_Admin {
                 'total' => $wpdb->get_var("SELECT COUNT(*) FROM {$prefix}veranstaltungen"),
                 'kommend' => $wpdb->get_var($wpdb->prepare(
                     "SELECT COUNT(DISTINCT v.id) FROM {$prefix}veranstaltungen v 
-                     INNER JOIN {$prefix}veranstaltungen_tage t ON v.id = t.veranstaltung_id 
-                     WHERE t.datum >= %s",
+                     INNER JOIN {$prefix}veranstaltung_tage t ON v.id = t.veranstaltung_id 
+                     WHERE t.tag_datum >= %s",
                     $heute
                 )),
                 'icon' => 'dashicons-calendar-alt',

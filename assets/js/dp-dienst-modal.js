@@ -665,14 +665,38 @@
         const dienstBisFolgetag = $('#d_bis_folgetag').is(':checked');
         
         if (!dienstVon || !dienstBis) return true;
+
+        const toMinutes = function(timeValue) {
+            if (!timeValue || typeof timeValue !== 'string' || timeValue.indexOf(':') === -1) {
+                return null;
+            }
+            const parts = timeValue.substring(0, 5).split(':');
+            const h = parseInt(parts[0], 10);
+            const m = parseInt(parts[1], 10);
+            if (isNaN(h) || isNaN(m)) {
+                return null;
+            }
+            return (h * 60) + m;
+        };
         
         // Normalisiere Zeiten auf HH:MM Format
         const tagVon = window.currentTagZeitfenster.von.substring(0, 5);
         const tagBis = window.currentTagZeitfenster.bis.substring(0, 5);
         const tagBisDatum = window.currentTagZeitfenster.bis_datum;
+        const tagIstOvernight = !!tagBisDatum;
+
+        const dienstVonMin = toMinutes(dienstVon);
+        const dienstBisMin = toMinutes(dienstBis);
+        const tagVonMin = toMinutes(tagVon);
+        const tagBisMin = toMinutes(tagBis);
+
+        if (dienstVonMin === null || dienstBisMin === null || tagVonMin === null || tagBisMin === null) {
+            $('#dienst-zeit-warnung').hide();
+            return true;
+        }
         
         // Vergleiche Zeiten (mit < und > damit gleiche Zeiten erlaubt sind)
-        if (dienstVon < tagVon) {
+        if (dienstVonMin < tagVonMin) {
             $('#dienst-zeit-warnung-text').text(`Dienst-Start (${dienstVon}) liegt vor dem erlaubten Zeitfenster-Start (${tagVon})`);
             $('#dienst-zeit-warnung').show();
             return false;
@@ -684,8 +708,23 @@
             $('#dienst-zeit-warnung').show();
             return false;
         }
-        
-        if (dienstBis > tagBis) {
+
+        // Dienst am selben Tag muss logisch sein
+        if (!dienstBisFolgetag && dienstBisMin <= dienstVonMin) {
+            $('#dienst-zeit-warnung-text').text('Dienst-Ende muss bei gleichem Tag nach dem Dienst-Start liegen');
+            $('#dienst-zeit-warnung').show();
+            return false;
+        }
+
+        // Dienst am Folgetag ist nur innerhalb des Folgetag-Endes des Zeitfensters erlaubt
+        if (dienstBisFolgetag && dienstBisMin > tagBisMin) {
+            $('#dienst-zeit-warnung-text').text(`Dienst-Ende (${dienstBis}) liegt nach dem erlaubten Zeitfenster-Ende (${tagBis})`);
+            $('#dienst-zeit-warnung').show();
+            return false;
+        }
+
+        // Bei Tag-Zeitfenster ohne Overnight gilt die bisherige obere Grenze am selben Tag
+        if (!tagIstOvernight && !dienstBisFolgetag && dienstBisMin > tagBisMin) {
             $('#dienst-zeit-warnung-text').text(`Dienst-Ende (${dienstBis}) liegt nach dem erlaubten Zeitfenster-Ende (${tagBis})`);
             $('#dienst-zeit-warnung').show();
             return false;

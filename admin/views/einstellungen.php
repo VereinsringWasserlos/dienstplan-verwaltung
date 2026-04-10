@@ -411,6 +411,8 @@ $nav_items = array(
                                 <th style="width:170px;"><?php _e('Zeitpunkt', 'dienstplan-verwaltung'); ?></th>
                                 <th style="width:220px;"><?php _e('Empfänger', 'dienstplan-verwaltung'); ?></th>
                                 <th style="width:160px;"><?php _e('Typ', 'dienstplan-verwaltung'); ?></th>
+                                <th style="width:170px;"><?php _e('Quelle', 'dienstplan-verwaltung'); ?></th>
+                                <th style="width:150px;"><?php _e('Grund', 'dienstplan-verwaltung'); ?></th>
                                 <th><?php _e('Betreff', 'dienstplan-verwaltung'); ?></th>
                                 <th style="width:120px;"><?php _e('Status', 'dienstplan-verwaltung'); ?></th>
                                 <th style="width:80px;"><?php _e('Versuche', 'dienstplan-verwaltung'); ?></th>
@@ -423,6 +425,8 @@ $nav_items = array(
                                 <td><?php echo esc_html($entry['time'] ?? ''); ?></td>
                                 <td style="word-break: break-all;"><?php echo esc_html($entry['to'] ?? ''); ?></td>
                                 <td><?php echo esc_html($entry['type'] ?? '-'); ?></td>
+                                <td><?php echo esc_html($entry['source'] ?? '-'); ?></td>
+                                <td><?php echo esc_html($entry['reason'] ?? '-'); ?></td>
                                 <td><?php echo esc_html($entry['subject'] ?? ''); ?></td>
                                 <td><?php echo esc_html($entry['status'] ?? ''); ?></td>
                                 <td><?php echo intval($entry['attempts'] ?? 0); ?></td>

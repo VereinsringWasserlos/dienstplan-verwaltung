@@ -28,6 +28,14 @@ class Dienstplan_Mail_Queue {
         return $type;
     }
 
+    private static function resolve_meta_value($meta, $key) {
+        if (!is_array($meta) || !isset($meta[$key])) {
+            return '';
+        }
+
+        return sanitize_text_field((string) $meta[$key]);
+    }
+
     public static function get_delivery_mode() {
         $mode = (string) get_option(self::MODE_OPTION, 'queue');
         return in_array($mode, array('queue', 'immediate'), true) ? $mode : 'queue';
@@ -82,12 +90,24 @@ class Dienstplan_Mail_Queue {
     }
 
     public static function enqueue_mail($to, $subject, $message, $headers = array(), $meta = array()) {
+        $mail_type = self::resolve_meta_type($meta);
+        $mail_source = self::resolve_meta_value($meta, 'source');
+        $mail_reason = self::resolve_meta_value($meta, 'reason');
         $recipients = self::normalize_recipients($to);
         if (empty($recipients)) {
+            self::append_log(array(
+                'time' => current_time('mysql'),
+                'status' => 'skipped',
+                'to' => is_array($to) ? implode(', ', $to) : (string) $to,
+                'subject' => (string) $subject,
+                'error' => '',
+                'attempts' => 0,
+                'type' => $mail_type,
+                'source' => $mail_source,
+                'reason' => !empty($mail_reason) ? $mail_reason : 'invalid_recipient',
+            ));
             return false;
         }
-
-        $mail_type = self::resolve_meta_type($meta);
 
         if (self::get_delivery_mode() === 'immediate') {
             $mail_result = wp_mail($recipients, (string) $subject, (string) $message, $headers);
@@ -107,6 +127,8 @@ class Dienstplan_Mail_Queue {
                 'error' => $error_message,
                 'attempts' => 1,
                 'type' => $mail_type,
+                'source' => $mail_source,
+                'reason' => $mail_result ? '' : 'wp_mail_failed',
             ));
 
             return (bool) $mail_result;
@@ -140,6 +162,8 @@ class Dienstplan_Mail_Queue {
             'error' => '',
             'attempts' => 0,
             'type' => $mail_type,
+            'source' => $mail_source,
+            'reason' => $mail_reason,
         ));
 
         return true;
@@ -173,6 +197,7 @@ class Dienstplan_Mail_Queue {
             $message = isset($item['message']) ? (string) $item['message'] : '';
             $headers = isset($item['headers']) && is_array($item['headers']) ? $item['headers'] : array();
             $mail_type = self::resolve_meta_type(isset($item['meta']) ? $item['meta'] : array());
+            $mail_source = self::resolve_meta_value(isset($item['meta']) ? $item['meta'] : array(), 'source');
 
             $processed++;
             $mail_result = wp_mail($to, $subject, $message, $headers);
@@ -187,6 +212,8 @@ class Dienstplan_Mail_Queue {
                     'error' => '',
                     'attempts' => intval(isset($item['attempts']) ? $item['attempts'] : 0) + 1,
                     'type' => $mail_type,
+                    'source' => $mail_source,
+                    'reason' => '',
                 ));
                 unset($queue[$index]);
                 continue;
@@ -209,6 +236,8 @@ class Dienstplan_Mail_Queue {
                     'error' => $error_message,
                     'attempts' => $attempts,
                     'type' => $mail_type,
+                    'source' => $mail_source,
+                    'reason' => 'wp_mail_failed',
                 ));
                 unset($queue[$index]);
             } else {
@@ -223,6 +252,8 @@ class Dienstplan_Mail_Queue {
                     'error' => $error_message,
                     'attempts' => $attempts,
                     'type' => $mail_type,
+                    'source' => $mail_source,
+                    'reason' => 'wp_mail_failed',
                 ));
             }
         }

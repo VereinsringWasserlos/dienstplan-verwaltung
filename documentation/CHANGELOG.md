@@ -11,6 +11,24 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ---
 
+## [0.9.5.62] - 2026-04-10 🛠️ Kritische Datenbankfehler: SQL-Spaltennamen und fehlende Tabelle
+
+### 🐛 Bugfixes
+
+- **Frontend: SQL-Fehler `Unknown column 'v.titel'` bei Buchungen**: Die Queries in `ajax_assign_slot()` und `ajax_anmeldung_verein()` verwendeten die nicht-existente Spalte `v.titel`. Alle drei Booking-Endpoints nutzen jetzt `COALESCE(v.titel, v.name)` wie bereits in `ajax_register_service()` implementiert, um auf fallback Vereinsnamen zu unterstützen.
+- **Dashboard: Falscher Tabellen- und Spaltennamen**: Die Statistik-Query im Dashboard-Widget referenzierte die nicht-existente Tabelle `{prefix}veranstaltungen_tage` statt `{prefix}veranstaltung_tage` und die Spalte `datum` statt `tag_datum`. Korrigiert.
+- **Datenbankstruktur: Automatische Reparatur bei fehlender Tabelle**: Der Initialisierer prüft jetzt beim Plugin-Start, ob die kritische Tabelle `veranstaltung_tage` existiert, und erstellt sie falls nötig (z. B. bei unvollständigen Plugin-Aktivierungen auf älteren Servern).
+- **WordPress 6.7+ Warnung: Textdomain zu früh geladen**: Der Updater wird jetzt auf dem `admin_init` Hook statt während der Klassen-Initialisierung instanziiert. Dadurch wird die Textdomain nach dem `init` Hook geladen und die WordPress 6.7+ Warnung eliminiert.
+
+### ⚙️ Technisch
+
+- `class-dienstplan-verwaltung.php`: `check_database_updates()` prüft jetzt nach kritischen Tabellen und führt `install()` aus, falls nötig.
+- `class-dienstplan-verwaltung.php`: Neue Methode `initialize_updater()` wird auf `admin_init` Hook gebunden, statt den Updater direkt zu instantiieren.
+- `public/class-public.php`: Beide problematischen SQL-Queries in Booking-Endpoints aktualisiert.
+- `admin/class-admin.php`: Dashboard-Widget Query korrigiert.
+
+---
+
 ## [0.9.5.61] - 2026-04-10 📬 Mail-Queue: Buchungsversand robuster und transparenter
 
 ### 🐛 Bugfixes
