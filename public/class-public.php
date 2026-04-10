@@ -656,7 +656,7 @@ class Dienstplan_Public {
             );
 
             wp_send_json_success(array(
-                'message' => $success_msg,
+                'message' => $success_msg . "\n\n" . $diagnose['text'],
                 'mitarbeiter_id' => $mitarbeiter_id,
                 'diagnose' => $diagnose['data'],
                 'diagnose_text' => $diagnose['text'],
@@ -1883,7 +1883,7 @@ class Dienstplan_Public {
         );
 
         wp_send_json_success(array(
-            'message' => $success_msg,
+            'message' => $success_msg . "\n\n" . $diagnose['text'],
             'mitarbeiter_id' => $mitarbeiter_id,
             'diagnose' => $diagnose['data'],
             'diagnose_text' => $diagnose['text'],
