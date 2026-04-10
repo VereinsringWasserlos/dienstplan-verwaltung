@@ -304,7 +304,13 @@ class Dienstplan_Notifications {
     private function send_email($user_id, $email, $subject, $message, $notification_type) {
         $headers = array('Content-Type: text/plain; charset=UTF-8');
         
-        $sent = wp_mail($email, $subject, $message, $headers);
+        $sent = Dienstplan_Mail_Queue::enqueue_mail(
+            $email,
+            $subject,
+            $message,
+            $headers,
+            array('type' => 'notification', 'notification_type' => $notification_type)
+        );
         
         // Log speichern
         $this->wpdb->insert(

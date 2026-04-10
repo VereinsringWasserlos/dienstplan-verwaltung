@@ -520,7 +520,13 @@ class Dienstplan_Public {
                         array('Content-Type: text/plain; charset=UTF-8')
                     );
 
-                    wp_mail($email_for_user, $mail_template['subject'], $mail_template['body'], $mail_headers);
+                    Dienstplan_Mail_Queue::enqueue_mail(
+                        $email_for_user,
+                        $mail_template['subject'],
+                        $mail_template['body'],
+                        $mail_headers,
+                        array('type' => 'buchungsbestaetigung')
+                    );
                 }
             }
 
@@ -814,7 +820,13 @@ class Dienstplan_Public {
                         array('Content-Type: text/plain; charset=UTF-8')
                     );
 
-                    $booking_mail_sent = wp_mail($email, $mail_template['subject'], $mail_template['body'], $mail_headers);
+                    $booking_mail_sent = Dienstplan_Mail_Queue::enqueue_mail(
+                        $email,
+                        $mail_template['subject'],
+                        $mail_template['body'],
+                        $mail_headers,
+                        array('type' => 'buchungsbestaetigung')
+                    );
                 }
             }
             
@@ -1209,7 +1221,13 @@ class Dienstplan_Public {
                 array('Content-Type: text/plain; charset=UTF-8')
             );
             if (get_option('dp_mail_enable_portal_invite', 1)) {
-                wp_mail($email, $mail_template['subject'], $mail_template['body'], $mail_headers);
+                Dienstplan_Mail_Queue::enqueue_mail(
+                    $email,
+                    $mail_template['subject'],
+                    $mail_template['body'],
+                    $mail_headers,
+                    array('type' => 'portal_invite')
+                );
             }
         }
 
@@ -1625,7 +1643,13 @@ class Dienstplan_Public {
                 array('Content-Type: text/plain; charset=UTF-8')
             );
 
-            wp_mail($email, $mail_template['subject'], $mail_template['body'], $mail_headers);
+            Dienstplan_Mail_Queue::enqueue_mail(
+                $email,
+                $mail_template['subject'],
+                $mail_template['body'],
+                $mail_headers,
+                array('type' => 'buchungsbestaetigung')
+            );
         }
         
         $success_msg = 'Anmeldung erfolgreich!';

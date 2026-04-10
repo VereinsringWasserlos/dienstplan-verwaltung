@@ -8,7 +8,7 @@ $mail_page_mode = !empty($mail_page_mode);
 $active_tab = $mail_page_mode ? 'email' : (isset($_GET['tab']) ? $_GET['tab'] : 'general');
 $mail_active_tab = isset($_GET['mail_tab']) ? sanitize_key($_GET['mail_tab']) : 'versand';
 
-if (!in_array($mail_active_tab, array('versand', 'templates', 'smtp'), true)) {
+if (!in_array($mail_active_tab, array('versand', 'queue', 'templates', 'smtp'), true)) {
     $mail_active_tab = 'versand';
 }
 
@@ -69,6 +69,10 @@ $nav_items = array(
         <a href="?page=dienstplan-mail&mail_tab=templates" class="nav-tab <?php echo $mail_active_tab === 'templates' ? 'nav-tab-active' : ''; ?>">
             <span class="dashicons dashicons-edit" style="vertical-align: text-top; margin-right: 4px;"></span>
             <?php _e('Vorlagen', 'dienstplan-verwaltung'); ?>
+        </a>
+        <a href="?page=dienstplan-mail&mail_tab=queue" class="nav-tab <?php echo $mail_active_tab === 'queue' ? 'nav-tab-active' : ''; ?>">
+            <span class="dashicons dashicons-clock" style="vertical-align: text-top; margin-right: 4px;"></span>
+            <?php _e('Queue & Log', 'dienstplan-verwaltung'); ?>
         </a>
         <a href="?page=dienstplan-mail&mail_tab=smtp" class="nav-tab <?php echo $mail_active_tab === 'smtp' ? 'nav-tab-active' : ''; ?>">
             <span class="dashicons dashicons-admin-network" style="vertical-align: text-top; margin-right: 4px;"></span>
@@ -168,6 +172,22 @@ $nav_items = array(
             update_option('dp_mail_enable_booking',           isset($_POST['dp_mail_enable_booking']) ? 1 : 0);
             update_option('dp_mail_enable_portal_invite',     isset($_POST['dp_mail_enable_portal_invite']) ? 1 : 0);
             update_option('dp_mail_enable_dienste_uebersicht',isset($_POST['dp_mail_enable_dienste_uebersicht']) ? 1 : 0);
+            $queue_interval = intval($_POST['dp_mail_queue_interval_minutes'] ?? 5);
+            $queue_batch = intval($_POST['dp_mail_queue_batch_size'] ?? 20);
+            if ($queue_interval < 1) {
+                $queue_interval = 1;
+            }
+            if ($queue_interval > 120) {
+                $queue_interval = 120;
+            }
+            if ($queue_batch < 1) {
+                $queue_batch = 1;
+            }
+            if ($queue_batch > 200) {
+                $queue_batch = 200;
+            }
+            update_option('dp_mail_queue_interval_minutes', $queue_interval);
+            update_option('dp_mail_queue_batch_size', $queue_batch);
             echo '<div class="notice notice-success is-dismissible"><p><strong>Versand-Einstellungen gespeichert.</strong></p></div>';
         }
 
@@ -287,6 +307,22 @@ $nav_items = array(
                                 <p class="description">Betrifft: Schaltfläche „Dienste-Übersicht senden" in der Mitarbeiterliste.</p>
                             </td>
                         </tr>
+                        <tr>
+                            <th scope="row"><label for="dp_mail_queue_interval_minutes">Queue-Intervall (Minuten)</label></th>
+                            <td>
+                                <input type="number" id="dp_mail_queue_interval_minutes" name="dp_mail_queue_interval_minutes" class="small-text"
+                                       value="<?php echo esc_attr(get_option('dp_mail_queue_interval_minutes', 5)); ?>" min="1" max="120">
+                                <p class="description">Gibt an, in welchem Abstand die Mail-Queue automatisch verarbeitet wird (WP-Cron).</p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th scope="row"><label for="dp_mail_queue_batch_size">Queue-Batchgröße</label></th>
+                            <td>
+                                <input type="number" id="dp_mail_queue_batch_size" name="dp_mail_queue_batch_size" class="small-text"
+                                       value="<?php echo esc_attr(get_option('dp_mail_queue_batch_size', 20)); ?>" min="1" max="200">
+                                <p class="description">Anzahl Mails pro Queue-Durchlauf. Bei vielen Mails klein anfangen (z. B. 20).</p>
+                            </td>
+                        </tr>
                     </table>
 
                     <p class="submit">
@@ -295,6 +331,144 @@ $nav_items = array(
                 </form>
             </div>
         </div>
+        <?php endif; ?>
+
+        <?php if ($mail_active_tab === 'queue'): ?>
+        <?php
+        $queue_stats = Dienstplan_Mail_Queue::get_stats();
+        $queue_log = Dienstplan_Mail_Queue::get_log_items();
+        $next_run_display = !empty($queue_stats['next_run'])
+            ? date_i18n('d.m.Y H:i:s', intval($queue_stats['next_run']))
+            : 'nicht geplant';
+        ?>
+        <div class="dp-card" style="margin-top: 1.5rem;">
+            <div class="dp-card-header">
+                <h2><span class="dashicons dashicons-clock" style="vertical-align:middle; margin-right:6px;"></span><?php _e('Mail-Queue Status', 'dienstplan-verwaltung'); ?></h2>
+            </div>
+            <div class="dp-card-body">
+                <table class="form-table">
+                    <tr>
+                        <th scope="row"><?php _e('Einträge in Queue', 'dienstplan-verwaltung'); ?></th>
+                        <td><strong><?php echo intval($queue_stats['queue_count']); ?></strong></td>
+                    </tr>
+                    <tr>
+                        <th scope="row"><?php _e('Nächster geplanter Lauf', 'dienstplan-verwaltung'); ?></th>
+                        <td><?php echo esc_html($next_run_display); ?></td>
+                    </tr>
+                    <tr>
+                        <th scope="row"><?php _e('Letzter Lauf', 'dienstplan-verwaltung'); ?></th>
+                        <td><?php echo !empty($queue_stats['last_run']) ? esc_html($queue_stats['last_run']) : 'noch nicht ausgeführt'; ?></td>
+                    </tr>
+                    <tr>
+                        <th scope="row"><?php _e('Log-Einträge', 'dienstplan-verwaltung'); ?></th>
+                        <td><?php echo intval($queue_stats['log_count']); ?></td>
+                    </tr>
+                </table>
+
+                <p style="margin-top: 1rem; display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                    <button type="button" id="dp-process-mail-queue-now" class="button button-secondary">
+                        <?php _e('Queue jetzt verarbeiten', 'dienstplan-verwaltung'); ?>
+                    </button>
+                    <button type="button" id="dp-clear-mail-queue-log" class="button button-secondary" style="color:#b32d2e; border-color:#b32d2e;">
+                        <?php _e('Queue-Log leeren', 'dienstplan-verwaltung'); ?>
+                    </button>
+                    <span id="dp-mail-queue-action-result" style="font-weight: 600;"></span>
+                </p>
+            </div>
+        </div>
+
+        <div class="dp-card" style="margin-top: 1.5rem;">
+            <div class="dp-card-header">
+                <h2><span class="dashicons dashicons-list-view" style="vertical-align:middle; margin-right:6px;"></span><?php _e('Queue-Log', 'dienstplan-verwaltung'); ?></h2>
+            </div>
+            <div class="dp-card-body">
+                <?php if (empty($queue_log)): ?>
+                    <p class="description" style="font-style: italic;"><?php _e('Noch keine Queue-Einträge vorhanden.', 'dienstplan-verwaltung'); ?></p>
+                <?php else: ?>
+                    <table class="wp-list-table widefat fixed striped" style="font-size: 13px;">
+                        <thead>
+                            <tr>
+                                <th style="width:170px;"><?php _e('Zeitpunkt', 'dienstplan-verwaltung'); ?></th>
+                                <th style="width:220px;"><?php _e('Empfänger', 'dienstplan-verwaltung'); ?></th>
+                                <th><?php _e('Betreff', 'dienstplan-verwaltung'); ?></th>
+                                <th style="width:120px;"><?php _e('Status', 'dienstplan-verwaltung'); ?></th>
+                                <th style="width:80px;"><?php _e('Versuche', 'dienstplan-verwaltung'); ?></th>
+                                <th><?php _e('Fehler', 'dienstplan-verwaltung'); ?></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        <?php foreach ($queue_log as $entry): ?>
+                            <tr>
+                                <td><?php echo esc_html($entry['time'] ?? ''); ?></td>
+                                <td style="word-break: break-all;"><?php echo esc_html($entry['to'] ?? ''); ?></td>
+                                <td><?php echo esc_html($entry['subject'] ?? ''); ?></td>
+                                <td><?php echo esc_html($entry['status'] ?? ''); ?></td>
+                                <td><?php echo intval($entry['attempts'] ?? 0); ?></td>
+                                <td style="color:#b32d2e;"><?php echo esc_html($entry['error'] ?? ''); ?></td>
+                            </tr>
+                        <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                <?php endif; ?>
+            </div>
+        </div>
+
+        <script>
+        (function($) {
+            var nonce = '<?php echo esc_js(wp_create_nonce('dp_ajax_nonce')); ?>';
+            var result = $('#dp-mail-queue-action-result');
+
+            $('#dp-process-mail-queue-now').on('click', function() {
+                var btn = $(this);
+                btn.prop('disabled', true).text('Verarbeite...');
+                result.css('color', '#666').text('');
+
+                $.post(ajaxurl, {
+                    action: 'dp_process_mail_queue_now',
+                    nonce: nonce
+                }, function(res) {
+                    if (res && res.success) {
+                        result.css('color', '#00a32a').text('✓ ' + res.data.message);
+                        window.setTimeout(function() { location.reload(); }, 1000);
+                    } else {
+                        var msg = (res && res.data && res.data.message) ? res.data.message : 'Unbekannter Fehler.';
+                        result.css('color', '#d63638').text('✗ ' + msg);
+                    }
+                }).fail(function() {
+                    result.css('color', '#d63638').text('Serverfehler - bitte Seite neu laden.');
+                }).always(function() {
+                    btn.prop('disabled', false).text('Queue jetzt verarbeiten');
+                });
+            });
+
+            $('#dp-clear-mail-queue-log').on('click', function() {
+                if (!window.confirm('Queue-Log wirklich leeren?')) {
+                    return;
+                }
+
+                var btn = $(this);
+                btn.prop('disabled', true).text('Leere Log...');
+                result.css('color', '#666').text('');
+
+                $.post(ajaxurl, {
+                    action: 'dp_clear_mail_queue_log',
+                    nonce: nonce
+                }, function(res) {
+                    if (res && res.success) {
+                        result.css('color', '#00a32a').text('✓ ' + res.data.message);
+                        window.setTimeout(function() { location.reload(); }, 500);
+                    } else {
+                        var msg = (res && res.data && res.data.message) ? res.data.message : 'Unbekannter Fehler.';
+                        result.css('color', '#d63638').text('✗ ' + msg);
+                    }
+                }).fail(function() {
+                    result.css('color', '#d63638').text('Serverfehler - bitte Seite neu laden.');
+                }).always(function() {
+                    btn.prop('disabled', false).text('Queue-Log leeren');
+                });
+            });
+        })(jQuery);
+        </script>
         <?php endif; ?>
 
         <?php if ($mail_active_tab === 'templates'): ?>

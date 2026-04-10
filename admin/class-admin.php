@@ -2749,7 +2749,7 @@ class Dienstplan_Admin {
         
         $headers = array('Content-Type: text/plain; charset=UTF-8');
         
-        return wp_mail($email, $subject, $message, $headers);
+        return Dienstplan_Mail_Queue::enqueue_mail($email, $subject, $message, $headers, array('type' => 'user_invitation'));
     }
     
     /**
@@ -3222,7 +3222,13 @@ class Dienstplan_Admin {
                             array('Content-Type: text/plain; charset=UTF-8')
                         );
 
-                        $email_sent = wp_mail($email, $mail_template['subject'], $mail_template['body'], $mail_headers);
+                        $email_sent = Dienstplan_Mail_Queue::enqueue_mail(
+                            $email,
+                            $mail_template['subject'],
+                            $mail_template['body'],
+                            $mail_headers,
+                            array('type' => 'portal_invite')
+                        );
                         
                         if ($email_sent) {
                             $portal_message = ' Portal-Zugriff aktiviert und Login-Daten versendet.';
@@ -6872,7 +6878,13 @@ class Dienstplan_Admin {
         );
 
         $email_sent = get_option('dp_mail_enable_portal_invite', 1)
-            ? wp_mail($mitarbeiter->email, $mail_template['subject'], $mail_template['body'], $mail_headers)
+            ? Dienstplan_Mail_Queue::enqueue_mail(
+                $mitarbeiter->email,
+                $mail_template['subject'],
+                $mail_template['body'],
+                $mail_headers,
+                array('type' => 'portal_invite')
+            )
             : false;
         $invite_disabled = !get_option('dp_mail_enable_portal_invite', 1);
         
@@ -6996,7 +7008,13 @@ class Dienstplan_Admin {
             array('Content-Type: text/plain; charset=UTF-8')
         );
 
-        $email_sent = wp_mail($mitarbeiter->email, $mail_template['subject'], $mail_template['body'], $mail_headers);
+        $email_sent = Dienstplan_Mail_Queue::enqueue_mail(
+            $mitarbeiter->email,
+            $mail_template['subject'],
+            $mail_template['body'],
+            $mail_headers,
+            array('type' => 'portal_reset_credentials')
+        );
         
         if ($email_sent) {
             wp_send_json_success(array(
@@ -7423,7 +7441,13 @@ class Dienstplan_Admin {
 
         $headers = Dienstplan_Mail_Templates::build_headers_from_template($mail_template, $headers);
 
-        $sent = wp_mail($ma->email, $mail_template['subject'], $mail_template['body'], $headers);
+        $sent = Dienstplan_Mail_Queue::enqueue_mail(
+            $ma->email,
+            $mail_template['subject'],
+            $mail_template['body'],
+            $headers,
+            array('type' => 'dienste_uebersicht')
+        );
 
         if ($sent) {
             wp_send_json_success(array(
@@ -7553,7 +7577,13 @@ class Dienstplan_Admin {
             );
             
             if (get_option('dp_mail_enable_portal_invite', 1)) {
-                wp_mail($mitarbeiter->email, $mail_template['subject'], $mail_template['body'], $mail_headers);
+                Dienstplan_Mail_Queue::enqueue_mail(
+                    $mitarbeiter->email,
+                    $mail_template['subject'],
+                    $mail_template['body'],
+                    $mail_headers,
+                    array('type' => 'portal_invite')
+                );
             }
             $success_count++;
         }
@@ -7794,17 +7824,18 @@ class Dienstplan_Admin {
             $headers[] = 'Reply-To: ' . $reply_to;
         }
 
-        $sent = wp_mail($to, $subject, $body, $headers);
+        $sent = Dienstplan_Mail_Queue::enqueue_mail(
+            $to,
+            $subject,
+            $body,
+            $headers,
+            array('type' => 'test_mail')
+        );
 
         if ($sent) {
-            wp_send_json_success(array('message' => 'Test-Mail erfolgreich an ' . esc_html($to) . ' gesendet.'));
+            wp_send_json_success(array('message' => 'Test-Mail wurde an die Queue übergeben: ' . esc_html($to) . '.'));
         } else {
-            global $phpmailer;
-            $error_info = '';
-            if (isset($phpmailer) && !empty($phpmailer->ErrorInfo)) {
-                $error_info = ' Fehlerdetail: ' . $phpmailer->ErrorInfo;
-            }
-            wp_send_json_error(array('message' => 'E-Mail konnte nicht gesendet werden.' . $error_info));
+            wp_send_json_error(array('message' => 'E-Mail konnte nicht zur Queue hinzugefügt werden.'));
         }
     }
 
@@ -7872,30 +7903,53 @@ class Dienstplan_Admin {
 
         $headers = Dienstplan_Mail_Templates::build_headers_from_template($mail_template, $headers);
 
-        $sent = wp_mail($to, $mail_template['subject'], $mail_template['body'], $headers);
+        $sent = Dienstplan_Mail_Queue::enqueue_mail(
+            $to,
+            $mail_template['subject'],
+            $mail_template['body'],
+            $headers,
+            array('type' => 'template_test_mail', 'template' => $template_type)
+        );
 
         if ($sent) {
-            wp_send_json_success(array('message' => 'Test-Mail fuer Vorlage "' . $definitions[$template_type]['label'] . '" wurde an ' . esc_html($to) . ' gesendet.'));
+            wp_send_json_success(array('message' => 'Test-Mail fuer Vorlage "' . $definitions[$template_type]['label'] . '" wurde zur Queue hinzugefügt: ' . esc_html($to) . '.'));
         } else {
-            global $phpmailer;
-            $error_info = '';
-            if (isset($phpmailer) && !empty($phpmailer->ErrorInfo)) {
-                $error_info = ' Fehlerdetail: ' . $phpmailer->ErrorInfo;
-            }
-            wp_send_json_error(array('message' => 'E-Mail konnte nicht gesendet werden.' . $error_info));
+            wp_send_json_error(array('message' => 'E-Mail konnte nicht zur Queue hinzugefügt werden.'));
         }
     }
 
     /**
      * AJAX: Mail-Debug-Log leeren
      */
-    public function ajax_clear_mail_log() {
+    public function ajax_clear_mail_queue_log() {
         check_ajax_referer('dp_ajax_nonce', 'nonce');
         if (!current_user_can('manage_options')) {
             wp_send_json_error(array('message' => 'Keine Berechtigung.'));
             return;
         }
-        delete_option('dp_mail_debug_log');
-        wp_send_json_success(array('message' => 'Mail-Log geleert.'));
+        Dienstplan_Mail_Queue::clear_log();
+        wp_send_json_success(array('message' => 'Queue-Log geleert.'));
+    }
+
+    /**
+     * AJAX: Mail-Queue sofort verarbeiten
+     */
+    public function ajax_process_mail_queue_now() {
+        check_ajax_referer('dp_ajax_nonce', 'nonce');
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(array('message' => 'Keine Berechtigung.'));
+            return;
+        }
+
+        $result = Dienstplan_Mail_Queue::process_queue();
+        wp_send_json_success(array(
+            'message' => sprintf(
+                'Queue verarbeitet: %d bearbeitet, %d versendet, %d fehlgeschlagen, %d verbleibend.',
+                intval($result['processed']),
+                intval($result['sent']),
+                intval($result['failed']),
+                intval($result['remaining'])
+            )
+        ));
     }
 }
