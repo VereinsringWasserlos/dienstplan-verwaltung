@@ -452,7 +452,9 @@ class Dienstplan_Public {
             setcookie('dp_mitarbeiter_id', $mitarbeiter_id, time() + WEEK_IN_SECONDS, COOKIEPATH, COOKIE_DOMAIN, is_ssl(), true);
 
             // Bestätigungs-E-Mail senden
-            if (!empty($email_for_user) && get_option('dp_mail_enable_booking', 1)) {
+            $booking_mail_enabled = (bool) get_option('dp_mail_enable_booking', 1);
+            $booking_mail_sent = null;
+            if (!empty($email_for_user) && $booking_mail_enabled) {
                 $slot_id_mail = intval($_POST['slot_id']);
                 $slot_mail = $wpdb->get_row($wpdb->prepare(
                     "SELECT * FROM {$prefix}dienst_slots WHERE id = %d",
@@ -520,7 +522,7 @@ class Dienstplan_Public {
                         array('Content-Type: text/plain; charset=UTF-8')
                     );
 
-                    Dienstplan_Mail_Queue::enqueue_mail(
+                    $booking_mail_sent = Dienstplan_Mail_Queue::enqueue_mail(
                         $email_for_user,
                         $mail_template['subject'],
                         $mail_template['body'],
@@ -531,8 +533,14 @@ class Dienstplan_Public {
             }
 
             $success_msg = 'Sie wurden erfolgreich eingetragen!';
-            if (!empty($email_for_user)) {
-                $success_msg .= ' Sie erhalten in Kürze eine Bestätigungs-E-Mail.';
+            if (!empty($email_for_user) && $booking_mail_enabled) {
+                if ($booking_mail_sent === true) {
+                    $success_msg .= ' Sie erhalten in Kürze eine Bestätigungs-E-Mail.';
+                } elseif ($booking_mail_sent === false) {
+                    $success_msg .= ' Hinweis: Die Bestätigungs-E-Mail konnte nicht erstellt werden.';
+                }
+            } elseif (!empty($email_for_user) && !$booking_mail_enabled) {
+                $success_msg .= ' Hinweis: Buchungsbestätigungen sind derzeit deaktiviert.';
             }
 
             wp_send_json_success(array(
@@ -1591,7 +1599,9 @@ class Dienstplan_Public {
             $this->ensure_portal_user_for_mitarbeiter($db, $mitarbeiter, $email, $verein_id);
         }
         
-        if ($dienst && !empty($email) && get_option('dp_mail_enable_booking', 1)) {
+        $booking_mail_enabled = (bool) get_option('dp_mail_enable_booking', 1);
+        $booking_mail_sent = null;
+        if ($dienst && !empty($email) && $booking_mail_enabled) {
             $tag = $wpdb->get_row($wpdb->prepare(
                 "SELECT datum FROM {$prefix}veranstaltung_tage WHERE id = %d",
                 $dienst->tag_id
@@ -1643,7 +1653,7 @@ class Dienstplan_Public {
                 array('Content-Type: text/plain; charset=UTF-8')
             );
 
-            Dienstplan_Mail_Queue::enqueue_mail(
+            $booking_mail_sent = Dienstplan_Mail_Queue::enqueue_mail(
                 $email,
                 $mail_template['subject'],
                 $mail_template['body'],
@@ -1653,8 +1663,14 @@ class Dienstplan_Public {
         }
         
         $success_msg = 'Anmeldung erfolgreich!';
-        if (!empty($email)) {
-            $success_msg .= ' Sie erhalten in Kürze eine Bestätigungs-E-Mail.';
+                if (!empty($email) && $booking_mail_enabled) {
+                    if ($booking_mail_sent === true) {
+                        $success_msg .= ' Sie erhalten in Kürze eine Bestätigungs-E-Mail.';
+                    } elseif ($booking_mail_sent === false) {
+                        $success_msg .= ' Hinweis: Die Bestätigungs-E-Mail konnte nicht erstellt werden.';
+                    }
+                } elseif (!empty($email) && !$booking_mail_enabled) {
+                    $success_msg .= ' Hinweis: Buchungsbestätigungen sind derzeit deaktiviert.';
         }
         wp_send_json_success(array(
             'message' => $success_msg,

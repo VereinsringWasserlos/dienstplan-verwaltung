@@ -1,6 +1,6 @@
 # Dienstplan Verwaltung V2
 
-**Version:** 0.9.5.47 (Dashboard Version & Import UX Release)  
+**Version:** 0.9.5.61 (Mail Queue Booking Reliability Release)  
 **Requires at least:** WordPress 5.0  
 **Tested up to:** WordPress 6.4  
 **Requires PHP:** 7.2  
@@ -102,7 +102,7 @@ Zeigt eine komplette Einstiegsseite mit:
 
 ## 🎯 Aktueller Stand
 
-- Aktuelle Version: **0.9.5.47**
+- Aktuelle Version: **0.9.5.61**
 - Laufende Änderungen und Releases: siehe `documentation/CHANGELOG.md`
 - Rollenübersicht: siehe `documentation/ROLLEN-UEBERSICHT.md`
 - Schnellstart: siehe `documentation/QUICK_START.md`
@@ -123,7 +123,7 @@ GPLv2 or later
 
 ---
 
-**Version 0.9.5.47** - Dashboard Version & Import UX Release  
-Stand: 24. März 2026
+**Version 0.9.5.61** - Mail Queue Booking Reliability Release  
+Stand: 10. April 2026
 
 Entwickelt für den Vereinsring Wasserlos und die Feuerwehr- und Event-Gemeinschaft.

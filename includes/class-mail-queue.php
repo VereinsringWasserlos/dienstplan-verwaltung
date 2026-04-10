@@ -19,6 +19,15 @@ class Dienstplan_Mail_Queue {
     const CRON_SCHEDULE = 'dp_mail_queue_interval';
     const MAX_LOG_ITEMS = 250;
 
+    private static function resolve_meta_type($meta) {
+        if (!is_array($meta)) {
+            return '';
+        }
+
+        $type = isset($meta['type']) ? sanitize_key((string) $meta['type']) : '';
+        return $type;
+    }
+
     public static function get_delivery_mode() {
         $mode = (string) get_option(self::MODE_OPTION, 'queue');
         return in_array($mode, array('queue', 'immediate'), true) ? $mode : 'queue';
@@ -78,6 +87,8 @@ class Dienstplan_Mail_Queue {
             return false;
         }
 
+        $mail_type = self::resolve_meta_type($meta);
+
         if (self::get_delivery_mode() === 'immediate') {
             $mail_result = wp_mail($recipients, (string) $subject, (string) $message, $headers);
             $error_message = '';
@@ -95,6 +106,7 @@ class Dienstplan_Mail_Queue {
                 'subject' => (string) $subject,
                 'error' => $error_message,
                 'attempts' => 1,
+                'type' => $mail_type,
             ));
 
             return (bool) $mail_result;
@@ -127,6 +139,7 @@ class Dienstplan_Mail_Queue {
             'subject' => (string) $subject,
             'error' => '',
             'attempts' => 0,
+            'type' => $mail_type,
         ));
 
         return true;
@@ -159,6 +172,7 @@ class Dienstplan_Mail_Queue {
             $subject = isset($item['subject']) ? (string) $item['subject'] : '';
             $message = isset($item['message']) ? (string) $item['message'] : '';
             $headers = isset($item['headers']) && is_array($item['headers']) ? $item['headers'] : array();
+            $mail_type = self::resolve_meta_type(isset($item['meta']) ? $item['meta'] : array());
 
             $processed++;
             $mail_result = wp_mail($to, $subject, $message, $headers);
@@ -172,6 +186,7 @@ class Dienstplan_Mail_Queue {
                     'subject' => $subject,
                     'error' => '',
                     'attempts' => intval(isset($item['attempts']) ? $item['attempts'] : 0) + 1,
+                    'type' => $mail_type,
                 ));
                 unset($queue[$index]);
                 continue;
@@ -193,6 +208,7 @@ class Dienstplan_Mail_Queue {
                     'subject' => $subject,
                     'error' => $error_message,
                     'attempts' => $attempts,
+                    'type' => $mail_type,
                 ));
                 unset($queue[$index]);
             } else {
@@ -206,6 +222,7 @@ class Dienstplan_Mail_Queue {
                     'subject' => $subject,
                     'error' => $error_message,
                     'attempts' => $attempts,
+                    'type' => $mail_type,
                 ));
             }
         }

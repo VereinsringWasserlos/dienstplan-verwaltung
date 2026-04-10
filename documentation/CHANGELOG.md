@@ -11,6 +11,16 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ---
 
+## [0.9.5.61] - 2026-04-10 📬 Mail-Queue: Buchungsversand robuster und transparenter
+
+### 🐛 Bugfixes
+
+- **Frontend-Buchung zeigte irrefuehrenden Erfolgstext**: In den Buchungs-Endpoints wird die Meldung zur Bestaetigungs-E-Mail jetzt nur noch angezeigt, wenn `enqueue_mail()` erfolgreich war. Bei deaktivierten Buchungsmails oder Queue-Fehlern erscheint ein klarer Hinweis.
+- **Queue-Log ohne eindeutigen Mail-Typ**: Log-Eintraege enthalten jetzt den Typ (z. B. `buchungsbestaetigung`, `portal_invite`, `dienste_uebersicht`) fuer schnellere Diagnose bei fehlenden Mails.
+- **Admin-Queue-Ansicht erweitert**: Im Queue-Log wurde eine Typ-Spalte ergaenzt, damit Buchungs-Mails zeitlich und fachlich leichter von anderen Versandtypen unterschieden werden koennen.
+
+---
+
 ## [0.9.5.59] - 2026-03-26 🔗 Frontend: Verein-Chip als Link
 
 ### ✨ Neu

@@ -1,8 +1,8 @@
 # Dokumentation - Dienstplan-Verwaltung V2
 
-**Version:** 0.9.5.47  
-**Stand:** 24. März 2026  
-**Status:** Dashboard-Version, Import-UX und Frontend-Layout-Fixes aktuell
+**Version:** 0.9.5.61  
+**Stand:** 10. April 2026  
+**Status:** Mail-Queue mit robuster Buchungsversand-Rueckmeldung und erweitertem Queue-Log
 
 ---
 
