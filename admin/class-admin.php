@@ -2991,10 +2991,20 @@ class Dienstplan_Admin {
         }
         
         if ($result !== false) {
+            $mail_note = '';
+            if (get_option('dp_mail_enable_booking', 1)) {
+                $mail_result = $this->send_booking_confirmation_for_slot($db, $slot_id, $mitarbeiter_id);
+                if ($mail_result === true) {
+                    $mail_note = ' Bestätigungs-E-Mail wurde erstellt.';
+                } elseif ($mail_result === false) {
+                    $mail_note = ' Hinweis: Bestätigungs-E-Mail konnte nicht erstellt werden.';
+                }
+            }
+
             error_log("=== ADMIN ASSIGN SLOT SUCCESS ===");
             error_log("Slot ID: $slot_id -> Mitarbeiter ID: $mitarbeiter_id");
             wp_send_json_success(array(
-                'message' => 'Slot erfolgreich zugewiesen',
+                'message' => 'Slot erfolgreich zugewiesen.' . $mail_note,
                 'slot_id' => $slot_id,
                 'mitarbeiter_id' => $mitarbeiter_id
             ));
@@ -3049,6 +3059,95 @@ class Dienstplan_Admin {
             error_log("WPDB Error: " . $wpdb->last_error);
             wp_send_json_error(array('message' => 'Fehler beim Entfernen: ' . $wpdb->last_error));
         }
+    }
+
+    /**
+     * Erstellt eine Buchungsbestaetigung fuer einen zugewiesenen Slot.
+     *
+     * @param Dienstplan_Database $db
+     * @param int $slot_id
+     * @param int $mitarbeiter_id
+     * @return bool|null true=erstellt, false=Fehler, null=nicht versendet (z.B. keine gueltige E-Mail)
+     */
+    private function send_booking_confirmation_for_slot($db, $slot_id, $mitarbeiter_id) {
+        $mitarbeiter = $db->get_mitarbeiter($mitarbeiter_id);
+        if (!$mitarbeiter || empty($mitarbeiter->email) || !is_email($mitarbeiter->email)) {
+            return null;
+        }
+
+        global $wpdb;
+        $prefix = $db->get_prefix();
+
+        $slot = $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM {$prefix}dienst_slots WHERE id = %d",
+            intval($slot_id)
+        ));
+        if (!$slot) {
+            return false;
+        }
+
+        $dienst = $wpdb->get_row($wpdb->prepare(
+            "SELECT d.*, COALESCE(v.titel, v.name) as veranstaltung, v.seite_id as veranstaltung_seite_id,
+                    ve.name as verein, ve.seite_id as verein_seite_id,
+                    t.name as taetigkeit, b.name as bereich, vt.tag_datum
+             FROM {$prefix}dienste d
+             LEFT JOIN {$prefix}veranstaltungen v ON d.veranstaltung_id = v.id
+             LEFT JOIN {$prefix}vereine ve ON d.verein_id = ve.id
+             LEFT JOIN {$prefix}taetigkeiten t ON d.taetigkeit_id = t.id
+             LEFT JOIN {$prefix}bereiche b ON d.bereich_id = b.id
+             LEFT JOIN {$prefix}veranstaltung_tage vt ON d.tag_id = vt.id
+             WHERE d.id = %d",
+            intval($slot->dienst_id)
+        ));
+        if (!$dienst) {
+            return false;
+        }
+
+        $tag_datum = !empty($dienst->tag_datum) ? date_i18n('d.m.Y', strtotime($dienst->tag_datum)) : 'N/A';
+        $beschreibung_block = !empty($dienst->beschreibung)
+            ? "Beschreibung: {$dienst->beschreibung}\n\n"
+            : '';
+        $veranstaltungsseite_url = !empty($dienst->veranstaltung_seite_id) ? get_permalink((int) $dienst->veranstaltung_seite_id) : '';
+        $vereinsseite_url = !empty($dienst->verein_seite_id) ? get_permalink((int) $dienst->verein_seite_id) : '';
+        $veranstaltungsseite_block = $veranstaltungsseite_url ? "Veranstaltungsseite:\n" . $veranstaltungsseite_url . "\n\n" : '';
+        $vereinsseite_block = $vereinsseite_url ? "Vereinsseite:\n" . $vereinsseite_url . "\n\n" : '';
+
+        $responsible_email_placeholders = $this->get_verantwortliche_email_placeholders(
+            $db,
+            !empty($dienst->veranstaltung_id) ? intval($dienst->veranstaltung_id) : 0,
+            !empty($dienst->verein_id) ? intval($dienst->verein_id) : 0
+        );
+
+        $mail_template = Dienstplan_Mail_Templates::get_template('booking_confirmation', array_merge(array(
+            'vorname' => $mitarbeiter->vorname ?? '',
+            'nachname' => $mitarbeiter->nachname ?? '',
+            'veranstaltung' => $dienst->veranstaltung ?? '',
+            'verein' => $dienst->verein ?? '',
+            'datum' => $tag_datum,
+            'von_zeit' => !empty($slot->von_zeit) ? substr($slot->von_zeit, 0, 5) : '',
+            'bis_zeit' => !empty($slot->bis_zeit) ? substr($slot->bis_zeit, 0, 5) : '',
+            'taetigkeit' => $dienst->taetigkeit ?? '',
+            'bereich' => $dienst->bereich ?? '',
+            'veranstaltungsseite_url' => $veranstaltungsseite_url,
+            'vereinsseite_url' => $vereinsseite_url,
+            'beschreibung_block' => $beschreibung_block,
+            'veranstaltungsseite_block' => $veranstaltungsseite_block,
+            'vereinsseite_block' => $vereinsseite_block,
+            'source_url_block' => '',
+        ), $responsible_email_placeholders));
+
+        $mail_headers = Dienstplan_Mail_Templates::build_headers_from_template(
+            $mail_template,
+            array('Content-Type: text/plain; charset=UTF-8')
+        );
+
+        return Dienstplan_Mail_Queue::enqueue_mail(
+            $mitarbeiter->email,
+            $mail_template['subject'],
+            $mail_template['body'],
+            $mail_headers,
+            array('type' => 'buchungsbestaetigung', 'source' => 'admin_assign_slot')
+        );
     }
     
     /**
