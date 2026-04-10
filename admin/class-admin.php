@@ -3209,15 +3209,20 @@ class Dienstplan_Admin {
                         $portal_page_id = get_option('dienstplan_portal_page_id', 0);
                         $login_url = $portal_page_id ? get_permalink($portal_page_id) : wp_login_url();
 
-                        $mail_template = Dienstplan_Mail_Templates::get_template('portal_invite', array(
+                        $mail_template = Dienstplan_Mail_Templates::get_template('portal_invite', array_merge(array(
                             'vorname' => $vorname,
                             'username' => $username,
                             'password' => $password,
                             'portal_link' => $login_url,
                             'site_name' => get_option('dp_site_name', get_bloginfo('name')),
-                        ));
+                        ), $this->get_verantwortliche_email_placeholders($db, array(), !empty($requested_verein_ids) ? $requested_verein_ids : array())));
 
-                        $email_sent = wp_mail($email, $mail_template['subject'], $mail_template['body']);
+                        $mail_headers = Dienstplan_Mail_Templates::build_headers_from_template(
+                            $mail_template,
+                            array('Content-Type: text/plain; charset=UTF-8')
+                        );
+
+                        $email_sent = wp_mail($email, $mail_template['subject'], $mail_template['body'], $mail_headers);
                         
                         if ($email_sent) {
                             $portal_message = ' Portal-Zugriff aktiviert und Login-Daten versendet.';
@@ -6848,16 +6853,26 @@ class Dienstplan_Admin {
         $portal_page_id = get_option('dienstplan_portal_page_id', 0);
         $login_url = $portal_page_id ? get_permalink($portal_page_id) : wp_login_url();
 
-        $mail_template = Dienstplan_Mail_Templates::get_template('portal_invite', array(
+        $mitarbeiter_vereine = $db->get_mitarbeiter_vereine($mitarbeiter_id);
+        $verein_ids_for_mail = array_map(function($row) {
+            return isset($row->verein_id) ? intval($row->verein_id) : 0;
+        }, (array) $mitarbeiter_vereine);
+
+        $mail_template = Dienstplan_Mail_Templates::get_template('portal_invite', array_merge(array(
             'vorname' => $mitarbeiter->vorname,
             'username' => $username,
             'password' => $password,
             'portal_link' => $login_url,
             'site_name' => get_option('dp_site_name', get_bloginfo('name')),
-        ));
+        ), $this->get_verantwortliche_email_placeholders($db, array(), $verein_ids_for_mail)));
+
+        $mail_headers = Dienstplan_Mail_Templates::build_headers_from_template(
+            $mail_template,
+            array('Content-Type: text/plain; charset=UTF-8')
+        );
 
         $email_sent = get_option('dp_mail_enable_portal_invite', 1)
-            ? wp_mail($mitarbeiter->email, $mail_template['subject'], $mail_template['body'])
+            ? wp_mail($mitarbeiter->email, $mail_template['subject'], $mail_template['body'], $mail_headers)
             : false;
         $invite_disabled = !get_option('dp_mail_enable_portal_invite', 1);
         
@@ -6958,20 +6973,30 @@ class Dienstplan_Admin {
         $portal_page_id = get_option('dienstplan_portal_page_id', 0);
         $login_url = $portal_page_id ? get_permalink($portal_page_id) : wp_login_url();
 
-        $mail_template = Dienstplan_Mail_Templates::get_template('portal_reset_credentials', array(
+        $mitarbeiter_vereine = $db->get_mitarbeiter_vereine($mitarbeiter_id);
+        $verein_ids_for_mail = array_map(function($row) {
+            return isset($row->verein_id) ? intval($row->verein_id) : 0;
+        }, (array) $mitarbeiter_vereine);
+
+        $mail_template = Dienstplan_Mail_Templates::get_template('portal_reset_credentials', array_merge(array(
             'vorname' => $mitarbeiter->vorname,
             'username' => $user->user_login,
             'password' => $new_password,
             'portal_link' => $login_url,
             'site_name' => get_option('dp_site_name', get_bloginfo('name')),
-        ));
+        ), $this->get_verantwortliche_email_placeholders($db, array(), $verein_ids_for_mail)));
         
         if (!get_option('dp_mail_enable_portal_invite', 1)) {
             wp_send_json_success(array('message' => 'Passwort wurde zurückgesetzt. E-Mail-Versand ist in den Einstellungen deaktiviert.'));
             return;
         }
 
-        $email_sent = wp_mail($mitarbeiter->email, $mail_template['subject'], $mail_template['body']);
+        $mail_headers = Dienstplan_Mail_Templates::build_headers_from_template(
+            $mail_template,
+            array('Content-Type: text/plain; charset=UTF-8')
+        );
+
+        $email_sent = wp_mail($mitarbeiter->email, $mail_template['subject'], $mail_template['body'], $mail_headers);
         
         if ($email_sent) {
             wp_send_json_success(array(
@@ -7021,6 +7046,72 @@ class Dienstplan_Admin {
         foreach ($verein_ids as $verein_id) {
             $db->assign_user_to_verein($user_id, intval($verein_id), $mitarbeiter_id);
         }
+    }
+
+    /**
+     * Liefert Platzhalterwerte fuer Verantwortlichen-E-Mails.
+     *
+     * @param Dienstplan_Database $db
+     * @param array $veranstaltung_ids
+     * @param array $verein_ids
+     * @return array
+     */
+    private function get_verantwortliche_email_placeholders($db, $veranstaltung_ids = array(), $verein_ids = array()) {
+        $wpdb = $db->get_wpdb();
+        $prefix = $db->get_prefix();
+
+        $veranstaltung_ids = array_values(array_unique(array_filter(array_map('intval', (array) $veranstaltung_ids))));
+        $verein_ids = array_values(array_unique(array_filter(array_map('intval', (array) $verein_ids))));
+
+        $veranstaltungs_admin_emails = array();
+        $vereins_admin_emails = array();
+
+        if (!empty($veranstaltung_ids)) {
+            $placeholders = implode(',', array_fill(0, count($veranstaltung_ids), '%d'));
+            $sql = $wpdb->prepare(
+                "SELECT DISTINCT u.user_email
+                 FROM {$prefix}veranstaltung_verantwortliche vv
+                 INNER JOIN {$wpdb->users} u ON u.ID = vv.user_id
+                 WHERE vv.veranstaltung_id IN ($placeholders)
+                   AND u.user_email IS NOT NULL
+                   AND u.user_email <> ''",
+                ...$veranstaltung_ids
+            );
+            $veranstaltungs_admin_emails = $wpdb->get_col($sql);
+        }
+
+        if (!empty($verein_ids)) {
+            $placeholders = implode(',', array_fill(0, count($verein_ids), '%d'));
+            $sql = $wpdb->prepare(
+                "SELECT DISTINCT u.user_email
+                 FROM {$prefix}verein_verantwortliche vv
+                 INNER JOIN {$wpdb->users} u ON u.ID = vv.user_id
+                 WHERE vv.verein_id IN ($placeholders)
+                   AND u.user_email IS NOT NULL
+                   AND u.user_email <> ''",
+                ...$verein_ids
+            );
+            $vereins_admin_emails = $wpdb->get_col($sql);
+
+            $kontakt_sql = $wpdb->prepare(
+                "SELECT kontakt_email FROM {$prefix}vereine WHERE id IN ($placeholders)",
+                ...$verein_ids
+            );
+            $kontakt_emails = $wpdb->get_col($kontakt_sql);
+            foreach ((array) $kontakt_emails as $kontakt_email) {
+                if (!empty($kontakt_email) && is_email($kontakt_email)) {
+                    $vereins_admin_emails[] = $kontakt_email;
+                }
+            }
+        }
+
+        $veranstaltungs_admin_emails = array_values(array_unique(array_filter(array_map('sanitize_email', (array) $veranstaltungs_admin_emails), 'is_email')));
+        $vereins_admin_emails = array_values(array_unique(array_filter(array_map('sanitize_email', (array) $vereins_admin_emails), 'is_email')));
+
+        return array(
+            'veranstaltungs_admin_email' => implode(', ', $veranstaltungs_admin_emails),
+            'vereins_admin_email' => implode(', ', $vereins_admin_emails),
+        );
     }
 
     /**
@@ -7239,6 +7330,8 @@ class Dienstplan_Admin {
         $diensteliste = str_repeat('-', 50) . "\n";
         $veranstaltungslinks = array();
         $vereinslinks = array();
+        $veranstaltung_ids_for_mail = array();
+        $verein_ids_for_mail = array();
 
         $current_event = '';
         foreach ($dienste as $d) {
@@ -7251,8 +7344,16 @@ class Dienstplan_Admin {
                 $veranstaltungslinks[$veranstaltung_name] = get_permalink((int) $d->veranstaltung_seite_id);
             }
 
+            if (!empty($d->veranstaltung_id)) {
+                $veranstaltung_ids_for_mail[] = intval($d->veranstaltung_id);
+            }
+
             if (!empty($d->verein_seite_id) && $verein_name !== '') {
                 $vereinslinks[$verein_name] = get_permalink((int) $d->verein_seite_id);
+            }
+
+            if (!empty($d->verein_id)) {
+                $verein_ids_for_mail[] = intval($d->verein_id);
             }
 
             if ($veranstaltung_name !== $current_event) {
@@ -7300,14 +7401,14 @@ class Dienstplan_Admin {
             $vereinslinks_block .= "\n";
         }
 
-        $mail_template = Dienstplan_Mail_Templates::get_template('dienste_uebersicht', array(
+        $mail_template = Dienstplan_Mail_Templates::get_template('dienste_uebersicht', array_merge(array(
             'vorname' => $ma->vorname,
             'diensteliste' => $diensteliste,
             'veranstaltungslinks_block' => $veranstaltungslinks_block,
             'vereinslinks_block' => $vereinslinks_block,
             'total_dienste' => count($dienste),
             'site_name' => get_option('dp_site_name', get_bloginfo('name')),
-        ));
+        ), $this->get_verantwortliche_email_placeholders($db, $veranstaltung_ids_for_mail, $verein_ids_for_mail)));
 
         if (!get_option('dp_mail_enable_dienste_uebersicht', 1)) {
             wp_send_json_error(array('message' => 'E-Mail-Versand für Dienste-Übersicht ist in den Einstellungen deaktiviert.'));
@@ -7319,6 +7420,8 @@ class Dienstplan_Admin {
         if (!empty($reply_to) && is_email($reply_to)) {
             $headers[] = 'Reply-To: ' . $reply_to;
         }
+
+        $headers = Dienstplan_Mail_Templates::build_headers_from_template($mail_template, $headers);
 
         $sent = wp_mail($ma->email, $mail_template['subject'], $mail_template['body'], $headers);
 
@@ -7432,16 +7535,25 @@ class Dienstplan_Admin {
             $portal_page_id = get_option('dienstplan_portal_page_id', 0);
             $login_url = $portal_page_id ? get_permalink($portal_page_id) : wp_login_url();
 
-            $mail_template = Dienstplan_Mail_Templates::get_template('portal_invite', array(
+            $mitarbeiter_vereine = $db->get_mitarbeiter_vereine($mitarbeiter_id);
+            $verein_ids_for_mail = array_map(function($row) {
+                return isset($row->verein_id) ? intval($row->verein_id) : 0;
+            }, (array) $mitarbeiter_vereine);
+
+            $mail_template = Dienstplan_Mail_Templates::get_template('portal_invite', array_merge(array(
                 'vorname' => $mitarbeiter->vorname,
                 'username' => $username,
                 'password' => $password,
                 'portal_link' => $login_url,
                 'site_name' => get_option('dp_site_name', get_bloginfo('name')),
-            ));
+            ), $this->get_verantwortliche_email_placeholders($db, array(), $verein_ids_for_mail)));
+            $mail_headers = Dienstplan_Mail_Templates::build_headers_from_template(
+                $mail_template,
+                array('Content-Type: text/plain; charset=UTF-8')
+            );
             
             if (get_option('dp_mail_enable_portal_invite', 1)) {
-                wp_mail($mitarbeiter->email, $mail_template['subject'], $mail_template['body']);
+                wp_mail($mitarbeiter->email, $mail_template['subject'], $mail_template['body'], $mail_headers);
             }
             $success_count++;
         }
@@ -7738,6 +7850,8 @@ class Dienstplan_Admin {
             'veranstaltungsseite_block' => "Veranstaltungsseite:\n" . home_url('/beispiel-event-2026') . "\n\n",
             'vereinsseite_block' => "Vereinsseite:\n" . home_url('/musterverein') . "\n\n",
             'source_url_block' => "Zurueck zur Veranstaltungsseite:\n" . home_url('/') . "\n\n",
+            'veranstaltungs_admin_email' => 'event-admin@example.de',
+            'vereins_admin_email' => 'verein-admin@example.de',
             'username' => 'max.mustermann',
             'password' => 'TestPass!123',
             'portal_link' => home_url('/portal'),
@@ -7755,6 +7869,8 @@ class Dienstplan_Admin {
         if (!empty($reply_to) && is_email($reply_to)) {
             $headers[] = 'Reply-To: ' . $reply_to;
         }
+
+        $headers = Dienstplan_Mail_Templates::build_headers_from_template($mail_template, $headers);
 
         $sent = wp_mail($to, $mail_template['subject'], $mail_template['body'], $headers);
 

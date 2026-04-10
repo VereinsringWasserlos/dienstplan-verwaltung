@@ -491,8 +491,13 @@ class Dienstplan_Public {
                     $vereinsseite_url = !empty($dienst_mail->verein_seite_id) ? get_permalink((int) $dienst_mail->verein_seite_id) : '';
                     $veranstaltungsseite_block = $veranstaltungsseite_url ? "Veranstaltungsseite:\n" . $veranstaltungsseite_url . "\n\n" : '';
                     $vereinsseite_block = $vereinsseite_url ? "Vereinsseite:\n" . $vereinsseite_url . "\n\n" : '';
+                    $responsible_email_placeholders = $this->get_verantwortliche_email_placeholders(
+                        $db,
+                        !empty($dienst_mail->veranstaltung_id) ? intval($dienst_mail->veranstaltung_id) : 0,
+                        !empty($dienst_mail->verein_id) ? intval($dienst_mail->verein_id) : 0
+                    );
 
-                    $mail_template = Dienstplan_Mail_Templates::get_template('booking_confirmation', array(
+                    $mail_template = Dienstplan_Mail_Templates::get_template('booking_confirmation', array_merge(array(
                         'vorname' => $vorname_mail,
                         'nachname' => $nachname_mail,
                         'veranstaltung' => $dienst_mail->veranstaltung ?? '',
@@ -508,9 +513,14 @@ class Dienstplan_Public {
                         'veranstaltungsseite_block' => $veranstaltungsseite_block,
                         'vereinsseite_block' => $vereinsseite_block,
                         'source_url_block' => $source_url_block,
-                    ));
+                    ), $responsible_email_placeholders));
 
-                    wp_mail($email_for_user, $mail_template['subject'], $mail_template['body']);
+                    $mail_headers = Dienstplan_Mail_Templates::build_headers_from_template(
+                        $mail_template,
+                        array('Content-Type: text/plain; charset=UTF-8')
+                    );
+
+                    wp_mail($email_for_user, $mail_template['subject'], $mail_template['body'], $mail_headers);
                 }
             }
 
@@ -775,8 +785,13 @@ class Dienstplan_Public {
                     $vereinsseite_url = !empty($dienst_mail->verein_seite_id) ? get_permalink((int) $dienst_mail->verein_seite_id) : '';
                     $veranstaltungsseite_block = $veranstaltungsseite_url ? "Veranstaltungsseite:\n" . $veranstaltungsseite_url . "\n\n" : '';
                     $vereinsseite_block = $vereinsseite_url ? "Vereinsseite:\n" . $vereinsseite_url . "\n\n" : '';
+                    $responsible_email_placeholders = $this->get_verantwortliche_email_placeholders(
+                        $db,
+                        !empty($dienst_mail->veranstaltung_id) ? intval($dienst_mail->veranstaltung_id) : 0,
+                        !empty($dienst_mail->verein_id) ? intval($dienst_mail->verein_id) : 0
+                    );
 
-                    $mail_template = Dienstplan_Mail_Templates::get_template('booking_confirmation', array(
+                    $mail_template = Dienstplan_Mail_Templates::get_template('booking_confirmation', array_merge(array(
                         'vorname' => sanitize_text_field($_POST['first_name']),
                         'nachname' => sanitize_text_field($_POST['last_name']),
                         'veranstaltung' => $dienst_mail->veranstaltung ?? '',
@@ -792,9 +807,14 @@ class Dienstplan_Public {
                         'veranstaltungsseite_block' => $veranstaltungsseite_block,
                         'vereinsseite_block' => $vereinsseite_block,
                         'source_url_block' => $source_url_block,
-                    ));
+                    ), $responsible_email_placeholders));
 
-                    $booking_mail_sent = wp_mail($email, $mail_template['subject'], $mail_template['body']);
+                    $mail_headers = Dienstplan_Mail_Templates::build_headers_from_template(
+                        $mail_template,
+                        array('Content-Type: text/plain; charset=UTF-8')
+                    );
+
+                    $booking_mail_sent = wp_mail($email, $mail_template['subject'], $mail_template['body'], $mail_headers);
                 }
             }
             
@@ -1053,6 +1073,63 @@ class Dienstplan_Public {
     }
 
     /**
+     * Liefert Platzhalterwerte fuer Verantwortlichen-E-Mails.
+     *
+     * @param Dienstplan_Database $db
+     * @param int $veranstaltung_id
+     * @param int $verein_id
+     * @return array
+     */
+    private function get_verantwortliche_email_placeholders($db, $veranstaltung_id = 0, $verein_id = 0) {
+        $wpdb = $db->get_wpdb();
+        $prefix = $db->get_prefix();
+
+        $veranstaltungs_admin_emails = array();
+        $vereins_admin_emails = array();
+
+        if ($veranstaltung_id > 0) {
+            $veranstaltungs_admin_emails = $wpdb->get_col($wpdb->prepare(
+                "SELECT DISTINCT u.user_email
+                 FROM {$prefix}veranstaltung_verantwortliche vv
+                 INNER JOIN {$wpdb->users} u ON u.ID = vv.user_id
+                 WHERE vv.veranstaltung_id = %d
+                   AND u.user_email IS NOT NULL
+                   AND u.user_email <> ''",
+                $veranstaltung_id
+            ));
+        }
+
+        if ($verein_id > 0) {
+            $vereins_admin_emails = $wpdb->get_col($wpdb->prepare(
+                "SELECT DISTINCT u.user_email
+                 FROM {$prefix}verein_verantwortliche vv
+                 INNER JOIN {$wpdb->users} u ON u.ID = vv.user_id
+                 WHERE vv.verein_id = %d
+                   AND u.user_email IS NOT NULL
+                   AND u.user_email <> ''",
+                $verein_id
+            ));
+
+            $kontakt_email = $wpdb->get_var($wpdb->prepare(
+                "SELECT kontakt_email FROM {$prefix}vereine WHERE id = %d",
+                $verein_id
+            ));
+
+            if (!empty($kontakt_email) && is_email($kontakt_email)) {
+                $vereins_admin_emails[] = $kontakt_email;
+            }
+        }
+
+        $veranstaltungs_admin_emails = array_values(array_unique(array_filter(array_map('sanitize_email', (array) $veranstaltungs_admin_emails), 'is_email')));
+        $vereins_admin_emails = array_values(array_unique(array_filter(array_map('sanitize_email', (array) $vereins_admin_emails), 'is_email')));
+
+        return array(
+            'veranstaltungs_admin_email' => implode(', ', $veranstaltungs_admin_emails),
+            'vereins_admin_email' => implode(', ', $vereins_admin_emails),
+        );
+    }
+
+    /**
      * Stellt sicher, dass für einen Mitarbeiter ein Portal-User existiert
      * und ordnet den User direkt einem Verein zu.
      *
@@ -1119,15 +1196,20 @@ class Dienstplan_Public {
 
             $portal_page_id = get_option('dienstplan_portal_page_id', 0);
             $login_url = $portal_page_id ? get_permalink($portal_page_id) : wp_login_url();
-            $mail_template = Dienstplan_Mail_Templates::get_template('portal_invite', array(
+            $mail_template = Dienstplan_Mail_Templates::get_template('portal_invite', array_merge(array(
                 'vorname' => $mitarbeiter->vorname,
                 'username' => $username,
                 'password' => $password,
                 'portal_link' => $login_url,
                 'site_name' => get_option('dp_site_name', get_bloginfo('name')),
-            ));
+            ), $this->get_verantwortliche_email_placeholders($db, 0, intval($verein_id))));
+
+            $mail_headers = Dienstplan_Mail_Templates::build_headers_from_template(
+                $mail_template,
+                array('Content-Type: text/plain; charset=UTF-8')
+            );
             if (get_option('dp_mail_enable_portal_invite', 1)) {
-                wp_mail($email, $mail_template['subject'], $mail_template['body']);
+                wp_mail($email, $mail_template['subject'], $mail_template['body'], $mail_headers);
             }
         }
 
@@ -1514,8 +1596,13 @@ class Dienstplan_Public {
             $vereinsseite_url = !empty($dienst->verein_seite_id) ? get_permalink((int) $dienst->verein_seite_id) : '';
             $veranstaltungsseite_block = $veranstaltungsseite_url ? "Veranstaltungsseite:\n" . $veranstaltungsseite_url . "\n\n" : '';
             $vereinsseite_block = $vereinsseite_url ? "Vereinsseite:\n" . $vereinsseite_url . "\n\n" : '';
+            $responsible_email_placeholders = $this->get_verantwortliche_email_placeholders(
+                $db,
+                !empty($dienst->veranstaltung_id) ? intval($dienst->veranstaltung_id) : 0,
+                !empty($dienst->verein_id) ? intval($dienst->verein_id) : 0
+            );
 
-            $mail_template = Dienstplan_Mail_Templates::get_template('booking_confirmation', array(
+            $mail_template = Dienstplan_Mail_Templates::get_template('booking_confirmation', array_merge(array(
                 'vorname' => $vorname,
                 'nachname' => $nachname,
                 'veranstaltung' => $dienst->veranstaltung ?? '',
@@ -1531,9 +1618,14 @@ class Dienstplan_Public {
                 'veranstaltungsseite_block' => $veranstaltungsseite_block,
                 'vereinsseite_block' => $vereinsseite_block,
                 'source_url_block' => $source_url_block,
-            ));
+            ), $responsible_email_placeholders));
 
-            wp_mail($email, $mail_template['subject'], $mail_template['body']);
+            $mail_headers = Dienstplan_Mail_Templates::build_headers_from_template(
+                $mail_template,
+                array('Content-Type: text/plain; charset=UTF-8')
+            );
+
+            wp_mail($email, $mail_template['subject'], $mail_template['body'], $mail_headers);
         }
         
         $success_msg = 'Anmeldung erfolgreich!';

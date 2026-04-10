@@ -22,28 +22,36 @@ class Dienstplan_Mail_Templates {
                 'description' => __('Bestätigung nach Dienst-Anmeldung im Frontend.', 'dienstplan-verwaltung'),
                 'subject_default' => __('Bestätigung Ihrer Anmeldung - {{veranstaltung}}', 'dienstplan-verwaltung'),
                 'body_default' => "Hallo {{vorname}} {{nachname}},\n\nvielen Dank fuer Ihre Anmeldung!\n\nDetails zu Ihrem Dienst:\nVeranstaltung: {{veranstaltung}}\nVerein: {{verein}}\nDatum: {{datum}}\nUhrzeit: {{von_zeit}} - {{bis_zeit}} Uhr\nTaetigkeit: {{taetigkeit}}\nBereich: {{bereich}}\n\n{{beschreibung_block}}{{veranstaltungsseite_block}}{{vereinsseite_block}}{{source_url_block}}Bei Fragen oder Aenderungen wenden Sie sich bitte an den Veranstalter.\n\nMit freundlichen Gruessen\nIhr Dienstplan-Team",
-                'placeholders' => array('vorname', 'nachname', 'veranstaltung', 'verein', 'datum', 'von_zeit', 'bis_zeit', 'taetigkeit', 'bereich', 'veranstaltungsseite_url', 'vereinsseite_url', 'beschreibung_block', 'veranstaltungsseite_block', 'vereinsseite_block', 'source_url_block')
+                'cc_default' => '',
+                'bcc_default' => '',
+                'placeholders' => array('vorname', 'nachname', 'veranstaltung', 'verein', 'datum', 'von_zeit', 'bis_zeit', 'taetigkeit', 'bereich', 'veranstaltungsseite_url', 'vereinsseite_url', 'beschreibung_block', 'veranstaltungsseite_block', 'vereinsseite_block', 'source_url_block', 'veranstaltungs_admin_email', 'vereins_admin_email')
             ),
             'portal_invite' => array(
                 'label' => __('Portal-Einladung / Zugangsdaten', 'dienstplan-verwaltung'),
                 'description' => __('Wird beim Erstellen/Aktivieren eines Portal-Zugangs genutzt.', 'dienstplan-verwaltung'),
                 'subject_default' => __('[{{site_name}}] Zugang zum Dienstplan-Portal', 'dienstplan-verwaltung'),
                 'body_default' => "Hallo {{vorname}},\n\nfuer dich wurde ein Zugang zum Dienstplan-Portal erstellt.\n\nHier sind deine Login-Daten:\n\nBenutzername: {{username}}\nPasswort: {{password}}\n\nPortal-Link: {{portal_link}}\n\nBitte aendere dein Passwort nach dem ersten Login.\n\nViele Gruesse\n{{site_name}}",
-                'placeholders' => array('vorname', 'username', 'password', 'portal_link', 'site_name')
+                'cc_default' => '',
+                'bcc_default' => '',
+                'placeholders' => array('vorname', 'username', 'password', 'portal_link', 'site_name', 'veranstaltungs_admin_email', 'vereins_admin_email')
             ),
             'portal_reset_credentials' => array(
                 'label' => __('Neue Login-Daten', 'dienstplan-verwaltung'),
                 'description' => __('Wird bei "Login-Daten erneut senden" genutzt.', 'dienstplan-verwaltung'),
                 'subject_default' => __('[{{site_name}}] Neue Login-Daten fuer das Dienstplan-Portal', 'dienstplan-verwaltung'),
                 'body_default' => "Hallo {{vorname}},\n\nwie gewuenscht erhaeltst du hier neue Login-Daten fuer das Dienstplan-Portal:\n\nBenutzername: {{username}}\nNeues Passwort: {{password}}\n\nPortal-Link: {{portal_link}}\n\nBitte aendere dein Passwort nach dem Login.\n\nViele Gruesse\n{{site_name}}",
-                'placeholders' => array('vorname', 'username', 'password', 'portal_link', 'site_name')
+                'cc_default' => '',
+                'bcc_default' => '',
+                'placeholders' => array('vorname', 'username', 'password', 'portal_link', 'site_name', 'veranstaltungs_admin_email', 'vereins_admin_email')
             ),
             'dienste_uebersicht' => array(
                 'label' => __('Dienste-Uebersicht', 'dienstplan-verwaltung'),
                 'description' => __('Manuelle Uebersicht aller zugewiesenen Dienste.', 'dienstplan-verwaltung'),
                 'subject_default' => __('Ihre Dienste-Uebersicht - {{site_name}}', 'dienstplan-verwaltung'),
                 'body_default' => "Hallo {{vorname}},\n\nhier ist deine aktuelle Uebersicht aller zugewiesenen Dienste:\n\n{{diensteliste}}\n\n{{veranstaltungslinks_block}}{{vereinslinks_block}}Gesamt: {{total_dienste}} Dienst(e)\n\nBei Fragen wende dich bitte an den Veranstalter.\n\nViele Gruesse\n{{site_name}}",
-                'placeholders' => array('vorname', 'diensteliste', 'veranstaltungslinks_block', 'vereinslinks_block', 'total_dienste', 'site_name')
+                'cc_default' => '',
+                'bcc_default' => '',
+                'placeholders' => array('vorname', 'diensteliste', 'veranstaltungslinks_block', 'vereinslinks_block', 'total_dienste', 'site_name', 'veranstaltungs_admin_email', 'vereins_admin_email')
             ),
         );
     }
@@ -53,7 +61,7 @@ class Dienstplan_Mail_Templates {
      *
      * @param string $type
      * @param array  $placeholders
-     * @return array{subject:string, body:string}
+    * @return array{subject:string, body:string, cc:string, bcc:string}
      */
     public static function get_template($type, $placeholders = array()) {
         $definitions = self::get_definitions();
@@ -65,9 +73,13 @@ class Dienstplan_Mail_Templates {
         $definition = $definitions[$type];
         $subject_option_key = 'dp_mail_tpl_' . $type . '_subject';
         $body_option_key = 'dp_mail_tpl_' . $type . '_body';
+        $cc_option_key = 'dp_mail_tpl_' . $type . '_cc';
+        $bcc_option_key = 'dp_mail_tpl_' . $type . '_bcc';
 
         $subject = get_option($subject_option_key, $definition['subject_default']);
         $body = get_option($body_option_key, $definition['body_default']);
+        $cc = get_option($cc_option_key, $definition['cc_default']);
+        $bcc = get_option($bcc_option_key, $definition['bcc_default']);
 
         if (!is_string($subject) || $subject === '') {
             $subject = $definition['subject_default'];
@@ -75,6 +87,14 @@ class Dienstplan_Mail_Templates {
 
         if (!is_string($body) || $body === '') {
             $body = $definition['body_default'];
+        }
+
+        if (!is_string($cc)) {
+            $cc = '';
+        }
+
+        if (!is_string($bcc)) {
+            $bcc = '';
         }
 
         $placeholders = array_merge(
@@ -90,7 +110,57 @@ class Dienstplan_Mail_Templates {
         return array(
             'subject' => strtr($subject, $replace_map),
             'body' => strtr($body, $replace_map),
+            'cc' => strtr($cc, $replace_map),
+            'bcc' => strtr($bcc, $replace_map),
         );
+    }
+
+    /**
+     * Baut Mail-Header aus Template-Daten (CC/BCC) und Basis-Headern.
+     *
+     * @param array $template_data
+     * @param array $base_headers
+     * @return array
+     */
+    public static function build_headers_from_template($template_data, $base_headers = array()) {
+        $headers = is_array($base_headers) ? $base_headers : array();
+
+        $cc_list = self::parse_recipient_list(isset($template_data['cc']) ? $template_data['cc'] : '');
+        $bcc_list = self::parse_recipient_list(isset($template_data['bcc']) ? $template_data['bcc'] : '');
+
+        if (!empty($cc_list)) {
+            $headers[] = 'Cc: ' . implode(', ', $cc_list);
+        }
+
+        if (!empty($bcc_list)) {
+            $headers[] = 'Bcc: ' . implode(', ', $bcc_list);
+        }
+
+        return $headers;
+    }
+
+    /**
+     * Zerlegt eine Empfaengerliste (Komma/Semikolon/Zeilenumbruch) in gueltige E-Mails.
+     *
+     * @param string $recipient_list
+     * @return array
+     */
+    private static function parse_recipient_list($recipient_list) {
+        if (!is_string($recipient_list) || trim($recipient_list) === '') {
+            return array();
+        }
+
+        $parts = preg_split('/[\r\n,;]+/', $recipient_list);
+        $emails = array();
+
+        foreach ((array) $parts as $part) {
+            $email = sanitize_email(trim($part));
+            if ($email !== '' && is_email($email)) {
+                $emails[] = $email;
+            }
+        }
+
+        return array_values(array_unique($emails));
     }
 
     /**
@@ -105,6 +175,8 @@ class Dienstplan_Mail_Templates {
         foreach (array_keys($definitions) as $type) {
             $subject_key = 'dp_mail_tpl_' . $type . '_subject';
             $body_key = 'dp_mail_tpl_' . $type . '_body';
+            $cc_key = 'dp_mail_tpl_' . $type . '_cc';
+            $bcc_key = 'dp_mail_tpl_' . $type . '_bcc';
 
             if (isset($post_data[$subject_key])) {
                 update_option($subject_key, sanitize_text_field(wp_unslash($post_data[$subject_key])));
@@ -112,6 +184,14 @@ class Dienstplan_Mail_Templates {
 
             if (isset($post_data[$body_key])) {
                 update_option($body_key, sanitize_textarea_field(wp_unslash($post_data[$body_key])));
+            }
+
+            if (isset($post_data[$cc_key])) {
+                update_option($cc_key, sanitize_text_field(wp_unslash($post_data[$cc_key])));
+            }
+
+            if (isset($post_data[$bcc_key])) {
+                update_option($bcc_key, sanitize_text_field(wp_unslash($post_data[$bcc_key])));
             }
         }
     }

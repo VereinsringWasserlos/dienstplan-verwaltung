@@ -313,8 +313,12 @@ $nav_items = array(
                         <?php
                         $subject_option = 'dp_mail_tpl_' . $template_key . '_subject';
                         $body_option = 'dp_mail_tpl_' . $template_key . '_body';
+                        $cc_option = 'dp_mail_tpl_' . $template_key . '_cc';
+                        $bcc_option = 'dp_mail_tpl_' . $template_key . '_bcc';
                         $subject_value = get_option($subject_option, $template['subject_default']);
                         $body_value = get_option($body_option, $template['body_default']);
+                        $cc_value = get_option($cc_option, $template['cc_default']);
+                        $bcc_value = get_option($bcc_option, $template['bcc_default']);
                         ?>
                         <div class="dp-mail-template-card" style="border:1px solid #dcdcde; border-radius:8px; padding:16px; margin-bottom:14px; background:#fff;">
                             <h4 style="margin:0 0 6px 0;"><?php echo esc_html($template['label']); ?></h4>
@@ -339,8 +343,35 @@ $nav_items = array(
                                     style="width:100%; max-width: 820px;"
                                 ><?php echo esc_textarea($body_value); ?></textarea>
                             </p>
+                            <p style="margin: 0 0 8px 0;">
+                                <label for="<?php echo esc_attr($cc_option); ?>"><strong>CC</strong></label><br>
+                                <input
+                                    type="text"
+                                    id="<?php echo esc_attr($cc_option); ?>"
+                                    name="<?php echo esc_attr($cc_option); ?>"
+                                    class="regular-text"
+                                    style="width:100%; max-width: 820px;"
+                                    value="<?php echo esc_attr($cc_value); ?>"
+                                    placeholder="mail1@example.de, {{veranstaltungs_admin_email}}, {{vereins_admin_email}}"
+                                >
+                            </p>
+                            <p style="margin: 0 0 8px 0;">
+                                <label for="<?php echo esc_attr($bcc_option); ?>"><strong>BCC</strong></label><br>
+                                <input
+                                    type="text"
+                                    id="<?php echo esc_attr($bcc_option); ?>"
+                                    name="<?php echo esc_attr($bcc_option); ?>"
+                                    class="regular-text"
+                                    style="width:100%; max-width: 820px;"
+                                    value="<?php echo esc_attr($bcc_value); ?>"
+                                    placeholder="audit@example.de; {{veranstaltungs_admin_email}}"
+                                >
+                            </p>
                             <p class="description" style="margin:0;">
                                 Platzhalter: <?php echo esc_html(implode(', ', array_map(function($placeholder) { return '{{' . $placeholder . '}}'; }, $template['placeholders']))); ?>
+                            </p>
+                            <p class="description" style="margin-top:6px;">
+                                CC/BCC akzeptiert mehrere Empfaenger (Komma, Semikolon oder Zeilenumbruch). Fuer Verantwortliche: {{veranstaltungs_admin_email}}, {{vereins_admin_email}}.
                             </p>
                             <div style="margin-top:12px; padding-top:12px; border-top:1px dashed #dcdcde; display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
                                 <input
