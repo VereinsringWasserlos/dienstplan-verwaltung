@@ -2043,10 +2043,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             var successMessage = (response && response.data && response.data.message)
                                 ? response.data.message
                                 : 'Vielen Dank! Die Übernahme/Zuweisung wurde gespeichert.';
-                            var diagnoseText = (response && response.data && response.data.diagnose_text)
-                                ? ('\n\n' + response.data.diagnose_text)
-                                : '';
-                            alert(successMessage + diagnoseText);
+                            alert(successMessage);
                             window.closeAnmeldeModal();
                             window.location.reload();
                             return;

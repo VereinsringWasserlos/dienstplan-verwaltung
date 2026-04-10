@@ -677,23 +677,9 @@ class Dienstplan_Public {
                 $success_msg .= ' Hinweis: Buchungsbestätigungen sind derzeit deaktiviert.';
             }
 
-            $diagnose = $this->build_booking_mail_diagnose(
-                'frontend_ajax_assign_slot',
-                $booking_mail_enabled,
-                $email_for_user,
-                $booking_mail_sent,
-                $booking_mail_reason,
-                array(
-                    'slot_id' => intval($_POST['slot_id']),
-                    'mitarbeiter_id' => intval($mitarbeiter_id),
-                )
-            );
-
             wp_send_json_success(array(
-                'message' => $success_msg . "\n\n" . $diagnose['text'],
+                'message' => $success_msg,
                 'mitarbeiter_id' => $mitarbeiter_id,
-                'diagnose' => $diagnose['data'],
-                'diagnose_text' => $diagnose['text'],
             ));
             exit; // Wichtig: Verhindere weiteren Output
             
@@ -1905,24 +1891,9 @@ class Dienstplan_Public {
                 } elseif (!empty($email) && !$booking_mail_enabled) {
                     $success_msg .= ' Hinweis: Buchungsbestätigungen sind derzeit deaktiviert.';
         }
-        $diagnose = $this->build_booking_mail_diagnose(
-            'frontend_ajax_anmeldung_verein',
-            $booking_mail_enabled,
-            $email,
-            $booking_mail_sent,
-            $booking_mail_reason,
-            array(
-                'dienst_id' => intval($dienst_id),
-                'slot_id' => intval($slot_id),
-                'mitarbeiter_id' => intval($mitarbeiter_id),
-            )
-        );
-
         wp_send_json_success(array(
-            'message' => $success_msg . "\n\n" . $diagnose['text'],
+            'message' => $success_msg,
             'mitarbeiter_id' => $mitarbeiter_id,
-            'diagnose' => $diagnose['data'],
-            'diagnose_text' => $diagnose['text'],
         ));
     }
 }

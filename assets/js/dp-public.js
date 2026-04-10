@@ -350,10 +350,7 @@ jQuery(document).on('submit', '#dp-anmelde-form', function(e) {
                     const successMessage = (response.data && response.data.message)
                         ? response.data.message
                         : 'Vielen Dank für Ihre Anmeldung!';
-                    const diagnoseText = (response.data && response.data.diagnose_text)
-                        ? ('\n\n' + response.data.diagnose_text)
-                        : '';
-                    alert(successMessage + diagnoseText);
+                    alert(successMessage);
                     closeAnmeldeModal();
                     // Seite neu laden, um aktualisierten Status zu zeigen
                     location.reload();
