@@ -352,6 +352,36 @@ $nav_items = array(
         <?php
         $queue_stats = Dienstplan_Mail_Queue::get_stats();
         $queue_log = Dienstplan_Mail_Queue::get_log_items();
+        $queue_log_grouped = array();
+
+        foreach ($queue_log as $entry) {
+            $group_key = md5(wp_json_encode(array(
+                $entry['to'] ?? '',
+                $entry['type'] ?? '',
+                $entry['source'] ?? '',
+                $entry['reason'] ?? '',
+                $entry['subject'] ?? '',
+                $entry['status'] ?? '',
+                $entry['error'] ?? '',
+            )));
+
+            if (!isset($queue_log_grouped[$group_key])) {
+                $queue_log_grouped[$group_key] = $entry;
+                $queue_log_grouped[$group_key]['count'] = 1;
+                $queue_log_grouped[$group_key]['last_time'] = $entry['time'] ?? '';
+                $queue_log_grouped[$group_key]['first_time'] = $entry['time'] ?? '';
+                continue;
+            }
+
+            $queue_log_grouped[$group_key]['count']++;
+            $queue_log_grouped[$group_key]['first_time'] = $entry['time'] ?? ($queue_log_grouped[$group_key]['first_time'] ?? '');
+            $queue_log_grouped[$group_key]['attempts'] = max(
+                intval($queue_log_grouped[$group_key]['attempts'] ?? 0),
+                intval($entry['attempts'] ?? 0)
+            );
+        }
+
+        $queue_log_display = array_values($queue_log_grouped);
         $delivery_mode = $queue_stats['mode'] ?? 'queue';
         $next_run_display = !empty($queue_stats['next_run'])
             ? date_i18n('d.m.Y H:i:s', intval($queue_stats['next_run']))
@@ -402,13 +432,21 @@ $nav_items = array(
                 <h2><span class="dashicons dashicons-list-view" style="vertical-align:middle; margin-right:6px;"></span><?php _e('Queue-Log', 'dienstplan-verwaltung'); ?></h2>
             </div>
             <div class="dp-card-body">
-                <?php if (empty($queue_log)): ?>
+                <?php if (empty($queue_log_display)): ?>
                     <p class="description" style="font-style: italic;"><?php _e('Noch keine Queue-Einträge vorhanden.', 'dienstplan-verwaltung'); ?></p>
                 <?php else: ?>
+                    <p class="description" style="margin-bottom: 10px;">
+                        <?php
+                        $original_count = count($queue_log);
+                        $grouped_count = count($queue_log_display);
+                        echo esc_html(sprintf('Zusammengeführt: %d Einträge zu %d Gruppen', $original_count, $grouped_count));
+                        ?>
+                    </p>
                     <table class="wp-list-table widefat fixed striped" style="font-size: 13px;">
                         <thead>
                             <tr>
                                 <th style="width:170px;"><?php _e('Zeitpunkt', 'dienstplan-verwaltung'); ?></th>
+                                <th style="width:80px;"><?php _e('Anzahl', 'dienstplan-verwaltung'); ?></th>
                                 <th style="width:220px;"><?php _e('Empfänger', 'dienstplan-verwaltung'); ?></th>
                                 <th style="width:160px;"><?php _e('Typ', 'dienstplan-verwaltung'); ?></th>
                                 <th style="width:170px;"><?php _e('Quelle', 'dienstplan-verwaltung'); ?></th>
@@ -420,9 +458,19 @@ $nav_items = array(
                             </tr>
                         </thead>
                         <tbody>
-                        <?php foreach ($queue_log as $entry): ?>
+                        <?php foreach ($queue_log_display as $entry): ?>
                             <tr>
-                                <td><?php echo esc_html($entry['time'] ?? ''); ?></td>
+                                <td>
+                                    <?php
+                                    $last_time = $entry['last_time'] ?? ($entry['time'] ?? '');
+                                    $first_time = $entry['first_time'] ?? ($entry['time'] ?? '');
+                                    echo esc_html($last_time);
+                                    if (!empty($first_time) && $first_time !== $last_time) {
+                                        echo '<br><small style="color:#666;">ab ' . esc_html($first_time) . '</small>';
+                                    }
+                                    ?>
+                                </td>
+                                <td><strong><?php echo intval($entry['count'] ?? 1); ?></strong></td>
                                 <td style="word-break: break-all;"><?php echo esc_html($entry['to'] ?? ''); ?></td>
                                 <td><?php echo esc_html($entry['type'] ?? '-'); ?></td>
                                 <td><?php echo esc_html($entry['source'] ?? '-'); ?></td>
