@@ -131,6 +131,39 @@ class Dienstplan_Public {
     }
 
     /**
+     * Liefert ein schema-sicheres SELECT-Fragment fuer den Veranstaltungsnamen.
+     *
+     * @param string $veranstaltungen_table
+     * @param string $alias
+     * @return string
+     */
+    private function get_veranstaltung_name_select_expr($veranstaltungen_table, $alias = 'v') {
+        global $wpdb;
+
+        static $cache = array();
+        $cache_key = $veranstaltungen_table . '|' . $alias;
+        if (isset($cache[$cache_key])) {
+            return $cache[$cache_key];
+        }
+
+        $has_name = (bool) $wpdb->get_var("SHOW COLUMNS FROM {$veranstaltungen_table} LIKE 'name'");
+        $has_titel = (bool) $wpdb->get_var("SHOW COLUMNS FROM {$veranstaltungen_table} LIKE 'titel'");
+
+        if ($has_name && $has_titel) {
+            $expr = "COALESCE({$alias}.name, {$alias}.titel) as veranstaltung";
+        } elseif ($has_name) {
+            $expr = "{$alias}.name as veranstaltung";
+        } elseif ($has_titel) {
+            $expr = "{$alias}.titel as veranstaltung";
+        } else {
+            $expr = "'' as veranstaltung";
+        }
+
+        $cache[$cache_key] = $expr;
+        return $expr;
+    }
+
+    /**
      * Assets (CSS/JS) für Frontend laden
      *
      * @since    1.0.0
@@ -528,13 +561,14 @@ class Dienstplan_Public {
             $booking_mail_sent = null;
             $booking_mail_reason = '';
             if (!empty($email_for_user) && $booking_mail_enabled) {
+                $veranstaltung_name_expr = $this->get_veranstaltung_name_select_expr($prefix . 'veranstaltungen', 'v');
                 $slot_id_mail = intval($_POST['slot_id']);
                 $slot_mail = $wpdb->get_row($wpdb->prepare(
                     "SELECT * FROM {$prefix}dienst_slots WHERE id = %d",
                     $slot_id_mail
                 ));
                 $dienst_mail = $wpdb->get_row($wpdb->prepare(
-                    "SELECT d.*, COALESCE(v.titel, v.name) as veranstaltung, v.seite_id as veranstaltung_seite_id, ve.name as verein, ve.seite_id as verein_seite_id, t.name as taetigkeit, b.name as bereich
+                    "SELECT d.*, {$veranstaltung_name_expr}, v.seite_id as veranstaltung_seite_id, ve.name as verein, ve.seite_id as verein_seite_id, t.name as taetigkeit, b.name as bereich
                      FROM {$prefix}dienste d
                      LEFT JOIN {$prefix}veranstaltungen v ON d.veranstaltung_id = v.id
                      LEFT JOIN {$prefix}vereine ve ON d.verein_id = ve.id
@@ -885,8 +919,9 @@ class Dienstplan_Public {
             $booking_mail_sent = null;
             $booking_mail_reason = '';
             if (!empty($email) && $booking_mail_enabled) {
+                $veranstaltung_name_expr = $this->get_veranstaltung_name_select_expr($prefix . 'veranstaltungen', 'v');
                 $dienst_mail = $wpdb->get_row($wpdb->prepare(
-                    "SELECT d.*, COALESCE(v.titel, v.name) as veranstaltung, v.seite_id as veranstaltung_seite_id,
+                    "SELECT d.*, {$veranstaltung_name_expr}, v.seite_id as veranstaltung_seite_id,
                             ve.name as verein, ve.seite_id as verein_seite_id,
                             t.name as taetigkeit, b.name as bereich, vt.tag_datum
                      FROM {$prefix}dienste d
@@ -1742,8 +1777,9 @@ class Dienstplan_Public {
         }
         
         // Bestätigungs-E-Mail senden
+        $veranstaltung_name_expr = $this->get_veranstaltung_name_select_expr($prefix . 'veranstaltungen', 'v');
         $dienst = $wpdb->get_row($wpdb->prepare(
-            "SELECT d.*, COALESCE(v.titel, v.name) as veranstaltung, v.seite_id as veranstaltung_seite_id, ve.name as verein, ve.seite_id as verein_seite_id, t.name as taetigkeit, b.name as bereich
+            "SELECT d.*, {$veranstaltung_name_expr}, v.seite_id as veranstaltung_seite_id, ve.name as verein, ve.seite_id as verein_seite_id, t.name as taetigkeit, b.name as bereich
              FROM {$prefix}dienste d
              LEFT JOIN {$prefix}veranstaltungen v ON d.veranstaltung_id = v.id
              LEFT JOIN {$prefix}vereine ve ON d.verein_id = ve.id
