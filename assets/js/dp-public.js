@@ -361,8 +361,13 @@ jQuery(document).on('submit', '#dp-anmelde-form', function(e) {
                 }
 
                 const responseCode = response && response.data ? response.data.code : '';
+                const responseMessage = response && response.data && response.data.message
+                    ? String(response.data.message)
+                    : '';
                 const existing = response && response.data ? response.data.existing_mitarbeiter : null;
-                if (responseCode === 'existing_mitarbeiter_found' && existing && existing.id) {
+                const isExistingEmailCase = responseCode === 'existing_mitarbeiter_found'
+                    || /bereits.*mitarbeiter.*zugeordnet/i.test(responseMessage);
+                if (isExistingEmailCase) {
                     const displayName = jQuery.trim(((existing.vorname || '') + ' ' + (existing.nachname || '')));
                     const confirmText = displayName
                         ? ('Die E-Mail-Adresse ist bereits dem Mitarbeiter "' + displayName + '" zugeordnet. Soll dieser Mitarbeiter verwendet werden?')

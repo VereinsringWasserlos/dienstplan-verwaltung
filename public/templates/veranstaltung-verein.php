@@ -2053,8 +2053,11 @@ document.addEventListener('DOMContentLoaded', function() {
                         }
 
                         var responseCode = (response && response.data && response.data.code) ? response.data.code : '';
+                        var responseMessage = (response && response.data && response.data.message) ? String(response.data.message) : '';
                         var existing = (response && response.data && response.data.existing_mitarbeiter) ? response.data.existing_mitarbeiter : null;
-                        if (responseCode === 'existing_mitarbeiter_found' && existing && existing.id) {
+                        var isExistingEmailCase = responseCode === 'existing_mitarbeiter_found'
+                            || /bereits.*mitarbeiter.*zugeordnet/i.test(responseMessage);
+                        if (isExistingEmailCase) {
                             var displayName = jQuery.trim(((existing.vorname || '') + ' ' + (existing.nachname || '')));
                             var confirmText = displayName
                                 ? ('Die E-Mail-Adresse ist bereits dem Mitarbeiter "' + displayName + '" zugeordnet. Soll dieser Mitarbeiter verwendet werden?')
