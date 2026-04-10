@@ -336,6 +336,64 @@ foreach ($stats as $count) {
         </table>
     </div>
 
+    <!-- 📧 Booking-Mail Debug Logs -->
+    <div class="card" style="margin-top: 2rem;">
+        <h2>📧 Booking-Mail Debug-Logs</h2>
+        
+        <?php
+        $booking_mail_logs = get_option('dp_booking_mail_debug_logs', array());
+        
+        if (!empty($booking_mail_logs) && is_array($booking_mail_logs)):
+            // Logs rückwärts (neueste zuerst)
+            $logs_reversed = array_reverse($booking_mail_logs);
+        ?>
+        
+            <p style="margin-bottom: 1rem; color: #6b7280;">
+                <strong><?php echo count($booking_mail_logs); ?> Debug-Einträge</strong> vorhanden. 
+                <button type="button" class="button button-small" onclick="clearBookingMailLogs()" style="margin-left: 1rem;">
+                    Logs löschen
+                </button>
+            </p>
+        
+            <table class="wp-list-table widefat striped" style="margin-top: 1rem;">
+                <thead>
+                    <tr>
+                        <th style="width: 180px;">Zeitstempel</th>
+                        <th style="width: 200px;">Quelle</th>
+                        <th>Details</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($logs_reversed as $log_entry): ?>
+                        <tr>
+                            <td style="font-family: monospace; font-size: 0.85rem;">
+                                <?php echo isset($log_entry['timestamp']) ? esc_html($log_entry['timestamp']) : '—'; ?>
+                            </td>
+                            <td>
+                                <code style="background: #f0f6fc; padding: 2px 6px; border-radius: 3px;">
+                                    <?php echo isset($log_entry['source']) ? esc_html($log_entry['source']) : '—'; ?>
+                                </code>
+                            </td>
+                            <td>
+                                <details style="cursor: pointer; font-size: 0.9rem;">
+                                    <summary style="color: #0073aa;">Anzeigen</summary>
+                                    <pre style="background: #f6f7f7; padding: 0.75rem; border-radius: 3px; margin-top: 0.5rem; overflow-x: auto; max-height: 300px; overflow-y: auto; font-size: 0.8rem;">
+                                        <?php echo esc_html(wp_json_encode($log_entry, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE)); ?>
+                                    </pre>
+                                </details>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        
+        <?php else: ?>
+            <p style="color: #6b7280; font-style: italic;">
+                Noch keine Booking-Mail Debug-Logs vorhanden. Lösen Sie eine Buchung auf dem Frontend aus, um Logs zu generieren.
+            </p>
+        <?php endif; ?>
+    </div>
+
     <!-- Diagnose-Tools -->
     <div class="card" style="margin-top: 2rem;">
         <h2>🔍 Diagnose-Tools</h2>
@@ -698,5 +756,32 @@ function checkDienstStatus() {
         `;
         resultDiv.style.display = 'block';
     });
+}
+
+function clearBookingMailLogs() {
+    if (confirm('Alle Booking-Mail Debug-Logs löschen?\n\nDies kann nicht rückgängig gemacht werden.')) {
+        fetch(ajaxurl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: new URLSearchParams({
+                action: 'dp_clear_booking_mail_logs',
+                nonce: '<?php echo wp_create_nonce('dp_ajax_nonce'); ?>'
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('✅ Logs wurden gelöscht! Seite wird neu geladen...');
+                location.reload();
+            } else {
+                alert('❌ Fehler: ' + data.data.message);
+            }
+        })
+        .catch(error => {
+            alert('❌ Fehler: ' + error.message);
+        });
+    }
 }
 </script>

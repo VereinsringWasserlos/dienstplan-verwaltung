@@ -5712,6 +5712,24 @@ class Dienstplan_Admin {
     }
     
     /**
+     * AJAX: Booking-Mail Debug-Logs löschen
+     */
+    public function ajax_clear_booking_mail_logs() {
+        check_ajax_referer('dp_ajax_nonce', 'nonce');
+        
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(array('message' => 'Keine Berechtigung'));
+            return;
+        }
+        
+        delete_option('dp_booking_mail_debug_logs');
+        
+        wp_send_json_success(array(
+            'message' => 'Debug-Logs gelöscht'
+        ));
+    }
+    
+    /**
      * Login-Redirect für Dienstplan-Rollen
      * 
      * Leitet Benutzer mit Dienstplan-Rollen nach Login direkt zum Dienstplan-Dashboard,

@@ -271,6 +271,7 @@ class Dienstplan_Verwaltung {
         $this->loader->add_action('wp_ajax_dp_create_verein', $plugin_admin, 'ajax_create_verein');
         $this->loader->add_action('wp_ajax_dp_get_taetigkeiten_by_bereich', $plugin_admin, 'ajax_get_taetigkeiten_by_bereich');
         $this->loader->add_action('wp_ajax_dp_check_dienst_status', $plugin_admin, 'ajax_check_dienst_status');
+        $this->loader->add_action('wp_ajax_dp_clear_booking_mail_logs', $plugin_admin, 'ajax_clear_booking_mail_logs');
         
         // AJAX-Actions für Bulk-Aktionen
         $this->loader->add_action('wp_ajax_bulk_delete_dienste', $plugin_admin, 'ajax_bulk_delete_dienste');

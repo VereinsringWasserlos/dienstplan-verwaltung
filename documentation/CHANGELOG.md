@@ -11,7 +11,7 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ---
 
-## [0.9.5.62] - 2026-04-10 🛠️ Kritische Datenbankfehler: SQL-Spaltennamen und fehlende Tabelle
+## [0.9.5.62] - 2026-04-10 🛠️ Kritische Datenbankfehler: SQL-Spaltennamen und fehlende Tabelle + Mail-Debug-Logs
 
 ### 🐛 Bugfixes
 
@@ -19,13 +19,18 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 - **Dashboard: Falscher Tabellen- und Spaltennamen**: Die Statistik-Query im Dashboard-Widget referenzierte die nicht-existente Tabelle `{prefix}veranstaltungen_tage` statt `{prefix}veranstaltung_tage` und die Spalte `datum` statt `tag_datum`. Korrigiert.
 - **Datenbankstruktur: Automatische Reparatur bei fehlender Tabelle**: Der Initialisierer prüft jetzt beim Plugin-Start, ob die kritische Tabelle `veranstaltung_tage` existiert, und erstellt sie falls nötig (z. B. bei unvollständigen Plugin-Aktivierungen auf älteren Servern).
 - **WordPress 6.7+ Warnung: Textdomain zu früh geladen**: Der Updater wird jetzt auf dem `admin_init` Hook statt während der Klassen-Initialisierung instanziiert. Dadurch wird die Textdomain nach dem `init` Hook geladen und die WordPress 6.7+ Warnung eliminiert.
+- **Mail-Debug-Logs unsichtbar ohne WP_DEBUG**: Die `log_booking_mail_debug()`-Funktion schreibt jetzt zusätzlich zu `error_log()` auch direkt in eine WordPress-Option (`dp_booking_mail_debug_logs`), damit die Logs im Debug-Header des Backends sichtbar sind — auch wenn WP_DEBUG deaktiviert ist.
+
+### ✨ Neu
+
+- **Debug-Seite: Mail-Debug-Logs anzeigen & löschen**: Neuer Abschnitt "📧 Booking-Mail Debug-Logs" im Dienstplan → Debug zeigt alle Booking-Buchungen mit Zeitstempel, Quelle (z.B. `frontend_ajax_create_service`) und vollständiger JSON-Payload für schnelle Fehlerdiagnose. Buttons zum Clearzen verfügbar.
 
 ### ⚙️ Technisch
 
-- `class-dienstplan-verwaltung.php`: `check_database_updates()` prüft jetzt nach kritischen Tabellen und führt `install()` aus, falls nötig.
-- `class-dienstplan-verwaltung.php`: Neue Methode `initialize_updater()` wird auf `admin_init` Hook gebunden, statt den Updater direkt zu instantiieren.
-- `public/class-public.php`: Beide problematischen SQL-Queries in Booking-Endpoints aktualisiert.
-- `admin/class-admin.php`: Dashboard-Widget Query korrigiert.
+- `public/class-public.php`: `log_booking_mail_debug()` speichert jetzt zusätzlich in `dp_booking_mail_debug_logs` (letzte 100 Einträge).
+- `admin/class-admin.php`: Neue AJAX-Funktion `ajax_clear_booking_mail_logs()` zum Leeren der Debug-Logs.
+- `admin/views/debug.php`: Neuer anklappbarer Bereich mit Logs-Tabelle, Zeit, Quelle und Details.
+- `includes/class-dienstplan-verwaltung.php`: Hook für neue AJAX-Funktion `dp_clear_booking_mail_logs` registriert.
 
 ---
 

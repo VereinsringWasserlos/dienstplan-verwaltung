@@ -65,8 +65,27 @@ class Dienstplan_Public {
 
         $payload['source'] = sanitize_key((string) $source);
         $payload['timestamp'] = current_time('mysql');
+        
+        $log_entry = wp_json_encode($payload);
 
-        error_log('DP BOOKING MAIL DEBUG: ' . wp_json_encode($payload));
+        // error_log für WP_DEBUG aktivierte Instanzen
+        error_log('DP BOOKING MAIL DEBUG: ' . $log_entry);
+        
+        // Zusätzlich in wp_option speichern für Backend-Zugriff (letzten 100 Einträge)
+        $debug_logs = get_option('dp_booking_mail_debug_logs', array());
+        if (!is_array($debug_logs)) {
+            $debug_logs = array();
+        }
+        
+        // Neuen Eintrag hinzufügen
+        $debug_logs[] = $payload;
+        
+        // Auf letzte 100 Einträge begrenzen (ältere Einträge löschen)
+        if (count($debug_logs) > 100) {
+            $debug_logs = array_slice($debug_logs, -100);
+        }
+        
+        update_option('dp_booking_mail_debug_logs', $debug_logs);
     }
 
     /**
