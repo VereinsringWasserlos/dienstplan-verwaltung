@@ -278,7 +278,8 @@ window.closeAnmeldeModal = function() {
     }
 };
 
-// Anmelde-Formular Handler
+// Anmelde-Formular Handler (nur einmal binden)
+if (!window.dpPublicSubmitBound) {
 window.dpPublicSubmitBound = true;
 jQuery(document).on('submit', '#dp-anmelde-form', function(e) {
     e.preventDefault();
@@ -390,6 +391,7 @@ jQuery(document).on('submit', '#dp-anmelde-form', function(e) {
 
     sendAnmeldungRequest(formData);
 });
+}
 
 // Modal-Close bei ESC oder Außenklick
 jQuery(document).on('keydown', function(e) {
