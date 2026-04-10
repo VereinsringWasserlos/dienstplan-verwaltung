@@ -11,12 +11,18 @@ class Dienstplan_Mail_Queue {
     const QUEUE_OPTION = 'dp_mail_queue_items';
     const LOG_OPTION = 'dp_mail_queue_log';
     const LAST_RUN_OPTION = 'dp_mail_queue_last_run';
+    const MODE_OPTION = 'dp_mail_delivery_mode';
     const INTERVAL_OPTION = 'dp_mail_queue_interval_minutes';
     const BATCH_OPTION = 'dp_mail_queue_batch_size';
     const APPLIED_INTERVAL_OPTION = 'dp_mail_queue_applied_interval_minutes';
     const CRON_HOOK = 'dp_process_mail_queue';
     const CRON_SCHEDULE = 'dp_mail_queue_interval';
     const MAX_LOG_ITEMS = 250;
+
+    public static function get_delivery_mode() {
+        $mode = (string) get_option(self::MODE_OPTION, 'queue');
+        return in_array($mode, array('queue', 'immediate'), true) ? $mode : 'queue';
+    }
 
     public static function get_interval_minutes() {
         $interval = intval(get_option(self::INTERVAL_OPTION, 5));
@@ -48,6 +54,11 @@ class Dienstplan_Mail_Queue {
     }
 
     public static function ensure_scheduled() {
+        if (self::get_delivery_mode() !== 'queue') {
+            wp_clear_scheduled_hook(self::CRON_HOOK);
+            return;
+        }
+
         $interval_minutes = self::get_interval_minutes();
         $applied = intval(get_option(self::APPLIED_INTERVAL_OPTION, 0));
 
@@ -65,6 +76,28 @@ class Dienstplan_Mail_Queue {
         $recipients = self::normalize_recipients($to);
         if (empty($recipients)) {
             return false;
+        }
+
+        if (self::get_delivery_mode() === 'immediate') {
+            $mail_result = wp_mail($recipients, (string) $subject, (string) $message, $headers);
+            $error_message = '';
+            if (!$mail_result) {
+                global $phpmailer;
+                if (isset($phpmailer) && !empty($phpmailer->ErrorInfo)) {
+                    $error_message = (string) $phpmailer->ErrorInfo;
+                }
+            }
+
+            self::append_log(array(
+                'time' => current_time('mysql'),
+                'status' => $mail_result ? 'sent' : 'failed',
+                'to' => implode(', ', $recipients),
+                'subject' => (string) $subject,
+                'error' => $error_message,
+                'attempts' => 1,
+            ));
+
+            return (bool) $mail_result;
         }
 
         $queue = get_option(self::QUEUE_OPTION, array());
@@ -205,6 +238,7 @@ class Dienstplan_Mail_Queue {
 
     public static function get_stats() {
         return array(
+            'mode' => self::get_delivery_mode(),
             'queue_count' => count(self::get_queue_items()),
             'log_count' => count(self::get_log_items()),
             'last_run' => self::get_last_run(),

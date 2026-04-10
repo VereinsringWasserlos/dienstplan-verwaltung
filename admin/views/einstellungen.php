@@ -172,6 +172,11 @@ $nav_items = array(
             update_option('dp_mail_enable_booking',           isset($_POST['dp_mail_enable_booking']) ? 1 : 0);
             update_option('dp_mail_enable_portal_invite',     isset($_POST['dp_mail_enable_portal_invite']) ? 1 : 0);
             update_option('dp_mail_enable_dienste_uebersicht',isset($_POST['dp_mail_enable_dienste_uebersicht']) ? 1 : 0);
+            $delivery_mode = sanitize_key(wp_unslash($_POST['dp_mail_delivery_mode'] ?? 'queue'));
+            if (!in_array($delivery_mode, array('queue', 'immediate'), true)) {
+                $delivery_mode = 'queue';
+            }
+            update_option('dp_mail_delivery_mode', $delivery_mode);
             $queue_interval = intval($_POST['dp_mail_queue_interval_minutes'] ?? 5);
             $queue_batch = intval($_POST['dp_mail_queue_batch_size'] ?? 20);
             if ($queue_interval < 1) {
@@ -308,6 +313,16 @@ $nav_items = array(
                             </td>
                         </tr>
                         <tr>
+                            <th scope="row"><label for="dp_mail_delivery_mode">Versandmodus</label></th>
+                            <td>
+                                <select id="dp_mail_delivery_mode" name="dp_mail_delivery_mode">
+                                    <option value="immediate" <?php selected(get_option('dp_mail_delivery_mode', 'queue'), 'immediate'); ?>>Mail sofort (direkt)</option>
+                                    <option value="queue" <?php selected(get_option('dp_mail_delivery_mode', 'queue'), 'queue'); ?>>Mail über Queue (Cron)</option>
+                                </select>
+                                <p class="description">Sofort: E-Mails werden direkt versendet. Queue: E-Mails werden gesammelt und per Cron verarbeitet.</p>
+                            </td>
+                        </tr>
+                        <tr>
                             <th scope="row"><label for="dp_mail_queue_interval_minutes">Queue-Intervall (Minuten)</label></th>
                             <td>
                                 <input type="number" id="dp_mail_queue_interval_minutes" name="dp_mail_queue_interval_minutes" class="small-text"
@@ -337,6 +352,7 @@ $nav_items = array(
         <?php
         $queue_stats = Dienstplan_Mail_Queue::get_stats();
         $queue_log = Dienstplan_Mail_Queue::get_log_items();
+        $delivery_mode = $queue_stats['mode'] ?? 'queue';
         $next_run_display = !empty($queue_stats['next_run'])
             ? date_i18n('d.m.Y H:i:s', intval($queue_stats['next_run']))
             : 'nicht geplant';
@@ -347,6 +363,10 @@ $nav_items = array(
             </div>
             <div class="dp-card-body">
                 <table class="form-table">
+                    <tr>
+                        <th scope="row"><?php _e('Versandmodus', 'dienstplan-verwaltung'); ?></th>
+                        <td><?php echo $delivery_mode === 'immediate' ? 'Mail sofort (direkt)' : 'Queue (Cron)'; ?></td>
+                    </tr>
                     <tr>
                         <th scope="row"><?php _e('Einträge in Queue', 'dienstplan-verwaltung'); ?></th>
                         <td><strong><?php echo intval($queue_stats['queue_count']); ?></strong></td>
