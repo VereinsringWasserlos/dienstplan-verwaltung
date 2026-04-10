@@ -2040,7 +2040,13 @@ document.addEventListener('DOMContentLoaded', function() {
                         dpDebug('Submit Antwort', response);
                         if (response && response.success) {
                             requestSucceeded = true;
-                            alert('Vielen Dank! Die Übernahme/Zuweisung wurde gespeichert.');
+                            var successMessage = (response && response.data && response.data.message)
+                                ? response.data.message
+                                : 'Vielen Dank! Die Übernahme/Zuweisung wurde gespeichert.';
+                            var diagnoseText = (response && response.data && response.data.diagnose_text)
+                                ? ('\n\n' + response.data.diagnose_text)
+                                : '';
+                            alert(successMessage + diagnoseText);
                             window.closeAnmeldeModal();
                             window.location.reload();
                             return;

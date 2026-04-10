@@ -89,6 +89,48 @@ class Dienstplan_Public {
     }
 
     /**
+     * Erstellt einen Diagnose-Block fuer den Mailversand.
+     *
+     * @param string $source
+     * @param bool   $booking_mail_enabled
+     * @param string $email
+     * @param mixed  $booking_mail_sent
+     * @param string $booking_mail_reason
+     * @param array  $extra
+     * @return array{data:array,text:string}
+     */
+    private function build_booking_mail_diagnose($source, $booking_mail_enabled, $email, $booking_mail_sent, $booking_mail_reason, $extra = array()) {
+        $result = is_bool($booking_mail_sent)
+            ? ($booking_mail_sent ? 'success' : 'failed')
+            : 'skipped';
+
+        $diagnose_data = array_merge(array(
+            'source' => sanitize_key((string) $source),
+            'booking_enabled' => $booking_mail_enabled ? 1 : 0,
+            'email_present' => !empty($email) ? 1 : 0,
+            'email' => !empty($email) ? sanitize_email($email) : '',
+            'result' => $result,
+            'reason' => (string) $booking_mail_reason,
+            'time' => current_time('mysql'),
+        ), is_array($extra) ? $extra : array());
+
+        $diagnose_lines = array(
+            '--- Diagnose Mailversand ---',
+            'Quelle: ' . $diagnose_data['source'],
+            'Mail aktiviert: ' . ($diagnose_data['booking_enabled'] ? 'ja' : 'nein'),
+            'E-Mail vorhanden: ' . ($diagnose_data['email_present'] ? 'ja' : 'nein'),
+            'Ergebnis: ' . $diagnose_data['result'],
+            'Grund: ' . (!empty($diagnose_data['reason']) ? $diagnose_data['reason'] : '-'),
+            'Zeit: ' . $diagnose_data['time'],
+        );
+
+        return array(
+            'data' => $diagnose_data,
+            'text' => implode("\n", $diagnose_lines),
+        );
+    }
+
+    /**
      * Assets (CSS/JS) für Frontend laden
      *
      * @since    1.0.0
@@ -601,9 +643,23 @@ class Dienstplan_Public {
                 $success_msg .= ' Hinweis: Buchungsbestätigungen sind derzeit deaktiviert.';
             }
 
+            $diagnose = $this->build_booking_mail_diagnose(
+                'frontend_ajax_assign_slot',
+                $booking_mail_enabled,
+                $email_for_user,
+                $booking_mail_sent,
+                $booking_mail_reason,
+                array(
+                    'slot_id' => intval($_POST['slot_id']),
+                    'mitarbeiter_id' => intval($mitarbeiter_id),
+                )
+            );
+
             wp_send_json_success(array(
                 'message' => $success_msg,
-                'mitarbeiter_id' => $mitarbeiter_id
+                'mitarbeiter_id' => $mitarbeiter_id,
+                'diagnose' => $diagnose['data'],
+                'diagnose_text' => $diagnose['text'],
             ));
             exit; // Wichtig: Verhindere weiteren Output
             
@@ -1813,9 +1869,24 @@ class Dienstplan_Public {
                 } elseif (!empty($email) && !$booking_mail_enabled) {
                     $success_msg .= ' Hinweis: Buchungsbestätigungen sind derzeit deaktiviert.';
         }
+        $diagnose = $this->build_booking_mail_diagnose(
+            'frontend_ajax_anmeldung_verein',
+            $booking_mail_enabled,
+            $email,
+            $booking_mail_sent,
+            $booking_mail_reason,
+            array(
+                'dienst_id' => intval($dienst_id),
+                'slot_id' => intval($slot_id),
+                'mitarbeiter_id' => intval($mitarbeiter_id),
+            )
+        );
+
         wp_send_json_success(array(
             'message' => $success_msg,
-            'mitarbeiter_id' => $mitarbeiter_id
+            'mitarbeiter_id' => $mitarbeiter_id,
+            'diagnose' => $diagnose['data'],
+            'diagnose_text' => $diagnose['text'],
         ));
     }
 }
