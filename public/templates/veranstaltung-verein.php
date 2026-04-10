@@ -2009,7 +2009,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 dienst_id: jQuery('#dp-dienst-id').val(),
                 vorname: jQuery('#dp-vorname').val(),
                 nachname: jQuery('#dp-nachname').val(),
-                email: jQuery('#dp-email').val(),
+                email: jQuery.trim(jQuery('#dp-email').val()),
                 besonderheiten: jQuery('#dp-besonderheiten').val(),
                 create_user_account: jQuery('input[name="create_user_account"]:checked').val() || '0',
                 create_user_datenschutz: jQuery('#dp-create-user-datenschutz').is(':checked') ? '1' : '0'
@@ -2030,41 +2030,64 @@ document.addEventListener('DOMContentLoaded', function() {
             submitBtn.prop('disabled', true).text('Wird gesendet...');
 
             var requestSucceeded = false;
-            jQuery.ajax({
-                url: dpConfig.ajaxurl,
-                type: 'POST',
-                data: formData,
-                success: function(response) {
-                    window.dpTrace('Submit Antwort', response);
-                    dpDebug('Submit Antwort', response);
-                    if (response && response.success) {
-                        requestSucceeded = true;
-                        alert('Vielen Dank! Die Übernahme/Zuweisung wurde gespeichert.');
-                        window.closeAnmeldeModal();
-                        window.location.reload();
-                    } else {
+            var sendAnmeldungRequest = function(payload) {
+                jQuery.ajax({
+                    url: dpConfig.ajaxurl,
+                    type: 'POST',
+                    data: payload,
+                    success: function(response) {
+                        window.dpTrace('Submit Antwort', response);
+                        dpDebug('Submit Antwort', response);
+                        if (response && response.success) {
+                            requestSucceeded = true;
+                            alert('Vielen Dank! Die Übernahme/Zuweisung wurde gespeichert.');
+                            window.closeAnmeldeModal();
+                            window.location.reload();
+                            return;
+                        }
+
+                        var responseCode = (response && response.data && response.data.code) ? response.data.code : '';
+                        var existing = (response && response.data && response.data.existing_mitarbeiter) ? response.data.existing_mitarbeiter : null;
+                        if (responseCode === 'existing_mitarbeiter_found' && existing && existing.id) {
+                            var displayName = jQuery.trim(((existing.vorname || '') + ' ' + (existing.nachname || '')));
+                            var confirmText = displayName
+                                ? ('Die E-Mail-Adresse ist bereits dem Mitarbeiter "' + displayName + '" zugeordnet. Soll dieser Mitarbeiter verwendet werden?')
+                                : 'Die E-Mail-Adresse ist bereits einem Mitarbeiter zugeordnet. Soll dieser Mitarbeiter verwendet werden?';
+
+                            if (window.confirm(confirmText)) {
+                                var retryPayload = jQuery.extend({}, payload, {
+                                    use_existing_mitarbeiter: '1',
+                                    selected_mitarbeiter_id: String(existing.id)
+                                });
+                                sendAnmeldungRequest(retryPayload);
+                                return;
+                            }
+                        }
+
                         var message = (response && response.data && response.data.message) ? response.data.message : 'Aktion fehlgeschlagen.';
                         alert('Fehler: ' + message);
                         submitBtn.prop('disabled', false).text(originalText);
-                    }
-                },
-                error: function(xhr, status, error) {
-                    window.dpTrace('Submit AJAX Fehler', {
-                        status: status,
-                        error: error,
-                        responseText: xhr && xhr.responseText ? String(xhr.responseText).slice(0, 250) : ''
-                    });
-                    alert('Serverfehler bei der Übermittlung.');
-                    dpDebug('Submit AJAX Fehler');
-                    submitBtn.prop('disabled', false).text(originalText);
-                },
-                complete: function() {
-                    window.dpTrace('Submit abgeschlossen', { requestSucceeded: requestSucceeded });
-                    if (!requestSucceeded) {
+                    },
+                    error: function(xhr, status, error) {
+                        window.dpTrace('Submit AJAX Fehler', {
+                            status: status,
+                            error: error,
+                            responseText: xhr && xhr.responseText ? String(xhr.responseText).slice(0, 250) : ''
+                        });
+                        alert('Serverfehler bei der Übermittlung.');
+                        dpDebug('Submit AJAX Fehler');
                         submitBtn.prop('disabled', false).text(originalText);
+                    },
+                    complete: function() {
+                        window.dpTrace('Submit abgeschlossen', { requestSucceeded: requestSucceeded });
+                        if (!requestSucceeded) {
+                            submitBtn.prop('disabled', false).text(originalText);
+                        }
                     }
-                }
-            });
+                });
+            };
+
+            sendAnmeldungRequest(formData);
 
             return false;
         });

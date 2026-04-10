@@ -1499,6 +1499,7 @@ class Dienstplan_Public {
         $besonderheiten = isset($_POST['besonderheiten']) ? sanitize_textarea_field(wp_unslash($_POST['besonderheiten'])) : '';
         $create_user_account = isset($_POST['create_user_account']) && sanitize_text_field(wp_unslash($_POST['create_user_account'])) === '1';
         $create_user_datenschutz = isset($_POST['create_user_datenschutz']) && sanitize_text_field(wp_unslash($_POST['create_user_datenschutz'])) === '1';
+        $use_existing_mitarbeiter = isset($_POST['use_existing_mitarbeiter']) && sanitize_text_field(wp_unslash($_POST['use_existing_mitarbeiter'])) === '1';
         $selected_mitarbeiter_id = isset($_POST['selected_mitarbeiter_id']) ? intval($_POST['selected_mitarbeiter_id']) : 0;
         $source_url = isset($_POST['source_url']) ? esc_url_raw(sanitize_text_field(wp_unslash($_POST['source_url']))) : '';
         
@@ -1613,7 +1614,22 @@ class Dienstplan_Public {
             )) : null;
 
             if ($existing_mitarbeiter) {
-                $mitarbeiter_id = $existing_mitarbeiter->id;
+                $existing_mitarbeiter_obj = $db->get_mitarbeiter(intval($existing_mitarbeiter->id));
+                if (!$use_existing_mitarbeiter) {
+                    wp_send_json_error(array(
+                        'message' => 'Diese E-Mail-Adresse ist bereits einem Mitarbeiter zugeordnet. Soll dieser Mitarbeiter verwendet werden?',
+                        'code' => 'existing_mitarbeiter_found',
+                        'existing_mitarbeiter' => array(
+                            'id' => intval($existing_mitarbeiter->id),
+                            'vorname' => sanitize_text_field($existing_mitarbeiter_obj->vorname ?? ''),
+                            'nachname' => sanitize_text_field($existing_mitarbeiter_obj->nachname ?? ''),
+                            'email' => sanitize_email($existing_mitarbeiter_obj->email ?? $email),
+                        ),
+                    ));
+                    return;
+                }
+
+                $mitarbeiter_id = intval($existing_mitarbeiter->id);
             } else {
                 // Neuen Mitarbeiter anlegen (schema-sicher: nur vorhandene Spalten)
                 $mitarbeiter_columns = $wpdb->get_col("SHOW COLUMNS FROM {$prefix}mitarbeiter", 0);

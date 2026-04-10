@@ -338,35 +338,58 @@ jQuery(document).on('submit', '#dp-anmelde-form', function(e) {
     
     // AJAX-Request
     let requestSucceeded = false;
-    jQuery.ajax({
-        url: dpConfig.ajaxurl,
-        type: 'POST',
-        data: formData,
-        success: function(response) {
-            if (response.success) {
-                requestSucceeded = true;
-                const successMessage = (response.data && response.data.message)
-                    ? response.data.message
-                    : 'Vielen Dank für Ihre Anmeldung!';
-                alert(successMessage);
-                closeAnmeldeModal();
-                // Seite neu laden, um aktualisierten Status zu zeigen
-                location.reload();
-            } else {
+    const sendAnmeldungRequest = function(payload) {
+        jQuery.ajax({
+            url: dpConfig.ajaxurl,
+            type: 'POST',
+            data: payload,
+            success: function(response) {
+                if (response.success) {
+                    requestSucceeded = true;
+                    const successMessage = (response.data && response.data.message)
+                        ? response.data.message
+                        : 'Vielen Dank für Ihre Anmeldung!';
+                    alert(successMessage);
+                    closeAnmeldeModal();
+                    // Seite neu laden, um aktualisierten Status zu zeigen
+                    location.reload();
+                    return;
+                }
+
+                const responseCode = response && response.data ? response.data.code : '';
+                const existing = response && response.data ? response.data.existing_mitarbeiter : null;
+                if (responseCode === 'existing_mitarbeiter_found' && existing && existing.id) {
+                    const displayName = jQuery.trim(((existing.vorname || '') + ' ' + (existing.nachname || '')));
+                    const confirmText = displayName
+                        ? ('Die E-Mail-Adresse ist bereits dem Mitarbeiter "' + displayName + '" zugeordnet. Soll dieser Mitarbeiter verwendet werden?')
+                        : 'Die E-Mail-Adresse ist bereits einem Mitarbeiter zugeordnet. Soll dieser Mitarbeiter verwendet werden?';
+
+                    if (window.confirm(confirmText)) {
+                        const retryPayload = Object.assign({}, payload, {
+                            use_existing_mitarbeiter: '1',
+                            selected_mitarbeiter_id: String(existing.id)
+                        });
+                        sendAnmeldungRequest(retryPayload);
+                        return;
+                    }
+                }
+
                 alert('Fehler: ' + (response.data?.message || 'Anmeldung fehlgeschlagen.'));
                 submitBtn.prop('disabled', false).text(originalSubmitText);
-            }
-        },
-        error: function(xhr, status, error) {
-            alert('Serverfehler: ' + error);
-            submitBtn.prop('disabled', false).text(originalSubmitText);
-        },
-        complete: function() {
-            if (!requestSucceeded) {
+            },
+            error: function(xhr, status, error) {
+                alert('Serverfehler: ' + error);
                 submitBtn.prop('disabled', false).text(originalSubmitText);
+            },
+            complete: function() {
+                if (!requestSucceeded) {
+                    submitBtn.prop('disabled', false).text(originalSubmitText);
+                }
             }
-        }
-    });
+        });
+    };
+
+    sendAnmeldungRequest(formData);
 });
 
 // Modal-Close bei ESC oder Außenklick
