@@ -2056,8 +2056,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
                             if (window.confirm(confirmText)) {
                                 var retryPayload = jQuery.extend({}, payload, {
-                                    use_existing_mitarbeiter: '1',
-                                    selected_mitarbeiter_id: String(existing.id)
+                                    use_existing_mitarbeiter: '1'
                                 });
                                 sendAnmeldungRequest(retryPayload);
                                 return;

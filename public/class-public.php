@@ -1508,7 +1508,7 @@ class Dienstplan_Public {
             return;
         }
 
-        if ($selected_mitarbeiter_id > 0 && !$can_manage_frontend_assignments) {
+        if ($selected_mitarbeiter_id > 0 && !$can_manage_frontend_assignments && !$use_existing_mitarbeiter) {
             wp_send_json_error(array('message' => 'Keine Berechtigung für diese Zuweisung.'));
             return;
         }

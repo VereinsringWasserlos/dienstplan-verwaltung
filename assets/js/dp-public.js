@@ -366,8 +366,7 @@ jQuery(document).on('submit', '#dp-anmelde-form', function(e) {
 
                     if (window.confirm(confirmText)) {
                         const retryPayload = Object.assign({}, payload, {
-                            use_existing_mitarbeiter: '1',
-                            selected_mitarbeiter_id: String(existing.id)
+                            use_existing_mitarbeiter: '1'
                         });
                         sendAnmeldungRequest(retryPayload);
                         return;
