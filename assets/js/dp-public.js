@@ -301,7 +301,7 @@ jQuery(document).on('submit', '#dp-anmelde-form', function(e) {
         dienst_id: jQuery('#dp-dienst-id').val(),
         vorname: jQuery('#dp-vorname').val(),
         nachname: jQuery('#dp-nachname').val(),
-        email: jQuery('#dp-email').val(),
+        email: jQuery.trim(jQuery('#dp-email').val()),
         telefon: jQuery('#dp-telefon').val(),
         besonderheiten: jQuery('#dp-besonderheiten').val(),
         create_user_account: jQuery('input[name="create_user_account"]:checked').val() || '0',

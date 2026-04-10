@@ -1494,7 +1494,7 @@ class Dienstplan_Public {
         $dienst_id = isset($_POST['dienst_id']) ? intval($_POST['dienst_id']) : 0;
         $vorname = isset($_POST['vorname']) ? sanitize_text_field(wp_unslash($_POST['vorname'])) : '';
         $nachname = isset($_POST['nachname']) ? sanitize_text_field(wp_unslash($_POST['nachname'])) : '';
-        $email = isset($_POST['email']) ? sanitize_email(wp_unslash($_POST['email'])) : '';
+        $email = isset($_POST['email']) ? sanitize_email(trim((string) wp_unslash($_POST['email']))) : '';
         $telefon = isset($_POST['telefon']) ? sanitize_text_field(wp_unslash($_POST['telefon'])) : '';
         $besonderheiten = isset($_POST['besonderheiten']) ? sanitize_textarea_field(wp_unslash($_POST['besonderheiten'])) : '';
         $create_user_account = isset($_POST['create_user_account']) && sanitize_text_field(wp_unslash($_POST['create_user_account'])) === '1';
@@ -1688,6 +1688,14 @@ class Dienstplan_Public {
             $this->ensure_portal_user_for_mitarbeiter($db, $mitarbeiter, $email, $verein_id);
         }
         
+        // E-Mail für Versand robust bestimmen: POST-Wert hat Vorrang, dann Mitarbeiter-Datensatz.
+        if (empty($email) && !empty($mitarbeiter_id)) {
+            $mitarbeiter_for_mail = $db->get_mitarbeiter($mitarbeiter_id);
+            if ($mitarbeiter_for_mail && !empty($mitarbeiter_for_mail->email) && is_email($mitarbeiter_for_mail->email)) {
+                $email = sanitize_email($mitarbeiter_for_mail->email);
+            }
+        }
+
         $booking_mail_enabled = (bool) get_option('dp_mail_enable_booking', 1);
         $booking_mail_sent = null;
         $booking_mail_reason = '';
