@@ -801,6 +801,87 @@ if ($dienst_start_dt !== null && $dienst_end_dt !== null) {
             min-width: 0;
             width: 100%;
         }
+
+        .dp-dienste-kompakt-list {
+            gap: 1rem;
+        }
+
+        .dp-day-section-compact {
+            border-radius: 5px;
+        }
+
+        .dp-day-section-compact .dp-day-title {
+            padding: 0.65rem 0.8rem;
+            font-size: 0.9rem;
+            border-bottom-width: 1px;
+        }
+
+        .dp-dienste-table {
+            font-size: 0.82rem;
+        }
+
+        .dp-dienste-table th,
+        .dp-dienste-table td {
+            padding: 0.5rem 0.45rem;
+        }
+
+        .dp-dienste-table .col-besonderheiten,
+        .dp-dienste-table .col-zugeordnet {
+            display: none;
+        }
+
+        .dp-dienste-table .col-zeit {
+            min-width: 82px;
+        }
+
+        .dp-dienste-table .col-bereich {
+            min-width: 72px;
+        }
+
+        .dp-dienste-table .col-status {
+            min-width: 64px;
+        }
+
+        .dp-dienste-table .col-aktion {
+            min-width: 80px;
+            text-align: right;
+        }
+
+        .dp-bereich-badge {
+            padding: 0.22rem 0.4rem;
+            font-size: 0.75rem;
+        }
+
+        .dp-status-badge {
+            padding: 0.2rem 0.45rem;
+            font-size: 0.74rem;
+        }
+
+        .dp-btn-anmelden {
+            padding: 0.38rem 0.55rem;
+            font-size: 0.76rem;
+        }
+
+        .dp-grey-text,
+        .dp-assigned-names,
+        .dp-dienst-hint,
+        .dp-empty {
+            font-size: 0.78rem;
+        }
+    }
+
+    @media (max-width: 560px) {
+        .dp-dienste-table .col-bereich {
+            display: none;
+        }
+
+        .dp-dienste-table .col-zeit {
+            min-width: 76px;
+        }
+
+        .dp-dienste-table .col-dienst {
+            min-width: 120px;
+        }
     }
     </style>
 
