@@ -128,7 +128,7 @@ if (!$can_manage_clubs && !$can_manage_events) {
 
         var link = document.createElement('a');
         link.href = url;
-        link.download = 'dienstplan-export-' + type + '-<?php echo date('Y-m-d'); ?>' + (type === 'all' ? '.zip' : '.csv');
+        link.download = 'dienstplan-export-' + type + '-<?php echo date_i18n('Y-m-d'); ?>' + (type === 'all' ? '.zip' : '.csv');
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);

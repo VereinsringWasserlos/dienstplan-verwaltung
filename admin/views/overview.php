@@ -20,6 +20,23 @@ $zeitslots = array();
 $veranstaltung_tage = array();
 $timeline_start = null;
 $timeline_end = null;
+$dp_time_format = get_option('time_format', 'H:i');
+$dp_format_time = static function($time_value) use ($dp_time_format) {
+    if (is_numeric($time_value)) {
+        return date_i18n($dp_time_format, intval($time_value));
+    }
+
+    if (empty($time_value)) {
+        return '';
+    }
+
+    $timestamp = strtotime((string) $time_value);
+    if ($timestamp === false) {
+        return substr((string) $time_value, 0, 5);
+    }
+
+    return date_i18n($dp_time_format, $timestamp);
+};
 $scoped_verein_ids = isset($allowed_verein_ids) && is_array($allowed_verein_ids)
     ? array_values(array_filter(array_map('intval', $allowed_verein_ids)))
     : array();
@@ -137,7 +154,7 @@ if ($selected_veranstaltung > 0) {
         // Erstelle Zeit-String
         $zeit_display = 'Keine Zeiten';
         if (!empty($dienst->von_zeit) && !empty($dienst->bis_zeit)) {
-            $zeit_display = date('H:i', strtotime($dienst->von_zeit)) . ' - ' . date('H:i', strtotime($dienst->bis_zeit));
+            $zeit_display = $dp_format_time($dienst->von_zeit) . ' - ' . $dp_format_time($dienst->bis_zeit);
             if ($dienst->bis_datum) {
                 $zeit_display .= ' (+1)';
             }
@@ -286,8 +303,8 @@ $bereiche = $db->get_bereiche();
                     <strong><?php echo count($dienste); ?></strong> <?php _e('Dienste', 'dienstplan-verwaltung'); ?>
                     <?php if ($timeline_start && $timeline_end): ?>
                         • <?php _e('Zeitraum', 'dienstplan-verwaltung'); ?>: 
-                        <strong><?php echo date('H:i', $timeline_start); ?></strong> - 
-                        <strong><?php echo date('H:i', $timeline_end); ?></strong>
+                        <strong><?php echo esc_html($dp_format_time($timeline_start)); ?></strong> - 
+                        <strong><?php echo esc_html($dp_format_time($timeline_end)); ?></strong>
                     <?php endif; ?>
                 </div>
             </div>
@@ -321,7 +338,7 @@ $bereiche = $db->get_bereiche();
                                     $current_time = $timeline_start;
                                     $slot_width = 60; // Pixel pro 30-Minuten-Slot
                                     while ($current_time < $timeline_end):
-                                        $time_label = date('H:i', $current_time);
+                                        $time_label = $dp_format_time($current_time);
                                         $is_full_hour = date('i', $current_time) === '00';
                                     ?>
                                         <th style="min-width: <?php echo $slot_width; ?>px; max-width: <?php echo $slot_width; ?>px; padding: 8px 2px; font-size: 10px; font-weight: <?php echo $is_full_hour ? '700' : '400'; ?>; border-right: 1px solid <?php echo $is_full_hour ? '#999' : '#ddd'; ?>; text-align: center; background: <?php echo $is_full_hour ? '#e5e7eb' : '#f6f7f7'; ?>;">
@@ -396,7 +413,7 @@ $bereiche = $db->get_bereiche();
                                                 </span>
                                             </td>
                                             <td style="position: sticky; left: 300px; z-index: 10; background: <?php echo $row_bg; ?>; padding: 6px; border-right: 2px solid #c3c4c7; font-size: 11px; font-weight: 600; white-space: nowrap;">
-                                                <?php echo date('H:i', strtotime($dienst->von_zeit)); ?>-<?php echo date('H:i', strtotime($dienst->bis_zeit)); ?>
+                                                <?php echo esc_html($dp_format_time($dienst->von_zeit)); ?>-<?php echo esc_html($dp_format_time($dienst->bis_zeit)); ?>
                                             </td>
                                             <td style="position: sticky; left: 400px; z-index: 10; background: <?php echo $row_bg; ?>; padding: 4px 6px; border-right: 3px solid #666; font-size: 11px; overflow: hidden;">
                                                 <?php if (!empty($mitarbeiter_namen)): ?>

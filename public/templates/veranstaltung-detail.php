@@ -11,6 +11,17 @@ if (!defined('ABSPATH')) exit;
 
 require_once DIENSTPLAN_PLUGIN_PATH . 'includes/class-database.php';
 $db = new Dienstplan_Database(DIENSTPLAN_DB_PREFIX);
+$dp_time_format = get_option('time_format', 'H:i');
+$dp_format_time = static function($time_value) use ($dp_time_format) {
+    if (empty($time_value)) {
+        return '';
+    }
+    $timestamp = strtotime((string) $time_value);
+    if ($timestamp === false) {
+        return substr((string) $time_value, 0, 5);
+    }
+    return date_i18n($dp_time_format, $timestamp);
+};
 
 // Hole Veranstaltungs-ID
 $veranstaltung_id = isset($_GET['veranstaltung_id']) ? intval($_GET['veranstaltung_id']) : $atts['veranstaltung_id'];
@@ -217,7 +228,7 @@ foreach ($alle_dienste as $dienst) {
                     <span class="dp-day-badge">Tag <?php echo $tag->tag_nummer; ?></span>
                     <span class="dp-day-date"><?php echo date_i18n('l, d. F Y', strtotime($tag->tag_datum)); ?></span>
                     <?php if ($tag->von_zeit && $tag->bis_zeit): ?>
-                        <span class="dp-day-time"><?php echo date('H:i', strtotime($tag->von_zeit)); ?> - <?php echo date('H:i', strtotime($tag->bis_zeit)); ?> Uhr</span>
+                        <span class="dp-day-time"><?php echo esc_html($dp_format_time($tag->von_zeit)); ?> - <?php echo esc_html($dp_format_time($tag->bis_zeit)); ?> Uhr</span>
                     <?php endif; ?>
                 </h2>
                 
@@ -233,7 +244,7 @@ foreach ($alle_dienste as $dienst) {
                                 </div>
                                 <div class="dp-dienst-meta">
                                     <span class="dp-time-badge">
-                                        🕐 <?php echo date('H:i', strtotime($dienst->von_zeit)); ?> - <?php echo date('H:i', strtotime($dienst->bis_zeit)); ?>
+                                        🕐 <?php echo esc_html($dp_format_time($dienst->von_zeit)); ?> - <?php echo esc_html($dp_format_time($dienst->bis_zeit)); ?>
                                     </span>
                                 </div>
                             </div>
@@ -257,7 +268,7 @@ foreach ($alle_dienste as $dienst) {
                                         <div class="dp-slot-header">
                                             <span class="dp-slot-number">Slot #1</span>
                                         </div>
-                                        <button class="dp-slot-btn" onclick="openEintragungsModal(<?php echo $dienst->id; ?>, '<?php echo esc_js($dienst->taetigkeit_name); ?>', '<?php echo esc_js(date('H:i', strtotime($dienst->von_zeit))); ?>', '<?php echo esc_js(date('H:i', strtotime($dienst->bis_zeit))); ?>')">
+                                        <button class="dp-slot-btn" onclick="openEintragungsModal(<?php echo $dienst->id; ?>, '<?php echo esc_js($dienst->taetigkeit_name); ?>', '<?php echo esc_js($dp_format_time($dienst->von_zeit)); ?>', '<?php echo esc_js($dp_format_time($dienst->bis_zeit)); ?>')">
                                             <span class="dp-slot-icon">+</span>
                                             <span class="dp-slot-text">Jetzt eintragen</span>
                                         </button>
@@ -272,7 +283,7 @@ foreach ($alle_dienste as $dienst) {
                                                 <span class="dp-slot-number">Slot #<?php echo $slot->slot_nummer; ?></span>
                                                 <?php if ($slot->von_zeit): ?>
                                                     <span class="dp-slot-time">
-                                                        <?php echo date('H:i', strtotime($slot->von_zeit)); ?> - <?php echo date('H:i', strtotime($slot->bis_zeit)); ?>
+                                                        <?php echo esc_html($dp_format_time($slot->von_zeit)); ?> - <?php echo esc_html($dp_format_time($slot->bis_zeit)); ?>
                                                     </span>
                                                 <?php endif; ?>
                                             </div>
@@ -285,7 +296,7 @@ foreach ($alle_dienste as $dienst) {
                                                     </span>
                                                 </div>
                                             <?php else: ?>
-                                                <button class="dp-slot-btn" onclick="openEintragungsModal(<?php echo $slot->id; ?>, '<?php echo esc_js($dienst->taetigkeit_name); ?>', '<?php echo esc_js(date('H:i', strtotime($dienst->von_zeit))); ?>', '<?php echo esc_js(date('H:i', strtotime($dienst->bis_zeit))); ?>')">
+                                                <button class="dp-slot-btn" onclick="openEintragungsModal(<?php echo $slot->id; ?>, '<?php echo esc_js($dienst->taetigkeit_name); ?>', '<?php echo esc_js($dp_format_time($dienst->von_zeit)); ?>', '<?php echo esc_js($dp_format_time($dienst->bis_zeit)); ?>')">
                                                     <span class="dp-slot-icon">+</span>
                                                     <span class="dp-slot-text">Jetzt eintragen</span>
                                                 </button>

@@ -8,6 +8,18 @@
 
 if (!defined('ABSPATH')) exit;
 
+$dp_time_format = get_option('time_format', 'H:i');
+$dp_format_time = static function($time_value) use ($dp_time_format) {
+    if (empty($time_value)) {
+        return '';
+    }
+    $timestamp = strtotime((string) $time_value);
+    if ($timestamp === false) {
+        return substr((string) $time_value, 0, 5);
+    }
+    return date_i18n($dp_time_format, $timestamp);
+};
+
 // Bereite Daten für Kalender auf
 $kalender_tage = array();
 foreach ($tage as $tag) {
@@ -51,7 +63,7 @@ usort($kalender_tage, function($a, $b) {
             <div class="dp-calendar-day">
                 <div class="dp-calendar-day-header">
                     <div class="dp-calendar-day-number">
-                        <?php echo date('d', strtotime($tag->tag_datum)); ?>
+                        <?php echo date_i18n('d', strtotime($tag->tag_datum)); ?>
                     </div>
                     <div class="dp-calendar-day-info">
                         <div class="dp-calendar-weekday"><?php echo date_i18n('D', strtotime($tag->tag_datum)); ?></div>
@@ -78,7 +90,7 @@ usort($kalender_tage, function($a, $b) {
                                 <div class="dp-calendar-dienst-info">
                                     <div class="dp-calendar-dienst-name"><?php echo esc_html($dienst->taetigkeit_name); ?></div>
                                     <div class="dp-calendar-dienst-time">
-                                        <?php echo date('H:i', strtotime($dienst->von_zeit)); ?> - <?php echo date('H:i', strtotime($dienst->bis_zeit)); ?>
+                                        <?php echo esc_html($dp_format_time($dienst->von_zeit)); ?> - <?php echo esc_html($dp_format_time($dienst->bis_zeit)); ?>
                                     </div>
                                 </div>
                             </div>

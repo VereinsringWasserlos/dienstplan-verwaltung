@@ -3124,8 +3124,8 @@ class Dienstplan_Admin {
             'veranstaltung' => $dienst->veranstaltung ?? '',
             'verein' => $dienst->verein ?? '',
             'datum' => $tag_datum,
-            'von_zeit' => !empty($slot->von_zeit) ? substr($slot->von_zeit, 0, 5) : '',
-            'bis_zeit' => !empty($slot->bis_zeit) ? substr($slot->bis_zeit, 0, 5) : '',
+            'von_zeit' => $this->format_local_time($slot->von_zeit ?? ''),
+            'bis_zeit' => $this->format_local_time($slot->bis_zeit ?? ''),
             'taetigkeit' => $dienst->taetigkeit ?? '',
             'bereich' => $dienst->bereich ?? '',
             'veranstaltungsseite_url' => $veranstaltungsseite_url,
@@ -5305,6 +5305,25 @@ class Dienstplan_Admin {
         $date->setTimezone(new DateTimeZone('UTC'));
         
         return $date->format('H:i:s');
+    }
+
+    /**
+     * Formatiert eine DB-Uhrzeit in das locale WordPress-Zeitformat.
+     *
+     * @param string $time Zeit im Format HH:MM oder HH:MM:SS
+     * @return string
+     */
+    private function format_local_time($time) {
+        if (!is_string($time) || trim($time) === '') {
+            return '';
+        }
+
+        $timestamp = strtotime($time);
+        if ($timestamp === false) {
+            return substr($time, 0, 5);
+        }
+
+        return date_i18n(get_option('time_format', 'H:i'), $timestamp);
     }
     
     /**
@@ -7500,8 +7519,8 @@ class Dienstplan_Admin {
                 $diensteliste .= str_repeat('-', 40) . "\n";
             }
             $datum  = $d->tag_datum ? date_i18n('d.m.Y (l)', strtotime($d->tag_datum)) : 'N/A';
-            $von    = $d->von_zeit  ? substr($d->von_zeit,  0, 5) : '';
-            $bis    = $d->bis_zeit  ? substr($d->bis_zeit,  0, 5) : '';
+            $von    = $d->von_zeit  ? $this->format_local_time($d->von_zeit) : '';
+            $bis    = $d->bis_zeit  ? $this->format_local_time($d->bis_zeit) : '';
             $diensteliste .= "- {$datum}";
             if ($von && $bis) {
                 $diensteliste .= ", {$von} - {$bis} Uhr";

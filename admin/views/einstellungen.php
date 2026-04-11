@@ -109,13 +109,13 @@ $nav_items = array(
                             <td>
                                 <select name="date_format" id="date_format" class="regular-text">
                                     <option value="d.m.Y" <?php selected(get_option('dp_date_format', 'd.m.Y'), 'd.m.Y'); ?>>
-                                        <?php echo date('d.m.Y'); ?> (TT.MM.JJJJ)
+                                        <?php echo date_i18n('d.m.Y'); ?> (TT.MM.JJJJ)
                                     </option>
                                     <option value="Y-m-d" <?php selected(get_option('dp_date_format', 'd.m.Y'), 'Y-m-d'); ?>>
-                                        <?php echo date('Y-m-d'); ?> (JJJJ-MM-TT)
+                                        <?php echo date_i18n('Y-m-d'); ?> (JJJJ-MM-TT)
                                     </option>
                                     <option value="m/d/Y" <?php selected(get_option('dp_date_format', 'd.m.Y'), 'm/d/Y'); ?>>
-                                        <?php echo date('m/d/Y'); ?> (MM/TT/JJJJ)
+                                        <?php echo date_i18n('m/d/Y'); ?> (MM/TT/JJJJ)
                                     </option>
                                 </select>
                             </td>

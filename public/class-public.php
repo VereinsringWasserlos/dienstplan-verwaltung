@@ -218,6 +218,25 @@ class Dienstplan_Public {
     }
 
     /**
+     * Formatiert eine Uhrzeit fuer Mail-Platzhalter im WordPress-Locale-Zeitformat.
+     *
+     * @param string $time
+     * @return string
+     */
+    private function get_mail_time_label($time) {
+        if (!is_string($time) || trim($time) === '') {
+            return '';
+        }
+
+        $timestamp = strtotime($time);
+        if ($timestamp === false) {
+            return substr($time, 0, 5);
+        }
+
+        return date_i18n(get_option('time_format', 'H:i'), $timestamp);
+    }
+
+    /**
      * Assets (CSS/JS) für Frontend laden
      *
      * @since    1.0.0
@@ -665,8 +684,8 @@ class Dienstplan_Public {
                         'veranstaltung' => $dienst_mail->veranstaltung ?? '',
                         'verein' => $dienst_mail->verein ?? '',
                         'datum' => $tag_datum_mail,
-                        'von_zeit' => substr($slot_mail->von_zeit, 0, 5),
-                        'bis_zeit' => substr($slot_mail->bis_zeit, 0, 5),
+                        'von_zeit' => $this->get_mail_time_label($slot_mail->von_zeit ?? ''),
+                        'bis_zeit' => $this->get_mail_time_label($slot_mail->bis_zeit ?? ''),
                         'taetigkeit' => $dienst_mail->taetigkeit ?? '',
                         'bereich' => $dienst_mail->bereich ?? '',
                         'veranstaltungsseite_url' => $veranstaltungsseite_url,
@@ -1004,8 +1023,8 @@ class Dienstplan_Public {
                         'veranstaltung' => $dienst_mail->veranstaltung ?? '',
                         'verein' => $dienst_mail->verein ?? '',
                         'datum' => $tag_datum,
-                        'von_zeit' => !empty($free_slot->von_zeit) ? substr($free_slot->von_zeit, 0, 5) : '',
-                        'bis_zeit' => !empty($free_slot->bis_zeit) ? substr($free_slot->bis_zeit, 0, 5) : '',
+                        'von_zeit' => $this->get_mail_time_label($free_slot->von_zeit ?? ''),
+                        'bis_zeit' => $this->get_mail_time_label($free_slot->bis_zeit ?? ''),
                         'taetigkeit' => $dienst_mail->taetigkeit ?? '',
                         'bereich' => $dienst_mail->bereich ?? '',
                         'veranstaltungsseite_url' => $veranstaltungsseite_url,
@@ -1882,8 +1901,8 @@ class Dienstplan_Public {
                 'veranstaltung' => $dienst->veranstaltung ?? '',
                 'verein' => $dienst->verein ?? '',
                 'datum' => $tag_datum,
-                'von_zeit' => substr($slot->von_zeit, 0, 5),
-                'bis_zeit' => substr($slot->bis_zeit, 0, 5),
+                'von_zeit' => $this->get_mail_time_label($slot->von_zeit ?? ''),
+                'bis_zeit' => $this->get_mail_time_label($slot->bis_zeit ?? ''),
                 'taetigkeit' => $dienst->taetigkeit ?? '',
                 'bereich' => $dienst->bereich ?? '',
                 'veranstaltungsseite_url' => $veranstaltungsseite_url,

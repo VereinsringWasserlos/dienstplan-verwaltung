@@ -4,6 +4,18 @@
  */
 if (!defined('ABSPATH')) exit;
 
+$dp_time_format = get_option('time_format', 'H:i');
+$dp_format_time = static function($time_value) use ($dp_time_format) {
+    if (empty($time_value)) {
+        return '';
+    }
+    $timestamp = strtotime((string) $time_value);
+    if ($timestamp === false) {
+        return substr((string) $time_value, 0, 5);
+    }
+    return date_i18n($dp_time_format, $timestamp);
+};
+
 if (!isset($is_restricted_club_admin)) {
     $is_restricted_club_admin = Dienstplan_Roles::is_restricted_club_admin();
 }
@@ -72,14 +84,14 @@ uasort($dienste_nach_tagen, function($a, $b) {
                 <?php if ($tag->von_zeit && $tag->bis_zeit): ?>
                     <span style="font-weight: normal; font-size: 0.9rem; background: rgba(255,255,255,0.15); padding: 0.25rem 0.75rem; border-radius: 3px;">
                         <span class="dashicons dashicons-clock" style="font-size: 16px;"></span>
-                        Event: <?php echo substr($tag->von_zeit, 0, 5); ?> - <?php echo substr($tag->bis_zeit, 0, 5); ?>
+                        Event: <?php echo esc_html($dp_format_time($tag->von_zeit)); ?> - <?php echo esc_html($dp_format_time($tag->bis_zeit)); ?>
                     </span>
                 <?php endif; ?>
                 
                 <?php if ($tag->dienst_von_zeit && $tag->dienst_bis_zeit): ?>
                     <span style="font-weight: normal; font-size: 0.9rem; background: rgba(255,255,255,0.15); padding: 0.25rem 0.75rem; border-radius: 3px;">
                         <span class="dashicons dashicons-hammer" style="font-size: 16px;"></span>
-                        Dienst: <?php echo substr($tag->dienst_von_zeit, 0, 5); ?> - <?php echo substr($tag->dienst_bis_zeit, 0, 5); ?>
+                        Dienst: <?php echo esc_html($dp_format_time($tag->dienst_von_zeit)); ?> - <?php echo esc_html($dp_format_time($tag->dienst_bis_zeit)); ?>
                     </span>
                 <?php endif; ?>
             </h3>
@@ -166,9 +178,9 @@ uasort($dienste_nach_tagen, function($a, $b) {
                             </td>
                             <td>
                                 <?php if (!empty($dienst->von_zeit) && !empty($dienst->bis_zeit)): ?>
-                                    <strong><?php echo substr($dienst->von_zeit, 0, 5); ?></strong>
+                                    <strong><?php echo esc_html($dp_format_time($dienst->von_zeit)); ?></strong>
                                     -
-                                    <strong><?php echo substr($dienst->bis_zeit, 0, 5); ?></strong>
+                                    <strong><?php echo esc_html($dp_format_time($dienst->bis_zeit)); ?></strong>
                                     <?php if ($dienst->bis_datum): ?>
                                         <br><small style="color: #dc2626;">
                                             <span class="dashicons dashicons-clock" style="font-size: 0.75rem;"></span>
@@ -392,9 +404,9 @@ uasort($dienste_nach_tagen, function($a, $b) {
                             </td>
                             <td>
                                 <?php if ($dienst->von_zeit && $dienst->bis_zeit): ?>
-                                    <strong><?php echo substr($dienst->von_zeit, 0, 5); ?></strong>
+                                    <strong><?php echo esc_html($dp_format_time($dienst->von_zeit)); ?></strong>
                                     -
-                                    <strong><?php echo substr($dienst->bis_zeit, 0, 5); ?></strong>
+                                    <strong><?php echo esc_html($dp_format_time($dienst->bis_zeit)); ?></strong>
                                 <?php endif; ?>
                             </td>
                             <td>

@@ -12,6 +12,18 @@
  */
 
 if (!defined('ABSPATH')) exit;
+
+$dp_time_format = get_option('time_format', 'H:i');
+$dp_format_time = static function($time_value) use ($dp_time_format) {
+    if (empty($time_value)) {
+        return '';
+    }
+    $timestamp = strtotime((string) $time_value);
+    if ($timestamp === false) {
+        return substr((string) $time_value, 0, 5);
+    }
+    return date_i18n($dp_time_format, $timestamp);
+};
 ?>
 
 <div class="dp-public-container dp-meine-dienste">
@@ -75,7 +87,7 @@ if (!defined('ABSPATH')) exit;
                                             </span>
                                             <span class="dp-detail-item">
                                                 <span class="dp-icon">🕐</span>
-                                                <?php echo date('H:i', strtotime($dienst->von_zeit)); ?> - <?php echo date('H:i', strtotime($dienst->bis_zeit)); ?> Uhr
+                                                <?php echo esc_html($dp_format_time($dienst->von_zeit)); ?> - <?php echo esc_html($dp_format_time($dienst->bis_zeit)); ?> Uhr
                                             </span>
                                             <span class="dp-detail-item">
                                                 <span class="dp-icon">👥</span>
