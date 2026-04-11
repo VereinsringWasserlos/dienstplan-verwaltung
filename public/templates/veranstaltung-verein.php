@@ -322,7 +322,7 @@ if ($dienst_start_dt !== null && $dienst_end_dt !== null) {
                         </div>
                     <?php endif; ?>
                 </div>
-                <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
+                <div class="dp-header-chip-row" style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
                     <?php if ($verein_id > 0 && isset($verein)): ?>
                         <?php
                         $verein_color = !empty($verein->farbe) ? sanitize_hex_color($verein->farbe) : '#0ea5e9';
@@ -2783,6 +2783,61 @@ document.addEventListener('DOMContentLoaded', function() {
             margin-right: 0;
             padding: 1rem;
         }
+
+        .dp-event-header {
+            padding: 1rem !important;
+            margin-bottom: 1rem !important;
+            border-radius: 10px !important;
+        }
+
+        .dp-event-header-top {
+            gap: 0.8rem !important;
+        }
+
+        .dp-event-title {
+            font-size: 1.35rem !important;
+            line-height: 1.1 !important;
+        }
+
+        .dp-title-row {
+            gap: 0.45rem;
+            margin-bottom: 0.65rem;
+        }
+
+        .dp-title-chip {
+            padding: 0.22rem 0.5rem;
+            font-size: 0.76rem;
+            border-radius: 6px;
+            gap: 0.32rem;
+        }
+
+        .dp-title-chip .dashicons {
+            font-size: 13px;
+            width: 13px;
+            height: 13px;
+        }
+
+        .dp-header-chip-row {
+            gap: 0.5rem !important;
+        }
+
+        .dp-header-chip {
+            padding: 0.28rem 0.55rem;
+            border-radius: 7px;
+            font-size: 0.78rem;
+            line-height: 1.15;
+            gap: 0.32rem;
+        }
+
+        .dp-header-chip .dashicons {
+            font-size: 14px !important;
+            width: 14px;
+            height: 14px;
+        }
+
+        .dp-header-view-tools {
+            margin-top: 0.15rem;
+        }
     }
     
     .dp-view-toggle {
@@ -4251,6 +4306,25 @@ document.addEventListener('DOMContentLoaded', function() {
             justify-content: flex-end;
         }
 
+        .dp-view-toggle {
+            padding: 0.3rem;
+            gap: 0.35rem;
+            border-radius: 9px;
+        }
+
+        .dp-view-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            border-width: 1px;
+        }
+
+        .dp-view-icon-emoji {
+            width: 16px;
+            height: 16px;
+            font-size: 16px;
+        }
+
         .dp-filter-group {
             min-width: 100%;
         }
@@ -4284,6 +4358,32 @@ document.addEventListener('DOMContentLoaded', function() {
 
         }
 
+
+    @media (max-width: 480px) {
+        .dp-frontend-container.dp-verein-specific {
+            padding: 0.75rem;
+        }
+
+        .dp-event-header {
+            padding: 0.8rem !important;
+            margin-bottom: 0.8rem !important;
+            border-radius: 9px !important;
+        }
+
+        .dp-event-title {
+            font-size: 1.2rem !important;
+        }
+
+        .dp-title-chip {
+            font-size: 0.72rem;
+            padding: 0.18rem 0.42rem;
+        }
+
+        .dp-header-chip {
+            font-size: 0.73rem;
+            padding: 0.22rem 0.45rem;
+        }
+    }
 
 
         .dp-timeline-v-day-head {
