@@ -1157,6 +1157,80 @@
     .dp-public-container {
         padding: var(--dp-spacing-md);
     }
+
+    .dp-frontend-container.dp-verein-specific .dp-event-header {
+        padding: 1.25rem !important;
+        margin-bottom: 1.25rem !important;
+        border-radius: 0.875rem !important;
+    }
+
+    .dp-frontend-container.dp-verein-specific .dp-event-header-top {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 1rem !important;
+    }
+
+    .dp-frontend-container.dp-verein-specific .dp-event-header-top > div:first-child {
+        min-width: 0 !important;
+        width: 100% !important;
+    }
+
+    .dp-frontend-container.dp-verein-specific .dp-event-title {
+        font-size: 1.55rem !important;
+        line-height: 1.15 !important;
+        word-break: break-word;
+    }
+
+    .dp-frontend-container.dp-verein-specific .dp-title-row {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .dp-frontend-container.dp-verein-specific .dp-title-chip,
+    .dp-frontend-container.dp-verein-specific .dp-header-chip {
+        width: 100%;
+        justify-content: flex-start;
+        min-height: 42px;
+    }
+
+    .dp-frontend-container.dp-verein-specific .dp-header-chip-link {
+        display: flex;
+        width: 100%;
+    }
+
+    .dp-frontend-container.dp-verein-specific .dp-header-view-tools {
+        width: 100%;
+    }
+
+    .dp-frontend-container.dp-verein-specific .dp-view-toggle-header {
+        width: 100%;
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 0.5rem;
+    }
+
+    .dp-frontend-container.dp-verein-specific .dp-view-toggle-header .dp-view-btn {
+        min-width: 0;
+        padding: 0.65rem 0.35rem;
+        font-size: 0.8rem;
+    }
+
+    .dp-frontend-container.dp-verein-specific .dp-kontakt-box {
+        padding: 1rem !important;
+        margin-bottom: 1.25rem !important;
+    }
+
+    .dp-frontend-container.dp-verein-specific .dp-kontakt-box h3,
+    .dp-frontend-container.dp-verein-specific .dp-kontakt-box h4 {
+        line-height: 1.25;
+        word-break: break-word;
+    }
+
+    .dp-frontend-container.dp-verein-specific .dp-kontakt-box > div,
+    .dp-frontend-container.dp-verein-specific .dp-kontakt-box > div > div {
+        min-width: 0;
+    }
     
     .dp-events-grid,
     .dp-verein-grid {
@@ -1184,9 +1258,47 @@
     }
     
     .dp-modal-content {
+        width: min(100%, 100vw);
         max-width: 100%;
-        max-height: 100vh;
+        max-height: 100dvh;
+        min-height: 100dvh;
         border-radius: 0;
+        margin: 0;
+    }
+
+    .dp-modal-header,
+    .dp-modal-body,
+    .dp-modal-footer {
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
+
+    .dp-modal-header {
+        align-items: flex-start;
+        gap: 0.75rem;
+    }
+
+    .dp-modal-header h2 {
+        font-size: 1.4rem;
+        line-height: 1.2;
+        padding-right: 0.5rem;
+    }
+
+    .dp-modal-footer {
+        flex-direction: column-reverse;
+    }
+
+    .dp-modal-footer .dp-btn,
+    .dp-modal-footer button,
+    .dp-modal-footer input[type="submit"] {
+        width: 100%;
+    }
+
+    .dp-radio-row {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.625rem !important;
     }
     
     .dp-view-switcher {
@@ -1195,6 +1307,32 @@
 }
 
 @media (max-width: 480px) {
+    .dp-public-container {
+        padding: 0.75rem;
+    }
+
+    .dp-frontend-container.dp-verein-specific .dp-event-header {
+        padding: 1rem !important;
+    }
+
+    .dp-frontend-container.dp-verein-specific .dp-event-title {
+        font-size: 1.3rem !important;
+    }
+
+    .dp-frontend-container.dp-verein-specific .dp-view-toggle-header {
+        grid-template-columns: 1fr;
+    }
+
+    .dp-frontend-container.dp-verein-specific .dp-view-toggle-header .dp-view-btn {
+        justify-content: flex-start;
+        padding-inline: 0.75rem;
+    }
+
+    .dp-modal-body {
+        padding-top: 0.875rem;
+        padding-bottom: 0.875rem;
+    }
+
     .dp-detail-title {
         font-size: var(--dp-font-size-2xl);
     }
