@@ -388,29 +388,29 @@ if ($dienst_start_dt !== null && $dienst_end_dt !== null) {
                 <div class="dp-view-toggle dp-view-toggle-header" aria-label="Ansicht wechseln">
                     <a href="?veranstaltung_id=<?php echo $veranstaltung_id; ?><?php echo ($verein_id > 0 ? '&verein_id=' . $verein_id : ''); ?>&view=kachel" 
                        class="dp-view-btn <?php echo $view_mode === 'kachel' ? 'active' : ''; ?>" title="Kachelansicht" aria-label="Kachelansicht">
-                        <span class="dp-view-icon-emoji" aria-hidden="true">🗂️</span>
+                        <span class="dp-view-icon-emoji dashicons dashicons-screenoptions" aria-hidden="true"></span>
                         <span class="dp-view-btn-text">Kachel</span>
                     </a>
                     <a href="?veranstaltung_id=<?php echo $veranstaltung_id; ?><?php echo ($verein_id > 0 ? '&verein_id=' . $verein_id : ''); ?>&view=kompakt" 
                        class="dp-view-btn <?php echo $view_mode === 'kompakt' ? 'active' : ''; ?>" title="Kompakte Liste" aria-label="Kompakte Liste">
-                        <span class="dp-view-icon-emoji" aria-hidden="true">📋</span>
+                        <span class="dp-view-icon-emoji dashicons dashicons-list-view" aria-hidden="true"></span>
                         <span class="dp-view-btn-text">Kompakt</span>
                     </a>
                     <a href="?veranstaltung_id=<?php echo $veranstaltung_id; ?><?php echo ($verein_id > 0 ? '&verein_id=' . $verein_id : ''); ?>&view=timeline" 
                        class="dp-view-btn <?php echo $view_mode === 'timeline' ? 'active' : ''; ?>" title="Timeline" aria-label="Timeline">
-                        <span class="dp-view-icon-emoji" aria-hidden="true">📊</span>
+                        <span class="dp-view-icon-emoji dashicons dashicons-chart-bar" aria-hidden="true"></span>
                         <span class="dp-view-btn-text">Timeline</span>
                     </a>
                 </div>
                 <div class="dp-view-toggle dp-view-toggle-mobile" aria-label="Ansicht wechseln mobil">
                     <a href="?veranstaltung_id=<?php echo $veranstaltung_id; ?><?php echo ($verein_id > 0 ? '&verein_id=' . $verein_id : ''); ?>&view=kachel"
                        class="dp-view-btn <?php echo $view_mode === 'kachel' ? 'active' : ''; ?>" title="Kachelansicht" aria-label="Kachelansicht mobil">
-                        <span class="dp-view-icon-emoji" aria-hidden="true">🗂️</span>
+                        <span class="dp-view-icon-emoji dashicons dashicons-screenoptions" aria-hidden="true"></span>
                         <span class="dp-view-btn-text">Kacheln</span>
                     </a>
                     <a href="?veranstaltung_id=<?php echo $veranstaltung_id; ?><?php echo ($verein_id > 0 ? '&verein_id=' . $verein_id : ''); ?>&view=kompakt"
                        class="dp-view-btn <?php echo $view_mode === 'kompakt' ? 'active' : ''; ?>" title="Kompakte Liste" aria-label="Kompakte Liste mobil">
-                        <span class="dp-view-icon-emoji" aria-hidden="true">📋</span>
+                        <span class="dp-view-icon-emoji dashicons dashicons-list-view" aria-hidden="true"></span>
                         <span class="dp-view-btn-text">Liste</span>
                     </a>
                 </div>
@@ -759,6 +759,17 @@ if ($dienst_start_dt !== null && $dienst_end_dt !== null) {
         display: none;
     }
 
+    .dp-view-icon-emoji {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 16px;
+        height: 16px;
+        font-size: 16px;
+        line-height: 1;
+        flex: 0 0 16px;
+    }
+
     @media (max-width: 1024px) {
         .dp-view-toggle-header {
             display: none !important;
@@ -808,6 +819,8 @@ if ($dienst_start_dt !== null && $dienst_end_dt !== null) {
 
         .dp-day-section-compact {
             border-radius: 5px;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
         }
 
         .dp-day-section-compact .dp-day-title {
@@ -860,6 +873,8 @@ if ($dienst_start_dt !== null && $dienst_end_dt !== null) {
         .dp-btn-anmelden {
             padding: 0.38rem 0.55rem;
             font-size: 0.76rem;
+            white-space: normal;
+            line-height: 1.1;
         }
 
         .dp-grey-text,
@@ -872,6 +887,10 @@ if ($dienst_start_dt !== null && $dienst_end_dt !== null) {
 
     @media (max-width: 560px) {
         .dp-dienste-table .col-bereich {
+            display: none;
+        }
+
+        .dp-dienste-table .col-status {
             display: none;
         }
 
