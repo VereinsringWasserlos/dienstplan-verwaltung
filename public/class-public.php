@@ -164,6 +164,60 @@ class Dienstplan_Public {
     }
 
     /**
+     * Liefert ein schema-sicher aufgeloestes und formatiertes Tag-Datum fuer Mails.
+     * Unterstuetzt sowohl `tag_datum` als auch `datum` in `veranstaltung_tage`.
+     *
+     * @param string $veranstaltung_tage_table
+     * @param int    $tag_id
+     * @return string
+     */
+    private function get_mail_tag_datum($veranstaltung_tage_table, $tag_id) {
+        global $wpdb;
+
+        $tag_id = intval($tag_id);
+        if ($tag_id <= 0) {
+            return 'N/A';
+        }
+
+        static $column_cache = array();
+        if (!isset($column_cache[$veranstaltung_tage_table])) {
+            $column_cache[$veranstaltung_tage_table] = array(
+                'tag_datum' => (bool) $wpdb->get_var("SHOW COLUMNS FROM {$veranstaltung_tage_table} LIKE 'tag_datum'"),
+                'datum' => (bool) $wpdb->get_var("SHOW COLUMNS FROM {$veranstaltung_tage_table} LIKE 'datum'"),
+            );
+        }
+
+        $has_tag_datum = !empty($column_cache[$veranstaltung_tage_table]['tag_datum']);
+        $has_datum = !empty($column_cache[$veranstaltung_tage_table]['datum']);
+
+        if ($has_tag_datum && $has_datum) {
+            $select_expr = 'COALESCE(tag_datum, datum)';
+        } elseif ($has_tag_datum) {
+            $select_expr = 'tag_datum';
+        } elseif ($has_datum) {
+            $select_expr = 'datum';
+        } else {
+            return 'N/A';
+        }
+
+        $raw_date = $wpdb->get_var($wpdb->prepare(
+            "SELECT {$select_expr} FROM {$veranstaltung_tage_table} WHERE id = %d LIMIT 1",
+            $tag_id
+        ));
+
+        if (empty($raw_date)) {
+            return 'N/A';
+        }
+
+        $timestamp = strtotime((string) $raw_date);
+        if ($timestamp === false) {
+            return 'N/A';
+        }
+
+        return date_i18n('d.m.Y', $timestamp);
+    }
+
+    /**
      * Assets (CSS/JS) für Frontend laden
      *
      * @since    1.0.0
@@ -578,11 +632,10 @@ class Dienstplan_Public {
                     $slot_id_mail
                 ));
                 if ($dienst_mail && $slot_mail) {
-                    $tag_mail = $wpdb->get_row($wpdb->prepare(
-                        "SELECT datum FROM {$prefix}veranstaltung_tage WHERE id = %d",
-                        $dienst_mail->tag_id
-                    ));
-                    $tag_datum_mail = $tag_mail ? date_i18n('d.m.Y', strtotime($tag_mail->datum)) : 'N/A';
+                    $tag_datum_mail = $this->get_mail_tag_datum(
+                        $prefix . 'veranstaltung_tage',
+                        !empty($dienst_mail->tag_id) ? intval($dienst_mail->tag_id) : 0
+                    );
                     $vorname_mail  = $mitarbeiter->vorname ?? '';
                     $nachname_mail = $mitarbeiter->nachname ?? '';
                     if (!empty($dienst_mail->beschreibung)) {
@@ -921,7 +974,10 @@ class Dienstplan_Public {
                 ));
 
                 if ($dienst_mail && $free_slot) {
-                    $tag_datum = !empty($dienst_mail->tag_datum) ? date_i18n('d.m.Y', strtotime($dienst_mail->tag_datum)) : 'N/A';
+                    $tag_datum = $this->get_mail_tag_datum(
+                        $prefix . 'veranstaltung_tage',
+                        !empty($dienst_mail->tag_id) ? intval($dienst_mail->tag_id) : 0
+                    );
 
                     $beschreibung_block = !empty($dienst_mail->beschreibung)
                         ? "Beschreibung: {$dienst_mail->beschreibung}\n\n"
@@ -1794,12 +1850,10 @@ class Dienstplan_Public {
         $booking_mail_sent = null;
         $booking_mail_reason = '';
         if ($dienst && !empty($email) && $booking_mail_enabled) {
-            $tag = $wpdb->get_row($wpdb->prepare(
-                "SELECT datum FROM {$prefix}veranstaltung_tage WHERE id = %d",
-                $dienst->tag_id
-            ));
-            
-            $tag_datum = $tag ? date_i18n('d.m.Y', strtotime($tag->datum)) : 'N/A';
+            $tag_datum = $this->get_mail_tag_datum(
+                $prefix . 'veranstaltung_tage',
+                !empty($dienst->tag_id) ? intval($dienst->tag_id) : 0
+            );
 
             if ($dienst->beschreibung) {
                 $beschreibung_block = "Beschreibung: {$dienst->beschreibung}\n\n";
