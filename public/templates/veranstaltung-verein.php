@@ -389,14 +389,29 @@ if ($dienst_start_dt !== null && $dienst_end_dt !== null) {
                     <a href="?veranstaltung_id=<?php echo $veranstaltung_id; ?><?php echo ($verein_id > 0 ? '&verein_id=' . $verein_id : ''); ?>&view=kachel" 
                        class="dp-view-btn <?php echo $view_mode === 'kachel' ? 'active' : ''; ?>" title="Kachelansicht" aria-label="Kachelansicht">
                         <span class="dp-view-icon-emoji" aria-hidden="true">🗂️</span>
+                        <span class="dp-view-btn-text">Kachel</span>
                     </a>
                     <a href="?veranstaltung_id=<?php echo $veranstaltung_id; ?><?php echo ($verein_id > 0 ? '&verein_id=' . $verein_id : ''); ?>&view=kompakt" 
                        class="dp-view-btn <?php echo $view_mode === 'kompakt' ? 'active' : ''; ?>" title="Kompakte Liste" aria-label="Kompakte Liste">
                         <span class="dp-view-icon-emoji" aria-hidden="true">📋</span>
+                        <span class="dp-view-btn-text">Kompakt</span>
                     </a>
                     <a href="?veranstaltung_id=<?php echo $veranstaltung_id; ?><?php echo ($verein_id > 0 ? '&verein_id=' . $verein_id : ''); ?>&view=timeline" 
                        class="dp-view-btn <?php echo $view_mode === 'timeline' ? 'active' : ''; ?>" title="Timeline" aria-label="Timeline">
                         <span class="dp-view-icon-emoji" aria-hidden="true">📊</span>
+                        <span class="dp-view-btn-text">Timeline</span>
+                    </a>
+                </div>
+                <div class="dp-view-toggle dp-view-toggle-mobile" aria-label="Ansicht wechseln mobil">
+                    <a href="?veranstaltung_id=<?php echo $veranstaltung_id; ?><?php echo ($verein_id > 0 ? '&verein_id=' . $verein_id : ''); ?>&view=kachel"
+                       class="dp-view-btn <?php echo $view_mode === 'kachel' ? 'active' : ''; ?>" title="Kachelansicht" aria-label="Kachelansicht mobil">
+                        <span class="dp-view-icon-emoji" aria-hidden="true">🗂️</span>
+                        <span class="dp-view-btn-text">Kacheln</span>
+                    </a>
+                    <a href="?veranstaltung_id=<?php echo $veranstaltung_id; ?><?php echo ($verein_id > 0 ? '&verein_id=' . $verein_id : ''); ?>&view=kompakt"
+                       class="dp-view-btn <?php echo $view_mode === 'kompakt' ? 'active' : ''; ?>" title="Kompakte Liste" aria-label="Kompakte Liste mobil">
+                        <span class="dp-view-icon-emoji" aria-hidden="true">📋</span>
+                        <span class="dp-view-btn-text">Liste</span>
                     </a>
                 </div>
             </div>
@@ -711,11 +726,98 @@ if ($dienst_start_dt !== null && $dienst_end_dt !== null) {
         color: #64748b;
         font-size: 0.9rem;
     }
+
+    .dp-filter-shell {
+        margin-bottom: 1.25rem;
+    }
+
+    .dp-filter-toggle {
+        display: none;
+        align-items: center;
+        gap: 0.45rem;
+        width: 100%;
+        padding: 0.65rem 0.8rem;
+        border: 1px solid #cbd5e1;
+        border-radius: 8px;
+        background: #fff;
+        color: #0f172a;
+        font-weight: 600;
+        cursor: pointer;
+    }
+
+    .dp-filter-toggle .dashicons {
+        font-size: 16px;
+        width: 16px;
+        height: 16px;
+    }
+
+    .dp-view-toggle-mobile {
+        display: none;
+    }
+
+    .dp-view-toggle-header .dp-view-btn-text {
+        display: none;
+    }
+
+    @media (max-width: 1024px) {
+        .dp-view-toggle-header {
+            display: none !important;
+        }
+
+        .dp-view-toggle-mobile {
+            display: grid !important;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 0.5rem;
+            width: 100%;
+        }
+
+        .dp-view-toggle-mobile .dp-view-btn {
+            min-width: 0;
+            justify-content: flex-start;
+            padding: 0.6rem 0.65rem;
+        }
+
+        .dp-view-toggle-mobile .dp-view-btn-text {
+            display: inline;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .dp-filter-toggle {
+            display: inline-flex;
+        }
+
+        .dp-filter-shell .dp-frontend-filterbar {
+            display: none;
+            margin-top: 0.65rem;
+        }
+
+        .dp-filter-shell.is-open .dp-frontend-filterbar {
+            display: flex;
+        }
+
+        .dp-filter-shell .dp-filter-group,
+        .dp-filter-shell .dp-filter-group select {
+            min-width: 0;
+            width: 100%;
+        }
+    }
     </style>
 
     <!-- View-Toggle im Header rechts -->
 
-    <div class="dp-frontend-filterbar">
+    <div class="dp-filter-shell">
+        <button type="button"
+                class="dp-filter-toggle"
+                id="dpFilterToggle"
+                aria-expanded="false"
+                aria-controls="dpFrontendFilterbar"
+                onclick="dpToggleFilterPanel()">
+            <span class="dashicons dashicons-filter" aria-hidden="true"></span>
+            <span>Filter anzeigen</span>
+        </button>
+
+        <div class="dp-frontend-filterbar" id="dpFrontendFilterbar">
         <div class="dp-filter-group">
             <label>Besetzung</label>
             <select id="dpFilterAvailability">
@@ -759,6 +861,7 @@ if ($dienst_start_dt !== null && $dienst_end_dt !== null) {
 
         <div class="dp-filter-group dp-filter-reset-wrap">
             <button type="button" class="dp-filter-reset" onclick="dpResetFilters()">Filter zurücksetzen</button>
+        </div>
         </div>
     </div>
 
@@ -1866,6 +1969,51 @@ function dpSetFilterSelectValue(filterName, value) {
 
     select.value = hasOption ? value : 'all';
 }
+
+function dpSyncResponsiveFilterPanel() {
+    var shell = document.querySelector('.dp-filter-shell');
+    var toggle = document.getElementById('dpFilterToggle');
+    if (!shell || !toggle) {
+        return;
+    }
+
+    var isSmallViewport = window.matchMedia('(max-width: 768px)').matches;
+    if (!isSmallViewport) {
+        shell.classList.add('is-open');
+        toggle.setAttribute('aria-expanded', 'true');
+        var toggleTextDesktop = toggle.querySelector('span:last-child');
+        if (toggleTextDesktop) {
+            toggleTextDesktop.textContent = 'Filter';
+        }
+        return;
+    }
+
+    if (!shell.classList.contains('is-open')) {
+        toggle.setAttribute('aria-expanded', 'false');
+        var toggleTextCollapsed = toggle.querySelector('span:last-child');
+        if (toggleTextCollapsed) {
+            toggleTextCollapsed.textContent = 'Filter anzeigen';
+        }
+    }
+}
+
+function dpToggleFilterPanel() {
+    var shell = document.querySelector('.dp-filter-shell');
+    var toggle = document.getElementById('dpFilterToggle');
+    if (!shell || !toggle) {
+        return;
+    }
+
+    var willOpen = !shell.classList.contains('is-open');
+    shell.classList.toggle('is-open', willOpen);
+    toggle.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+
+    var textNode = toggle.querySelector('span:last-child');
+    if (textNode) {
+        textNode.textContent = willOpen ? 'Filter ausblenden' : 'Filter anzeigen';
+    }
+}
+
 document.addEventListener('DOMContentLoaded', function() {
         window.dpToggleCreateUserConsent = function() {
             var selected = jQuery('input[name="create_user_account"]:checked').val() || '0';
@@ -1943,6 +2091,13 @@ document.addEventListener('DOMContentLoaded', function() {
     } catch (e) {}
 
     dpApplyFrontendFilters();
+    dpSyncResponsiveFilterPanel();
+
+    var dpResponsiveTimer = null;
+    window.addEventListener('resize', function() {
+        window.clearTimeout(dpResponsiveTimer);
+        dpResponsiveTimer = window.setTimeout(dpSyncResponsiveFilterPanel, 120);
+    });
 
     if (typeof window.openAnmeldeModal !== 'function') {
         window.openAnmeldeModal = function(slotId, dienstId) {
