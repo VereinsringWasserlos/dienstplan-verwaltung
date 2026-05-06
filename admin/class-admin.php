@@ -693,13 +693,17 @@ class Dienstplan_Admin {
     
     /**
      * Setzt die korrekten Titel für versteckte Admin-Seiten
+     * 
+     * @param string|null $admin_title
+     * @param string|null $title
+     * @return string Immer ein nicht-null String
      */
     public function set_hidden_page_titles($admin_title, $title) {
         global $plugin_page;
         
-        // Sicherstellen dass wir nie null zurückgeben
-        $admin_title = $admin_title ?? '';
-        $title = $title ?? '';
+        // Sicherstellen dass wir mit gültigen Strings arbeiten
+        $admin_title = (string) ($admin_title ?? '');
+        $title = (string) ($title ?? '');
         
         $page_titles = array(
             'dienstplan-vereine' => __('Vereine', 'dienstplan-verwaltung'),
@@ -722,13 +726,12 @@ class Dienstplan_Admin {
         );
         
         if (isset($plugin_page) && isset($page_titles[$plugin_page])) {
-            $blog_name = get_bloginfo('name');
-            $blog_name = $blog_name ?? '';
+            $blog_name = (string) (get_bloginfo('name') ?? '');
             return $page_titles[$plugin_page] . ' &lsaquo; ' . $blog_name;
         }
         
-        // Immer einen String zurückgeben, nie null
-        return (string) $admin_title;
+        // Immer einen gültigen String zurückgeben, niemals null
+        return $admin_title;
     }
     
     /**
