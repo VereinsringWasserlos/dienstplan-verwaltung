@@ -455,6 +455,60 @@ class Dienstplan_Database {
                 ADD COLUMN admin_only tinyint(1) DEFAULT 0 AFTER splittbar"
             );
         }
+
+        // Mitbringen-Items (separat von Diensten)
+        $sql = "CREATE TABLE IF NOT EXISTS {$this->prefix}mitbringen_items (
+            id mediumint(9) NOT NULL AUTO_INCREMENT,
+            legacy_dienst_id mediumint(9) DEFAULT NULL,
+            veranstaltung_id mediumint(9) NOT NULL,
+            tag_id mediumint(9) DEFAULT NULL,
+            verein_id mediumint(9) NOT NULL,
+            bereich_id mediumint(9) DEFAULT NULL,
+            taetigkeit_id mediumint(9) DEFAULT NULL,
+            bezeichnung varchar(255) NOT NULL,
+            menge int(4) DEFAULT 1,
+            einheit varchar(50) DEFAULT '',
+            hinweis text,
+            status varchar(20) DEFAULT 'offen',
+            erstellt_am datetime DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (id),
+            UNIQUE KEY legacy_dienst_id (legacy_dienst_id),
+            KEY veranstaltung_id (veranstaltung_id),
+            KEY tag_id (tag_id),
+            KEY verein_id (verein_id),
+            KEY status (status)
+        ) $charset;";
+
+        dbDelta($sql);
+
+        // Einmalige Migration bestehender Mitbringen-Dienste in eigene Tabelle.
+        $this->wpdb->query(
+            "INSERT IGNORE INTO {$this->prefix}mitbringen_items
+                (legacy_dienst_id, veranstaltung_id, tag_id, verein_id, bereich_id, taetigkeit_id, bezeichnung, menge, einheit, hinweis, status)
+             SELECT
+                d.id,
+                d.veranstaltung_id,
+                d.tag_id,
+                d.verein_id,
+                d.bereich_id,
+                d.taetigkeit_id,
+                COALESCE(NULLIF(TRIM(CONCAT(
+                    COALESCE(t.name, ''),
+                    CASE WHEN t.name IS NOT NULL AND b.name IS NOT NULL THEN ' - ' ELSE '' END,
+                    COALESCE(b.name, '')
+                )), ''), 'Mitbringen') AS bezeichnung,
+                GREATEST(COALESCE(d.anzahl_personen, 1), 1) AS menge,
+                '' AS einheit,
+                d.besonderheiten AS hinweis,
+                CASE
+                    WHEN d.status IN ('vergeben', 'besetzt') THEN 'vergeben'
+                    ELSE 'offen'
+                END AS status
+             FROM {$this->prefix}dienste d
+             LEFT JOIN {$this->prefix}taetigkeiten t ON d.taetigkeit_id = t.id
+             LEFT JOIN {$this->prefix}bereiche b ON d.bereich_id = b.id
+             WHERE d.dienst_typ = 'mitbringen'"
+        );
         
         // Dienst-Slots-Tabelle (für Split-Dienste)
         $sql = "CREATE TABLE IF NOT EXISTS {$this->prefix}dienst_slots (
@@ -1704,7 +1758,7 @@ class Dienstplan_Database {
     
     // === DIENSTE METHODEN ===
     
-    public function get_dienste($veranstaltung_id = null, $verein_id = null, $tag_id = null, $allowed_verein_ids = array()) {
+    public function get_dienste($veranstaltung_id = null, $verein_id = null, $tag_id = null, $allowed_verein_ids = array(), $dienst_typ = null) {
         $where = array();
         $params = array();
         
@@ -1721,6 +1775,11 @@ class Dienstplan_Database {
         if ($tag_id) {
             $where[] = "d.tag_id = %d";
             $params[] = $tag_id;
+        }
+        
+        if ($dienst_typ !== null && in_array($dienst_typ, array('dienst', 'mitbringen'), true)) {
+            $where[] = "d.dienst_typ = %s";
+            $params[] = $dienst_typ;
         }
 
         if (!empty($allowed_verein_ids) && is_array($allowed_verein_ids)) {
@@ -1750,6 +1809,53 @@ class Dienstplan_Database {
         $results = $this->wpdb->get_results($sql);
         
         return $results;
+    }
+
+    public function get_mitbringen_items($veranstaltung_id = null, $verein_id = null, $status = '', $allowed_verein_ids = array()) {
+        $where = array();
+        $params = array();
+
+        if ($veranstaltung_id) {
+            $where[] = "m.veranstaltung_id = %d";
+            $params[] = $veranstaltung_id;
+        }
+
+        if ($verein_id) {
+            $where[] = "m.verein_id = %d";
+            $params[] = $verein_id;
+        }
+
+        if ($status !== '' && in_array($status, array('offen', 'vergeben'), true)) {
+            $where[] = "m.status = %s";
+            $params[] = $status;
+        }
+
+        if (!empty($allowed_verein_ids) && is_array($allowed_verein_ids)) {
+            $allowed_verein_ids = array_values(array_filter(array_map('intval', $allowed_verein_ids)));
+            if (!empty($allowed_verein_ids)) {
+                $placeholders = implode(', ', array_fill(0, count($allowed_verein_ids), '%d'));
+                $where[] = "m.verein_id IN ({$placeholders})";
+                $params = array_merge($params, $allowed_verein_ids);
+            }
+        }
+
+        $where_sql = !empty($where) ? "WHERE " . implode(" AND ", $where) : "";
+
+        $sql = "SELECT m.*, v.name as verein_name, vt.tag_nummer, vt.tag_datum,
+                       b.name as bereich_name, t.name as taetigkeit_name
+                FROM {$this->prefix}mitbringen_items m
+                LEFT JOIN {$this->prefix}vereine v ON m.verein_id = v.id
+                LEFT JOIN {$this->prefix}veranstaltung_tage vt ON m.tag_id = vt.id
+                LEFT JOIN {$this->prefix}bereiche b ON m.bereich_id = b.id
+                LEFT JOIN {$this->prefix}taetigkeiten t ON m.taetigkeit_id = t.id
+                {$where_sql}
+                ORDER BY COALESCE(vt.tag_nummer, 999) ASC, m.bezeichnung ASC, m.id ASC";
+
+        if (!empty($params)) {
+            $sql = $this->wpdb->prepare($sql, $params);
+        }
+
+        return $this->wpdb->get_results($sql);
     }
     
     public function get_recent_dienste($limit = 10) {

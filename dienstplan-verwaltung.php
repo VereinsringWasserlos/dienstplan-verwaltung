@@ -1,9 +1,10 @@
 <?php
+
 /**
- * Plugin Name: Dienstplan Verwaltung V2
+ * Plugin Name: Dienstplan Verwaltung
  * Plugin URI: https://vereinsring-wasserlos.de
  * Description: Moderne Dienstplan-Verwaltung für Vereine und Veranstaltungen
- * Version:           0.9.5.65
+ * Version:           0.9.5.66
  * Author: Kai Naumann
  * Author URI: https://vereinsring-wasserlos.de
  * License: GPL v2 or later
@@ -23,7 +24,7 @@ if (!defined('ABSPATH')) {
 /**
  * Plugin-Konstanten
  */
-define('DIENSTPLAN_VERSION', '0.9.5.65');
+define('DIENSTPLAN_VERSION', '0.9.5.66');
 define('DIENSTPLAN_PLUGIN_FILE', __FILE__);
 define('DIENSTPLAN_PLUGIN_PATH', plugin_dir_path(__FILE__));
 define('DIENSTPLAN_PLUGIN_URL', plugin_dir_url(__FILE__));
@@ -32,7 +33,8 @@ define('DIENSTPLAN_DB_PREFIX', 'dp_');
 /**
  * Plugin-Aktivierung
  */
-function activate_dienstplan_verwaltung() {
+function activate_dienstplan_verwaltung()
+{
     require_once DIENSTPLAN_PLUGIN_PATH . 'includes/class-activator.php';
     Dienstplan_Activator::activate();
 }
@@ -40,7 +42,8 @@ function activate_dienstplan_verwaltung() {
 /**
  * Plugin-Deaktivierung
  */
-function deactivate_dienstplan_verwaltung() {
+function deactivate_dienstplan_verwaltung()
+{
     require_once DIENSTPLAN_PLUGIN_PATH . 'includes/class-deactivator.php';
     Dienstplan_Deactivator::deactivate();
 }
@@ -58,7 +61,8 @@ require_once DIENSTPLAN_PLUGIN_PATH . 'includes/class-dienstplan-verwaltung.php'
  *
  * @since    1.0.0
  */
-function run_dienstplan_verwaltung() {
+function run_dienstplan_verwaltung()
+{
     $plugin = new Dienstplan_Verwaltung();
     $plugin->run();
 }

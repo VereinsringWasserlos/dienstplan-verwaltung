@@ -1,6 +1,6 @@
 # Roadmap & Ausblick
 
-**Dienstplan-Verwaltung V2** - Entwicklungsplan und zukünftige Features
+**Dienstplan-Verwaltung** - Entwicklungsplan und zukünftige Features
 
 **Aktuelle Version:** 0.9.0 (UAT Release)  
 **Status:** User Acceptance Testing  

@@ -1,4 +1,4 @@
-# Dienstplan Verwaltung V2 - Plugin-Struktur
+# Dienstplan Verwaltung - Plugin-Struktur
 
 ## 📁 Vollständige Verzeichnisstruktur
 

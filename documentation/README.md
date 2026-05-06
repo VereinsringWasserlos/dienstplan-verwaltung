@@ -1,4 +1,4 @@
-# Dokumentation - Dienstplan-Verwaltung V2
+# Dokumentation - Dienstplan-Verwaltung
 
 **Version:** 0.9.5.61  
 **Stand:** 10. April 2026  
@@ -246,7 +246,7 @@ WordPress-Admin → Dienstplan → Dashboard → Administration → Dokumentatio
 
 **GPL v2 or later**
 
-Diese Dokumentation ist Teil des Dienstplan-Verwaltung V2 Plugins und unterliegt der gleichen Lizenz (GPL v2 or later).
+Diese Dokumentation ist Teil des Dienstplan-Verwaltung Plugins und unterliegt der gleichen Lizenz (GPL v2 or later).
 
 ---
 

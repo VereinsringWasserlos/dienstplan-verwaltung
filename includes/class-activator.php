@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Plugin-Aktivierung
  *
@@ -13,65 +14,70 @@ if (!defined('ABSPATH')) {
 /**
  * Wird beim Aktivieren des Plugins ausgeführt.
  */
-class Dienstplan_Activator {
+class Dienstplan_Activator
+{
 
     /**
      * Plugin aktivieren
      *
      * @since    1.0.0
      */
-    public static function activate() {
+    public static function activate()
+    {
         // Datenbank-Tabellen erstellen
         self::create_tables();
-        
+
         // Rollen registrieren
         self::install_roles();
-        
+
         // Standard-Optionen setzen
         self::set_default_options();
-        
+
         // Markiere dass Portal-Seite vorgeschlagen werden soll
         set_transient('dienstplan_show_portal_setup', true, 60 * 60 * 24); // 24 Stunden
-        
+
         // Rewrite-Rules flushen
         flush_rewrite_rules();
-        
+
         // Log-Eintrag
-        error_log('Dienstplan Verwaltung V2 aktiviert');
+        error_log('Dienstplan Verwaltung aktiviert');
     }
-    
+
     /**
      * Datenbank-Tabellen erstellen
      *
      * @since    1.0.0
      */
-    private static function create_tables() {
+    private static function create_tables()
+    {
         require_once DIENSTPLAN_PLUGIN_PATH . 'includes/class-database.php';
         $database = new Dienstplan_Database(DIENSTPLAN_DB_PREFIX);
         $database->install();
     }
-    
+
     /**
      * Rollen und Capabilities installieren
      *
      * @since    0.7.0
      */
-    private static function install_roles() {
+    private static function install_roles()
+    {
         require_once DIENSTPLAN_PLUGIN_PATH . 'includes/class-dienstplan-roles.php';
         Dienstplan_Roles::install_roles();
     }
-    
+
     /**
      * Standard-Optionen setzen
      *
      * @since    1.0.0
      */
-    private static function set_default_options() {
+    private static function set_default_options()
+    {
         // Plugin-Version speichern
         add_option('dienstplan_version', DIENSTPLAN_VERSION);
         add_option('dienstplan_db_version', DIENSTPLAN_VERSION);
         add_option('dienstplan_delete_data_on_deactivate', 0);
-        
+
         // Standard-Einstellungen
         $default_settings = array(
             'installed_at' => current_time('mysql'),
@@ -81,7 +87,7 @@ class Dienstplan_Activator {
             'date_format' => 'd.m.Y',
             'time_format' => 'H:i',
         );
-        
+
         add_option('dienstplan_settings', $default_settings);
     }
 }

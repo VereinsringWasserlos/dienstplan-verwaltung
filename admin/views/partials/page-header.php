@@ -68,6 +68,12 @@ $can_show_nav_item = function($item) {
             || Dienstplan_Roles::can_manage_settings();
     }
 
+    if (in_array($target_page, array('dienstplan-dienste', 'dienstplan-mitbringen'), true)) {
+        return current_user_can('manage_options')
+            || Dienstplan_Roles::can_manage_clubs()
+            || Dienstplan_Roles::can_manage_events();
+    }
+
     // Eingeschränkte Vereins-Admins dürfen Veranstaltungen und Bereiche nicht sehen.
     if (in_array($target_page, array('dienstplan-veranstaltungen', 'dienstplan-bereiche'), true)) {
         if (Dienstplan_Roles::is_restricted_club_admin()) {
@@ -81,6 +87,7 @@ $can_show_nav_item = function($item) {
         'dienstplan-bereiche' => Dienstplan_Roles::CAP_MANAGE_EVENTS,
         'dienstplan-mitarbeiter' => Dienstplan_Roles::CAP_MANAGE_EVENTS,
         'dienstplan-dienste' => Dienstplan_Roles::CAP_MANAGE_EVENTS,
+        'dienstplan-mitbringen' => Dienstplan_Roles::CAP_MANAGE_EVENTS,
         'dienstplan-overview' => Dienstplan_Roles::CAP_MANAGE_EVENTS,
         'dienstplan-einstellungen' => Dienstplan_Roles::CAP_MANAGE_SETTINGS,
         'dienstplan-mail' => Dienstplan_Roles::CAP_MANAGE_SETTINGS,

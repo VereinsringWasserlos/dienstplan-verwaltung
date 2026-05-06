@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Plugin-Deaktivierung
  *
@@ -13,17 +14,19 @@ if (!defined('ABSPATH')) {
 /**
  * Wird beim Deaktivieren des Plugins ausgeführt.
  */
-class Dienstplan_Deactivator {
+class Dienstplan_Deactivator
+{
 
     /**
      * Plugin deaktivieren
      *
      * @since    1.0.0
      */
-    public static function deactivate() {
+    public static function deactivate()
+    {
         // Rewrite-Rules flushen
         flush_rewrite_rules();
-        
+
         // Scheduled Events entfernen
         self::clear_scheduled_events();
 
@@ -31,9 +34,9 @@ class Dienstplan_Deactivator {
         if (self::should_delete_all_data_on_deactivate()) {
             self::delete_all_plugin_data();
         }
-        
+
         // Log-Eintrag
-        error_log('Dienstplan Verwaltung V2 deaktiviert');
+        error_log('Dienstplan Verwaltung deaktiviert');
     }
 
     /**
@@ -41,14 +44,16 @@ class Dienstplan_Deactivator {
      *
      * @return bool
      */
-    private static function should_delete_all_data_on_deactivate() {
+    private static function should_delete_all_data_on_deactivate()
+    {
         return (bool) get_option('dienstplan_delete_data_on_deactivate', 0);
     }
 
     /**
      * Löscht alle pluginbezogenen Daten für einen sauberen Neustart.
      */
-    private static function delete_all_plugin_data() {
+    private static function delete_all_plugin_data()
+    {
         global $wpdb;
 
         $table_prefix = $wpdb->prefix . 'dp_';
@@ -87,15 +92,16 @@ class Dienstplan_Deactivator {
         // Benachrichtigungs-/Plugin-Meta löschen
         delete_metadata('user', 0, 'dienstplan_', '', true);
 
-        error_log('Dienstplan Verwaltung V2: Alle Plugin-Daten beim Deaktivieren gelöscht');
+        error_log('Dienstplan Verwaltung: Alle Plugin-Daten beim Deaktivieren gelöscht');
     }
-    
+
     /**
      * Geplante Events entfernen
      *
      * @since    1.0.0
      */
-    private static function clear_scheduled_events() {
+    private static function clear_scheduled_events()
+    {
         // Beispiel für Cron-Jobs
         wp_clear_scheduled_hook('dienstplan_daily_cleanup');
         wp_clear_scheduled_hook('dienstplan_send_reminders');

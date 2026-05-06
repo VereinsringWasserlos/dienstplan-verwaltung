@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Plugin Updater über Git
  * 
@@ -9,7 +10,8 @@
  * @subpackage Dienstplan_Verwaltung/includes
  */
 
-class Dienstplan_Updater {
+class Dienstplan_Updater
+{
 
     /**
      * Plugin-Slug
@@ -82,12 +84,13 @@ class Dienstplan_Updater {
     /**
      * Initialisiert den Updater
      */
-    public function __construct() {
+    public function __construct()
+    {
         $this->plugin_slug = 'dienstplan-verwaltung';
         $this->plugin_basename = plugin_basename(DIENSTPLAN_PLUGIN_FILE);
         $this->plugin_dir = DIENSTPLAN_PLUGIN_PATH;
         $this->current_version = DIENSTPLAN_VERSION;
-        
+
         // Git-Repository Konfiguration
         $this->git_repo_url = 'https://github.com/VereinsringWasserlos/dienstplan-verwaltung.git';
         $this->git_branch = 'main';
@@ -106,7 +109,7 @@ class Dienstplan_Updater {
         add_filter('upgrader_pre_download', array($this, 'handle_github_download'), 10, 3);
         add_filter('upgrader_post_install', array($this, 'post_install_rename'), 10, 3);
         add_action('wp_ajax_dienstplan_download_update', array($this, 'ajax_download_update'));
-        
+
         // Automatische Updates aktivieren wenn gewünscht
         add_filter('auto_update_plugin', array($this, 'enable_auto_update'), 10, 2);
     }
@@ -118,7 +121,8 @@ class Dienstplan_Updater {
      * @param array         $hook_extra Kontextinformationen des Upgraders
      * @return bool|WP_Error
      */
-    public function capture_pre_update_state($response, $hook_extra) {
+    public function capture_pre_update_state($response, $hook_extra)
+    {
         if (!is_array($hook_extra)) {
             return $response;
         }
@@ -154,7 +158,8 @@ class Dienstplan_Updater {
     /**
      * Reaktiviert das Plugin nach erfolgreichem Update, wenn es davor aktiv war.
      */
-    private function restore_activation_after_update() {
+    private function restore_activation_after_update()
+    {
         if (!$this->was_active_before_update) {
             return;
         }
@@ -181,7 +186,8 @@ class Dienstplan_Updater {
     /**
      * Findet den Git-Executable Pfad
      */
-    private function find_git_executable() {
+    private function find_git_executable()
+    {
         // Mögliche Git-Pfade (Windows)
         $possible_paths = array(
             'C:\\Program Files\\Git\\cmd\\git.exe',
@@ -195,21 +201,22 @@ class Dienstplan_Updater {
             $output = array();
             $return_var = 0;
             @exec('"' . $path . '" --version 2>&1', $output, $return_var);
-            
+
             if ($return_var === 0) {
                 $this->git_cmd = $path;
                 error_log('DP Updater: Git gefunden: ' . $path);
                 return;
             }
         }
-        
+
         error_log('DP Updater: Kein Git-Executable gefunden');
     }
 
     /**
      * Prüft auf Updates
      */
-    public function check_for_updates($transient) {
+    public function check_for_updates($transient)
+    {
         if (empty($transient->checked)) {
             return $transient;
         }
@@ -236,7 +243,7 @@ class Dienstplan_Updater {
             if (!isset($transient->no_update)) {
                 $transient->no_update = array();
             }
-            
+
             $plugin_info = array(
                 'slug' => $this->plugin_slug,
                 'plugin' => $this->plugin_basename,
@@ -247,7 +254,7 @@ class Dienstplan_Updater {
                 'requires_php' => '7.4',
                 'compatibility' => new stdClass(),
             );
-            
+
             $transient->no_update[$this->plugin_basename] = (object) $plugin_info;
         }
 
@@ -257,7 +264,8 @@ class Dienstplan_Updater {
     /**
      * Holt Update-Informationen (Git oder GitHub API)
      */
-    private function get_update_info() {
+    private function get_update_info()
+    {
         if (!empty($this->update_info)) {
             return $this->update_info;
         }
@@ -293,11 +301,12 @@ class Dienstplan_Updater {
     /**
      * Holt Update-Informationen aus Git (Entwicklungsumgebung)
      */
-    private function get_update_info_from_git() {
+    private function get_update_info_from_git()
+    {
         try {
             // Hole Remote-Version aus Git
             $remote_version = $this->get_remote_version();
-            
+
             if (!$remote_version) {
                 return false;
             }
@@ -310,7 +319,6 @@ class Dienstplan_Updater {
                 'requires_php' => '7.4',
                 'changelog' => $this->get_changelog(),
             );
-
         } catch (Exception $e) {
             error_log('DP Updater: Git-Fehler: ' . $e->getMessage());
             return false;
@@ -320,7 +328,8 @@ class Dienstplan_Updater {
     /**
      * Holt Update-Informationen von GitHub API (Produktionsserver)
      */
-    private function get_update_info_from_github() {
+    private function get_update_info_from_github()
+    {
         // GitHub API: Neuestes Release
         $api_url = 'https://api.github.com/repos/VereinsringWasserlos/dienstplan-verwaltung/releases/latest';
 
@@ -402,7 +411,8 @@ class Dienstplan_Updater {
      *
      * @return array|false
      */
-    private function get_latest_github_tag_info() {
+    private function get_latest_github_tag_info()
+    {
         $tags_api_url = 'https://api.github.com/repos/VereinsringWasserlos/dienstplan-verwaltung/tags?per_page=20';
 
         $response = wp_remote_get($tags_api_url, array(
@@ -461,7 +471,8 @@ class Dienstplan_Updater {
     /**
      * Prüft ob Git verfügbar ist
      */
-    private function is_git_available() {
+    private function is_git_available()
+    {
         // Prüfe ob .git Verzeichnis existiert
         if (!is_dir($this->plugin_dir . '.git')) {
             error_log('DP Updater: .git Verzeichnis nicht gefunden in ' . $this->plugin_dir);
@@ -478,26 +489,27 @@ class Dienstplan_Updater {
         $output = array();
         $return_var = 0;
         @exec('"' . $this->git_cmd . '" --version 2>&1', $output, $return_var);
-        
+
         if ($return_var !== 0) {
             error_log('DP Updater: Git Befehl nicht verfügbar (Return: ' . $return_var . ')');
             return false;
         }
-        
+
         return true;
     }
 
     /**
      * Holt Remote-Version aus Git
      */
-    private function get_remote_version() {
+    private function get_remote_version()
+    {
         $current_dir = getcwd();
         chdir($this->plugin_dir);
 
         try {
             // Fetch Remote-Changes
             exec('"' . $this->git_cmd . '" fetch origin "' . $this->safe_git_branch . '" 2>&1', $output, $return_var);
-            
+
             if ($return_var !== 0) {
                 error_log('DP Updater: Git fetch fehlgeschlagen');
                 chdir($current_dir);
@@ -507,7 +519,7 @@ class Dienstplan_Updater {
             // Hole Version aus remote Plugin-Datei
             $remote_file_cmd = '"' . $this->git_cmd . '" show origin/' . $this->safe_git_branch . ':dienstplan-verwaltung.php';
             exec($remote_file_cmd . ' 2>&1', $file_output, $return_var);
-            
+
             if ($return_var !== 0) {
                 chdir($current_dir);
                 return false;
@@ -522,7 +534,6 @@ class Dienstplan_Updater {
 
             chdir($current_dir);
             return false;
-
         } catch (Exception $e) {
             chdir($current_dir);
             error_log('DP Updater: ' . $e->getMessage());
@@ -533,7 +544,8 @@ class Dienstplan_Updater {
     /**
      * Generiert Download-URL
      */
-    private function get_download_url() {
+    private function get_download_url()
+    {
         // Für lokales Git-Repository: Erstelle temporäres Archiv
         return admin_url('admin-ajax.php?action=dienstplan_download_update');
     }
@@ -548,7 +560,8 @@ class Dienstplan_Updater {
      * @param array         $result   Ergebnis der Installation mit 'destination' usw.
      * @return array|WP_Error Ggf. korrigiertes Ergebnis.
      */
-    public function post_install_rename($response, $extra, $result) {
+    public function post_install_rename($response, $extra, $result)
+    {
         global $wp_filesystem;
 
         // Nur für dieses Plugin relevant
@@ -614,7 +627,8 @@ class Dienstplan_Updater {
      * @param WP_Upgrader   $upgrader Upgrader-Instanz
      * @return string|WP_Error Pfad zur temporären Datei oder Fehler
      */
-    public function handle_github_download($reply, $package, $upgrader) {
+    public function handle_github_download($reply, $package, $upgrader)
+    {
         // Nur für GitHub-Pakete eingreifen
         if (
             strpos($package, 'github.com') === false &&
@@ -672,13 +686,14 @@ class Dienstplan_Updater {
     /**
      * Holt Changelog aus Git
      */
-    private function get_changelog() {
+    private function get_changelog()
+    {
         $changelog_file = $this->plugin_dir . 'documentation/CHANGELOG.md';
-        
+
         if (file_exists($changelog_file)) {
             return file_get_contents($changelog_file);
         }
-        
+
         return 'Keine Changelog-Informationen verfügbar.';
     }
 
@@ -686,7 +701,8 @@ class Dienstplan_Updater {
      * AJAX-Handler: Liefert ein Git-Archiv als ZIP für WordPress-Updates
      * in der Entwicklungsumgebung (wenn Git verfügbar ist).
      */
-    public function ajax_download_update() {
+    public function ajax_download_update()
+    {
         if (!current_user_can('update_plugins')) {
             wp_die('Keine Berechtigung', '', array('response' => 403));
         }
@@ -724,20 +740,21 @@ class Dienstplan_Updater {
     }
 
 
-    public function plugin_info($false, $action, $response) {
+    public function plugin_info($false, $action, $response)
+    {
         // Nur für unser Plugin
         if ($action !== 'plugin_information' || $response->slug !== $this->plugin_slug) {
             return $false;
         }
 
         $update_info = $this->get_update_info();
-        
+
         if (!$update_info) {
             return $false;
         }
 
         $plugin_info = new stdClass();
-        $plugin_info->name = 'Dienstplan Verwaltung V2';
+        $plugin_info->name = 'Dienstplan Verwaltung';
         $plugin_info->slug = $this->plugin_slug;
         $plugin_info->version = $update_info['version'];
         $plugin_info->author = '<a href="https://github.com">Ihr Name</a>';
@@ -757,7 +774,8 @@ class Dienstplan_Updater {
     /**
      * Führt Update durch (Git oder WordPress-Standard)
      */
-    public function perform_update() {
+    public function perform_update()
+    {
         // Auf Produktionsservern ohne Git: WordPress-Update direkt ausführen
         if (!$this->git_available) {
             require_once ABSPATH . 'wp-admin/includes/update.php';
@@ -835,7 +853,7 @@ class Dienstplan_Updater {
             // Pull Updates (--ff-only vermeidet Merge-Nachfragen und unerwartete Merges)
             $pull_cmd = '"' . $this->git_cmd . '" pull --ff-only origin "' . $this->safe_git_branch . '" 2>&1';
             exec($pull_cmd, $pull_output, $return_var);
-            
+
             if ($return_var !== 0) {
                 chdir($current_dir);
                 return array(
@@ -857,7 +875,6 @@ class Dienstplan_Updater {
                 'message' => 'Update erfolgreich durchgeführt',
                 'output' => implode("\n", $pull_output)
             );
-
         } catch (Exception $e) {
             chdir($current_dir);
             return array(
@@ -870,7 +887,8 @@ class Dienstplan_Updater {
     /**
      * Führt Datenbank-Migrationen aus
      */
-    private function run_migrations() {
+    private function run_migrations()
+    {
         require_once $this->plugin_dir . 'includes/class-database.php';
         require_once $this->plugin_dir . 'includes/class-dienstplan-notifications.php';
 
@@ -888,13 +906,14 @@ class Dienstplan_Updater {
     /**
      * Nach Update-Hook
      */
-    public function after_update($upgrader_object, $options) {
+    public function after_update($upgrader_object, $options)
+    {
         if ($options['action'] === 'update' && $options['type'] === 'plugin') {
             foreach ($options['plugins'] as $plugin) {
                 if ($plugin === $this->plugin_basename) {
                     // Lösche Update-Cache
                     delete_transient('dienstplan_update_info');
-                    
+
                     // Führe Migrationen aus
                     $this->run_migrations();
 
@@ -909,21 +928,23 @@ class Dienstplan_Updater {
     /**
      * Aktiviert automatische Updates wenn in Einstellungen aktiviert
      */
-    public function enable_auto_update($update, $item) {
+    public function enable_auto_update($update, $item)
+    {
         // Prüfe ob es sich um unser Plugin handelt
         if (isset($item->slug) && $item->slug === $this->plugin_slug) {
             // Hole Einstellung
             $auto_update_enabled = get_option('dienstplan_auto_update_enabled', 0);
             return (bool) $auto_update_enabled;
         }
-        
+
         return $update;
     }
 
     /**
      * Manuelle Update-Prüfung
      */
-    public function check_update_manually() {
+    public function check_update_manually()
+    {
         // Lösche Transient-Cache UND In-Memory-Cache des Objekts,
         // damit auch dann frisch geprüft wird, wenn der WP-Filter
         // check_for_updates() bereits früher im selben Request aufgerufen wurde.
@@ -932,7 +953,7 @@ class Dienstplan_Updater {
 
         // Hole neue Update-Informationen
         $update_info = $this->get_update_info();
-        
+
         if (!$update_info) {
             return array(
                 'has_update' => false,
@@ -946,7 +967,7 @@ class Dienstplan_Updater {
             'has_update' => $has_update,
             'current_version' => $this->current_version,
             'new_version' => $update_info['version'],
-            'message' => $has_update 
+            'message' => $has_update
                 ? 'Update verfügbar: Version ' . $update_info['version']
                 : 'Plugin ist auf dem neuesten Stand'
         );
@@ -955,7 +976,8 @@ class Dienstplan_Updater {
     /**
      * Holt Git-Status
      */
-    public function get_git_status() {
+    public function get_git_status()
+    {
         $status = array(
             'available' => $this->git_available,
             'mode' => $this->git_available ? 'Git (Entwicklung)' : 'GitHub API (Produktion)'
@@ -996,7 +1018,6 @@ class Dienstplan_Updater {
             $status['configured_repo'] = $this->git_repo_url;
 
             return $status;
-
         } catch (Exception $e) {
             chdir($current_dir);
             return array(
@@ -1014,7 +1035,8 @@ class Dienstplan_Updater {
      * @param string $ref
      * @return string
      */
-    private function sanitize_git_ref($ref) {
+    private function sanitize_git_ref($ref)
+    {
         $ref = (string) $ref;
         if ($ref === '') {
             return 'main';
@@ -1034,7 +1056,8 @@ class Dienstplan_Updater {
      *
      * @param string $dir Absoluter Pfad zum Verzeichnis.
      */
-    private function recursive_rmdir($dir) {
+    private function recursive_rmdir($dir)
+    {
         if (!is_dir($dir)) {
             return;
         }

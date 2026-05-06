@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Dienste Verwaltung
  *
@@ -15,6 +16,7 @@ $selected_veranstaltung = isset($_GET['veranstaltung']) ? intval($_GET['veransta
 $selected_verein = isset($_GET['verein']) ? intval($_GET['verein']) : 0;
 $filter_status = isset($_GET['status']) ? sanitize_text_field($_GET['status']) : '';
 $filter_mitarbeiter = isset($_GET['mitarbeiter']) ? intval($_GET['mitarbeiter']) : 0;
+$filter_dienst_typ = isset($_GET['dienst_typ']) ? sanitize_text_field($_GET['dienst_typ']) : '';
 $filter_mitarbeiter_name = '';
 $scoped_verein_ids = isset($allowed_verein_ids) && is_array($allowed_verein_ids)
     ? array_values(array_filter(array_map('intval', $allowed_verein_ids)))
@@ -39,10 +41,10 @@ if ($filter_mitarbeiter > 0) {
 // Dienste laden (mit Filtern)
 $dienste = array();
 if ($selected_veranstaltung > 0) {
-    $all_dienste = $db->get_dienste($selected_veranstaltung, $selected_verein, null, $scoped_verein_ids);
+    $all_dienste = $db->get_dienste($selected_veranstaltung, $selected_verein, null, $scoped_verein_ids, $filter_dienst_typ ?: null);
 
     if ($filter_mitarbeiter > 0) {
-        $all_dienste = array_filter($all_dienste, function($d) use ($db, $filter_mitarbeiter) {
+        $all_dienste = array_filter($all_dienste, function ($d) use ($db, $filter_mitarbeiter) {
             $slots = $db->get_dienst_slots($d->id);
             foreach ($slots as $slot) {
                 if (intval($slot->mitarbeiter_id ?? 0) === $filter_mitarbeiter) {
@@ -52,10 +54,10 @@ if ($selected_veranstaltung > 0) {
             return false;
         });
     }
-    
+
     // Status-Filter anwenden
     if ($filter_status === 'unvollstaendig') {
-        $dienste = array_filter($all_dienste, function($d) {
+        $dienste = array_filter($all_dienste, function ($d) {
             return isset($d->status) && $d->status === 'unvollstaendig';
         });
     } else {
@@ -89,6 +91,11 @@ $nav_items = [
         'icon' => 'dashicons-groups',
     ],
     [
+        'label' => __('Mitbringen', 'dienstplan-verwaltung'),
+        'url' => admin_url('admin.php?page=dienstplan-mitbringen'),
+        'icon' => 'dashicons-cart',
+    ],
+    [
         'label' => __('Bereiche & Tätigkeiten', 'dienstplan-verwaltung'),
         'url' => admin_url('admin.php?page=dienstplan-bereiche'),
         'icon' => 'dashicons-category',
@@ -99,13 +106,13 @@ $nav_items = [
 <div class="wrap dienstplan-wrap" style="overflow: visible; position: relative;">
     <?php include DIENSTPLAN_PLUGIN_PATH . 'admin/views/partials/page-header.php'; ?>
     <hr class="wp-header-end">
-    
+
     <?php if (isset($_GET['dp_message'])): ?>
         <div class="notice notice-<?php echo esc_attr($_GET['dp_type'] ?? 'success'); ?> is-dismissible">
             <p><?php echo esc_html($_GET['dp_message']); ?></p>
         </div>
     <?php endif; ?>
-    
+
     <!-- Filter-Bereich -->
     <div class="dp-filter-bar" style="background: #fff; padding: 1.5rem; border: 1px solid #c3c4c7; border-radius: 4px; margin: 1.5rem 0;">
         <div style="display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 0.75rem;">
@@ -135,19 +142,25 @@ $nav_items = [
                         'status' => $filter_status,
                     ), admin_url('admin.php'));
                     ?>
-                    <a href="<?php echo esc_url($clear_filter_url); ?>" class="button button-small" style="margin-left: auto;">
+                    <a href="<?php echo esc_url(add_query_arg(array(
+                                    'page' => 'dienstplan-dienste',
+                                    'veranstaltung' => $selected_veranstaltung,
+                                    'verein' => $selected_verein,
+                                    'status' => $filter_status,
+                                    'dienst_typ' => $filter_dienst_typ,
+                                ), admin_url('admin.php'))); ?>" class="button button-small" style="margin-left: auto;">
                         <?php _e('Mitarbeiter-Filter entfernen', 'dienstplan-verwaltung'); ?>
                     </a>
                 </p>
             </div>
         <?php endif; ?>
-        
+
         <form method="get" action="" style="display: flex; gap: 1rem; flex-wrap: wrap; align-items: flex-end;">
             <input type="hidden" name="page" value="dienstplan-dienste">
             <?php if ($filter_mitarbeiter > 0): ?>
                 <input type="hidden" name="mitarbeiter" value="<?php echo intval($filter_mitarbeiter); ?>">
             <?php endif; ?>
-            
+
             <div style="flex: 1; min-width: 250px;">
                 <label for="filter-veranstaltung" style="display: block; margin-bottom: 0.5rem; font-weight: 600;">
                     <?php _e('Veranstaltung', 'dienstplan-verwaltung'); ?> *
@@ -162,7 +175,7 @@ $nav_items = [
                     <?php endforeach; ?>
                 </select>
             </div>
-            
+
             <div style="flex: 1; min-width: 200px;">
                 <label for="filter-verein" style="display: block; margin-bottom: 0.5rem; font-weight: 600;">
                     <?php _e('Verein', 'dienstplan-verwaltung'); ?>
@@ -176,7 +189,7 @@ $nav_items = [
                     <?php endforeach; ?>
                 </select>
             </div>
-            
+
             <div style="flex: 0 0 180px;">
                 <label for="filter-status" style="display: block; margin-bottom: 0.5rem; font-weight: 600;">
                     <?php _e('Status', 'dienstplan-verwaltung'); ?>
@@ -185,6 +198,21 @@ $nav_items = [
                     <option value=""><?php _e('-- Alle --', 'dienstplan-verwaltung'); ?></option>
                     <option value="unvollstaendig" <?php selected($filter_status, 'unvollstaendig'); ?>>
                         ⚠️ <?php _e('Nur Unvollständige', 'dienstplan-verwaltung'); ?>
+                    </option>
+                </select>
+            </div>
+
+            <div style="flex: 0 0 180px;">
+                <label for="filter-dienst-typ" style="display: block; margin-bottom: 0.5rem; font-weight: 600;">
+                    <?php _e('Dienst-Typ', 'dienstplan-verwaltung'); ?>
+                </label>
+                <select id="filter-dienst-typ" name="dienst_typ" class="regular-text" style="width: 100%;">
+                    <option value=""><?php _e('-- Alle --', 'dienstplan-verwaltung'); ?></option>
+                    <option value="dienst" <?php selected($filter_dienst_typ, 'dienst'); ?>>
+                        <?php _e('Dienste (mit Uhrzeit)', 'dienstplan-verwaltung'); ?>
+                    </option>
+                    <option value="mitbringen" <?php selected($filter_dienst_typ, 'mitbringen'); ?>>
+                        📦 <?php _e('Mitbringen (ohne Uhrzeit)', 'dienstplan-verwaltung'); ?>
                     </option>
                 </select>
             </div>
@@ -202,7 +230,7 @@ $nav_items = [
                     <?php endforeach; ?>
                 </select>
             </div>
-            
+
             <div>
                 <button type="submit" class="button button-primary">
                     <span class="dashicons dashicons-search"></span>
@@ -216,12 +244,12 @@ $nav_items = [
             </div>
         </form>
     </div>
-    
+
     <?php if ($selected_veranstaltung > 0): ?>
         <?php if (empty($dienste)): ?>
             <?php include_once DIENSTPLAN_PLUGIN_PATH . 'admin/views/partials/dienste-empty.php'; ?>
         <?php else: ?>
-            <?php 
+            <?php
             // Berechne Statistiken
             $unvollstaendige_count = 0;
             foreach ($dienste as $d) {
@@ -229,7 +257,7 @@ $nav_items = [
                     $unvollstaendige_count++;
                 }
             }
-            
+
             // Zeige Warnung wenn unvollständige Dienste vorhanden sind
             if ($unvollstaendige_count > 0 && $filter_status !== 'unvollstaendig'): ?>
                 <div class="notice notice-warning" style="margin: 1.5rem 0; padding: 1rem; background: #fef3c7; border-left: 4px solid #f59e0b;">
@@ -248,7 +276,7 @@ $nav_items = [
                     </p>
                 </div>
             <?php endif; ?>
-            
+
             <?php include_once DIENSTPLAN_PLUGIN_PATH . 'admin/views/partials/dienste-table.php'; ?>
         <?php endif; ?>
     <?php else: ?>
@@ -259,10 +287,10 @@ $nav_items = [
             </p>
         </div>
     <?php endif; ?>
-    
+
 </div>
 
-<?php 
+<?php
 // Modals einbinden
 include_once DIENSTPLAN_PLUGIN_PATH . 'admin/views/partials/dienst-modal.php';
 include_once DIENSTPLAN_PLUGIN_PATH . 'admin/views/partials/besetzung-modal.php';

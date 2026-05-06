@@ -11,6 +11,19 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ---
 
+## [0.9.5.66] - 2026-05-06 📦 Release: Mitbringen-Trennung & Export-Hotfix
+
+### ✨ Neu
+
+- **Mitbringen separat im Backend**: Eigene Admin-Seite `Mitbringen` ergänzt und von der Dienste-Ansicht getrennt zugänglich gemacht.
+- **Mitbringen als eigene Datenquelle**: Neue Tabelle `mitbringen_items` inkl. Migration bestehender `dienst_typ=mitbringen`-Einträge.
+
+### 🐛 Bugfixes
+
+- **CSV/ZIP-Export ohne Warntext**: Export-Handler initialisiert Berechtigungsflags jetzt vor der CSV-Closure. Dadurch werden PHP-Warnungen vor Dateiausgaben verhindert und Downloads bleiben gültig.
+
+---
+
 ## [0.9.5.63] - 2025-06-XX 🗂️ Bereichsgruppen: 3-Ebenen-Gruppierung (Gruppe → Bereich → Dienst)
 
 ### ✨ Neue Features
