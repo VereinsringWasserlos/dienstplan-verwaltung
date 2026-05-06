@@ -104,6 +104,25 @@ foreach ($services as $service) {
 }
 ksort($dienste_nach_tagen);
 
+// Bereichsgruppen laden (für Frontend-Gruppierung nach Tätigkeit)
+$alle_bereichsgruppen = $db->get_bereichsgruppen(true); // nur aktive
+$taetigkeit_gruppe_cache = []; // taetigkeit_id => gruppe_obj|null
+$dp_get_bereichsgruppe = function($bereich_id_unused, $taetigkeit_id = 0) use ($db, &$taetigkeit_gruppe_cache) {
+    if (!isset($taetigkeit_gruppe_cache[$taetigkeit_id])) {
+        if ($taetigkeit_id > 0) {
+            $t = $db->get_taetigkeit($taetigkeit_id);
+            if ($t && !empty($t->gruppe_id)) {
+                $taetigkeit_gruppe_cache[$taetigkeit_id] = $db->get_bereichsgruppe(intval($t->gruppe_id));
+            } else {
+                $taetigkeit_gruppe_cache[$taetigkeit_id] = null;
+            }
+        } else {
+            $taetigkeit_gruppe_cache[$taetigkeit_id] = null;
+        }
+    }
+    return $taetigkeit_gruppe_cache[$taetigkeit_id];
+};
+
 // Filterdaten (Arbeitsbereiche & Dienste)
 $filter_bereiche = array();
 $filter_dienste = array();
@@ -127,6 +146,7 @@ foreach ($services as $service) {
 }
 asort($filter_bereiche);
 asort($filter_dienste);
+
 
 // Sammle alle Vereine aus den Diensten (für Anzeige wenn verein_id = 0)
 $alle_vereine_in_services = [];
@@ -309,12 +329,6 @@ if ($dienst_start_dt !== null && $dienst_end_dt !== null) {
             <div style="flex: 1; min-width: 300px;">
                 <div class="dp-title-row">
                     <h1 class="dp-event-title" style="margin: 0; font-size: 2rem; color: #0f172a;"><?php echo esc_html($veranstaltung->name); ?></h1>
-                    <?php if (!empty($veranstaltungs_zeitraum_label)): ?>
-                        <div class="dp-title-chip">
-                            <span class="dashicons dashicons-calendar-alt"></span>
-                            <span><strong>Veranstaltung:</strong> <?php echo esc_html($veranstaltungs_zeitraum_label); ?></span>
-                        </div>
-                    <?php endif; ?>
                     <?php if (!empty($dienst_zeitraum_label)): ?>
                         <div class="dp-title-chip">
                             <span class="dashicons dashicons-clock"></span>
@@ -400,18 +414,6 @@ if ($dienst_start_dt !== null && $dienst_end_dt !== null) {
                        class="dp-view-btn <?php echo $view_mode === 'timeline' ? 'active' : ''; ?>" title="Timeline" aria-label="Timeline">
                         <span class="dp-view-icon-emoji dashicons dashicons-chart-bar" aria-hidden="true"></span>
                         <span class="dp-view-btn-text">Timeline</span>
-                    </a>
-                </div>
-                <div class="dp-view-toggle dp-view-toggle-mobile" aria-label="Ansicht wechseln mobil">
-                    <a href="?veranstaltung_id=<?php echo $veranstaltung_id; ?><?php echo ($verein_id > 0 ? '&verein_id=' . $verein_id : ''); ?>&view=kachel"
-                       class="dp-view-btn <?php echo $view_mode === 'kachel' ? 'active' : ''; ?>" title="Kachelansicht" aria-label="Kachelansicht mobil">
-                        <span class="dp-view-icon-emoji dashicons dashicons-screenoptions" aria-hidden="true"></span>
-                        <span class="dp-view-btn-text">Kacheln</span>
-                    </a>
-                    <a href="?veranstaltung_id=<?php echo $veranstaltung_id; ?><?php echo ($verein_id > 0 ? '&verein_id=' . $verein_id : ''); ?>&view=kompakt"
-                       class="dp-view-btn <?php echo $view_mode === 'kompakt' ? 'active' : ''; ?>" title="Kompakte Liste" aria-label="Kompakte Liste mobil">
-                        <span class="dp-view-icon-emoji dashicons dashicons-list-view" aria-hidden="true"></span>
-                        <span class="dp-view-btn-text">Liste</span>
                     </a>
                 </div>
             </div>
@@ -751,10 +753,6 @@ if ($dienst_start_dt !== null && $dienst_end_dt !== null) {
         height: 16px;
     }
 
-    .dp-view-toggle-mobile {
-        display: none;
-    }
-
     .dp-view-toggle-header .dp-view-btn-text {
         display: none;
     }
@@ -773,23 +771,6 @@ if ($dienst_start_dt !== null && $dienst_end_dt !== null) {
     @media (max-width: 1024px) {
         .dp-view-toggle-header {
             display: none !important;
-        }
-
-        .dp-view-toggle-mobile {
-            display: grid !important;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 0.5rem;
-            width: 100%;
-        }
-
-        .dp-view-toggle-mobile .dp-view-btn {
-            min-width: 0;
-            justify-content: flex-start;
-            padding: 0.6rem 0.65rem;
-        }
-
-        .dp-view-toggle-mobile .dp-view-btn-text {
-            display: inline;
         }
     }
 
@@ -1076,7 +1057,33 @@ if ($dienst_start_dt !== null && $dienst_end_dt !== null) {
 
                     </div>
 
-                    <?php foreach ($tl_tag_dienste as $dienst):
+                    <?php
+                    // Timeline: Dienste nach Bereichsgruppe sortieren
+                    $tl_sorted = [];
+                    foreach ($tl_tag_dienste as $tl_d) {
+                        $tl_grp   = $dp_get_bereichsgruppe(0, intval($tl_d->taetigkeit_id ?? 0));
+                        $tl_gkey  = $tl_grp ? intval($tl_grp->id) : 0;
+                        $tl_gsort = $tl_grp ? intval($tl_grp->sortierung) : 9999;
+                        $tl_sorted[] = ['dienst' => $tl_d, 'gruppe' => $tl_grp, 'gkey' => $tl_gkey, 'gsort' => $tl_gsort];
+                    }
+                    usort($tl_sorted, function($a, $b) { return $a['gsort'] <=> $b['gsort']; });
+                    $tl_unique_gkeys = array_unique(array_column($tl_sorted, 'gkey'));
+                    $tl_show_grp_headers = count($tl_unique_gkeys) > 1 || (count($tl_unique_gkeys) === 1 && $tl_unique_gkeys[0] !== 0);
+                    $tl_prev_gkey = -1;
+                    ?>
+
+                    <?php foreach ($tl_sorted as $tl_item):
+                        $dienst      = $tl_item['dienst'];
+                        $tl_curr_grp = $tl_item['gruppe'];
+                        $tl_curr_gkey = $tl_item['gkey'];
+                        if ($tl_show_grp_headers && $tl_curr_gkey !== $tl_prev_gkey):
+                            $tl_prev_gkey = $tl_curr_gkey;
+                            ?>
+                            <div class="dp-tl-gruppe-header" style="display:flex;align-items:center;gap:0.5rem;padding:0.3rem 0.5rem 0.3rem 0.8rem;margin:0.5rem 0 0.15rem;background:<?php echo $tl_curr_grp ? esc_attr($tl_curr_grp->farbe ?? '#64748b') . '18' : '#f1f5f920'; ?>;border-left:3px solid <?php echo $tl_curr_grp ? esc_attr($tl_curr_grp->farbe ?? '#64748b') : '#94a3b8'; ?>;">
+                                <strong style="font-size:0.78rem;letter-spacing:0.05em;text-transform:uppercase;color:<?php echo $tl_curr_grp ? esc_attr($tl_curr_grp->farbe ?? '#64748b') : '#94a3b8'; ?>;"><?php echo $tl_curr_grp ? esc_html($tl_curr_grp->name) : __('Weitere Bereiche', 'dienstplan-verwaltung'); ?></strong>
+                            </div>
+                            <?php
+                        endif;
 
                         $slots          = $db->get_dienst_slots($dienst->id);
 
@@ -1270,113 +1277,136 @@ if ($dienst_start_dt !== null && $dienst_end_dt !== null) {
                 <?php foreach ($dienste_nach_tagen as $tag_id => $tag_dienste):
                     $tag = null;
                     foreach ($tage as $t) {
-                        if ($t->id == $tag_id) {
-                            $tag = $t;
-                            break;
-                        }
+                        if ($t->id == $tag_id) { $tag = $t; break; }
                     }
-                    $tag_raw = $tag->tag_datum ?? ($tag->datum ?? null);
+                    $tag_raw   = $tag->tag_datum ?? ($tag->datum ?? null);
                     $tag_datum = $tag_raw ? date('d.m.Y', strtotime($tag_raw)) : 'Unbekannt';
+
+                    // Dienste nach Bereichsgruppe gruppieren
+                    $kp_gruppen_map = [];
+                    foreach ($tag_dienste as $dienst) {
+                        $grp    = $dp_get_bereichsgruppe(0, intval($dienst->taetigkeit_id ?? 0));
+                        $grpkey = $grp ? intval($grp->id) : 0;
+                        if (!isset($kp_gruppen_map[$grpkey])) {
+                            $kp_gruppen_map[$grpkey] = ['gruppe' => $grp, 'dienste' => []];
+                        }
+                        $kp_gruppen_map[$grpkey]['dienste'][] = $dienst;
+                    }
+                    uasort($kp_gruppen_map, function($a, $b) {
+                        $sa = $a['gruppe'] ? intval($a['gruppe']->sortierung) : 9999;
+                        $sb = $b['gruppe'] ? intval($b['gruppe']->sortierung) : 9999;
+                        return $sa <=> $sb;
+                    });
+                    $kp_has_gruppen = count($kp_gruppen_map) > 1 || (count($kp_gruppen_map) === 1 && array_key_first($kp_gruppen_map) !== 0);
                 ?>
                     <div class="dp-day-section-compact" data-tag-id="<?php echo intval($tag_id); ?>">
                         <h3 class="dp-day-title"><?php echo esc_html($tag_datum); ?></h3>
 
-                        <table class="dp-dienste-table">
-                            <thead>
-                                <tr>
-                                    <th class="col-zeit">Zeit</th>
-                                    <th class="col-bereich">Bereich</th>
-                                    <th class="col-dienst">Dienst</th>
-                                    <th class="col-besonderheiten">Besonderheiten</th>
-                                    <th class="col-zugeordnet">Zugeordnet</th>
-                                    <th class="col-status">Status</th>
-                                    <th class="col-aktion">Aktion</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                            <?php foreach ($tag_dienste as $dienst):
-                                $slots = $db->get_dienst_slots($dienst->id);
-                                $bereich = $db->get_bereich($dienst->bereich_id);
-                                $taetigkeit = $db->get_taetigkeit($dienst->taetigkeit_id);
-                                $freie_slots = count(array_filter($slots, function($s) { return empty($s->mitarbeiter_id); }));
+                        <?php foreach ($kp_gruppen_map as $kp_grp_key => $kp_grp_data):
+                            $kp_grp_obj = $kp_grp_data['gruppe'];
+                            if ($kp_has_gruppen): ?>
+                            <div style="margin-bottom:0.5rem;">
+                                <div style="padding:0.4rem 0.8rem;font-size:0.82rem;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;color:<?php echo $kp_grp_obj ? esc_attr($kp_grp_obj->farbe ?? '#64748b') : '#94a3b8'; ?>;border-left:3px solid <?php echo $kp_grp_obj ? esc_attr($kp_grp_obj->farbe ?? '#64748b') : '#94a3b8'; ?>;background:<?php echo $kp_grp_obj ? esc_attr($kp_grp_obj->farbe ?? '#64748b') : '#94a3b8'; ?>12;margin-bottom:0.25rem;">
+                                    <?php echo $kp_grp_obj ? esc_html($kp_grp_obj->name) : __('Weitere Bereiche', 'dienstplan-verwaltung'); ?>
+                                </div>
+                            <?php endif; ?>
+                            <table class="dp-dienste-table">
+                                <thead>
+                                    <tr>
+                                        <th class="col-zeit">Zeit</th>
+                                        <th class="col-bereich">Bereich</th>
+                                        <th class="col-dienst">Dienst</th>
+                                        <th class="col-besonderheiten">Besonderheiten</th>
+                                        <th class="col-zugeordnet">Zugeordnet</th>
+                                        <th class="col-status">Status</th>
+                                        <th class="col-aktion">Aktion</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                <?php foreach ($kp_grp_data['dienste'] as $dienst):
+                                    $slots = $db->get_dienst_slots($dienst->id);
+                                    $bereich = $db->get_bereich($dienst->bereich_id);
+                                    $taetigkeit = $db->get_taetigkeit($dienst->taetigkeit_id);
+                                    $freie_slots = count(array_filter($slots, function($s) { return empty($s->mitarbeiter_id); }));
 
-                                $kp_assigned_names = [];
-                                if ($can_manage_dienste) {
-                                    foreach ($slots as $kp_slot_row) {
-                                        if (empty($kp_slot_row->mitarbeiter_id)) {
-                                            continue;
-                                        }
-                                        $kp_m_obj = $db->get_mitarbeiter($kp_slot_row->mitarbeiter_id);
-                                        if ($kp_m_obj) {
-                                            $kp_assigned_names[] = trim(($kp_m_obj->vorname ?? '') . ' ' . substr(($kp_m_obj->nachname ?? ''), 0, 1) . '.');
+                                    $kp_assigned_names = [];
+                                    if ($can_manage_dienste) {
+                                        foreach ($slots as $kp_slot_row) {
+                                            if (empty($kp_slot_row->mitarbeiter_id)) continue;
+                                            $kp_m_obj = $db->get_mitarbeiter($kp_slot_row->mitarbeiter_id);
+                                            if ($kp_m_obj) {
+                                                $kp_assigned_names[] = trim(($kp_m_obj->vorname ?? '') . ' ' . substr(($kp_m_obj->nachname ?? ''), 0, 1) . '.');
+                                            }
                                         }
                                     }
-                                }
 
-                                $has_my_slot = ($current_mitarbeiter_id > 0) ? count(array_filter($slots, function($s) use ($current_mitarbeiter_id) {
-                                    return intval($s->mitarbeiter_id ?? 0) === intval($current_mitarbeiter_id);
-                                })) > 0 : false;
-                                $first_free_slot_id  = 0;
-                                $second_free_slot_id = 0;
-                                foreach ($slots as $slot_row) {
-                                    if (empty($slot_row->mitarbeiter_id)) {
-                                        if ($first_free_slot_id === 0) {
-                                            $first_free_slot_id = intval($slot_row->id);
-                                        } else {
-                                            $second_free_slot_id = intval($slot_row->id);
-                                            break;
+                                    $has_my_slot = ($current_mitarbeiter_id > 0) ? count(array_filter($slots, function($s) use ($current_mitarbeiter_id) {
+                                        return intval($s->mitarbeiter_id ?? 0) === intval($current_mitarbeiter_id);
+                                    })) > 0 : false;
+                                    $first_free_slot_id  = 0;
+                                    $second_free_slot_id = 0;
+                                    foreach ($slots as $slot_row) {
+                                        if (empty($slot_row->mitarbeiter_id)) {
+                                            if ($first_free_slot_id === 0) { $first_free_slot_id = intval($slot_row->id); }
+                                            else { $second_free_slot_id = intval($slot_row->id); break; }
                                         }
                                     }
-                                }
-                                $dienst_von = $dienst->von_zeit ?? ($dienst->zeit_von ?? '');
-                                $dienst_bis = $dienst->bis_zeit ?? ($dienst->zeit_bis ?? '');
-                                $dienst_beschreibung = $dienst->beschreibung ?? ($dienst->besonderheiten ?? '');
-                            ?>
-                                <tr class="dp-dienst-row" data-tag-id="<?php echo intval($tag_id); ?>" data-dienst-id="<?php echo $dienst->id; ?>" data-bereich-id="<?php echo intval($dienst->bereich_id); ?>" data-taetigkeit-id="<?php echo intval($dienst->taetigkeit_id); ?>" data-has-free="<?php echo $freie_slots > 0 ? '1' : '0'; ?>" data-has-mine="<?php echo $has_my_slot ? '1' : '0'; ?>">
-                                    <td class="col-zeit">
-                                        <strong><?php echo substr($dienst_von, 0, 5) . ' - ' . substr($dienst_bis, 0, 5); ?></strong>
-                                    </td>
-                                    <td class="col-bereich">
-                                        <span class="dp-bereich-badge" style="background-color: <?php echo esc_attr($bereich->farbe ?? '#e2e8f0'); ?>;">
-                                            <?php echo esc_html($bereich->name ?? ''); ?>
-                                        </span>
-                                    </td>
-                                    <td class="col-dienst">
-                                        <strong><?php echo esc_html($taetigkeit->name ?? 'Unbekannt'); ?></strong>
-                                    </td>
-                                    <td class="col-besonderheiten">
-                                        <?php if (!empty($dienst_beschreibung)): ?>
-                                            <span class="dp-dienst-hint"><?php echo esc_html($dienst_beschreibung); ?></span>
-                                        <?php else: ?>
-                                            <span class="dp-empty">—</span>
-                                        <?php endif; ?>
-                                    </td>
-                                    <td class="col-zugeordnet">
-                                        <?php if ($can_manage_dienste && !empty($kp_assigned_names)): ?>
-                                            <span class="dp-assigned-names"><?php echo esc_html(implode(', ', $kp_assigned_names)); ?></span>
-                                        <?php else: ?>
-                                            <span class="dp-empty">—</span>
-                                        <?php endif; ?>
-                                    </td>
-                                    <td class="col-status">
-                                        <span class="dp-status-badge <?php echo $freie_slots > 0 ? 'open' : 'full'; ?>">
-                                            <?php echo $freie_slots > 0 ? ($freie_slots . ' frei') : 'Voll'; ?>
-                                        </span>
-                                    </td>
-                                    <td class="col-aktion">
-                                        <?php if ($anmeldung_aktiv && $first_free_slot_id > 0): ?>
-                                            <?php $dienst_btn_color = $dp_get_verein_color($dienst); ?>
-                                            <button type="button" class="dp-btn-anmelden" style="--dp-btn-accent:<?php echo esc_attr($dienst_btn_color); ?>;" onclick="return dpOpenTakeoverModal(<?php echo $first_free_slot_id; ?>, <?php echo intval($dienst->id); ?>, event, <?php echo intval($second_free_slot_id); ?>, <?php echo intval($dienst->splittbar ?? 0); ?>);">Übernehmen</button>
-                                        <?php elseif ($freie_slots === 0): ?>
-                                            <span class="dp-grey-text">Voll</span>
-                                        <?php else: ?>
-                                            <span class="dp-grey-text">—</span>
-                                        <?php endif; ?>
-                                    </td>
-                                </tr>
-                            <?php endforeach; ?>
-                            </tbody>
-                        </table>
+                                    $dienst_von          = $dienst->von_zeit ?? ($dienst->zeit_von ?? '');
+                                    $dienst_bis          = $dienst->bis_zeit ?? ($dienst->zeit_bis ?? '');
+                                    $dienst_typ          = $dienst->dienst_typ ?? 'dienst';
+                                    $is_mitbringen       = ($dienst_typ === 'mitbringen');
+                                    $dienst_beschreibung = $dienst->beschreibung ?? ($dienst->besonderheiten ?? '');
+                                    $effective_admin_only = (!empty($dienst->admin_only) || !empty($taetigkeit->admin_only));
+                                ?>
+                                    <tr class="dp-dienst-row" data-tag-id="<?php echo intval($tag_id); ?>" data-dienst-id="<?php echo $dienst->id; ?>" data-bereich-id="<?php echo intval($dienst->bereich_id); ?>" data-taetigkeit-id="<?php echo intval($dienst->taetigkeit_id); ?>" data-admin-only="<?php echo $effective_admin_only ? '1' : '0'; ?>" data-has-free="<?php echo $freie_slots > 0 ? '1' : '0'; ?>" data-has-mine="<?php echo $has_my_slot ? '1' : '0'; ?>">
+                                        <td class="col-zeit">
+                                            <?php if ($is_mitbringen): ?>
+                                                <strong><?php _e('Mitbringen', 'dienstplan-verwaltung'); ?></strong>
+                                            <?php else: ?>
+                                                <strong><?php echo substr($dienst_von, 0, 5) . ' - ' . substr($dienst_bis, 0, 5); ?></strong>
+                                            <?php endif; ?>
+                                        </td>
+                                        <td class="col-bereich">
+                                            <span class="dp-bereich-badge" style="background-color:<?php echo esc_attr($bereich->farbe ?? '#e2e8f0'); ?>;">
+                                                <?php echo esc_html($bereich->name ?? ''); ?>
+                                            </span>
+                                        </td>
+                                        <td class="col-dienst"><strong><?php echo esc_html($taetigkeit->name ?? 'Unbekannt'); ?></strong></td>
+                                        <td class="col-besonderheiten">
+                                            <?php if (!empty($dienst_beschreibung)): ?>
+                                                <span class="dp-dienst-hint"><?php echo esc_html($dienst_beschreibung); ?></span>
+                                            <?php else: ?><span class="dp-empty">—</span><?php endif; ?>
+                                        </td>
+                                        <td class="col-zugeordnet">
+                                            <?php if ($can_manage_dienste && !empty($kp_assigned_names)): ?>
+                                                <span class="dp-assigned-names"><?php echo esc_html(implode(', ', $kp_assigned_names)); ?></span>
+                                            <?php else: ?><span class="dp-empty">—</span><?php endif; ?>
+                                        </td>
+                                        <td class="col-status">
+                                            <span class="dp-status-badge <?php echo $freie_slots > 0 ? 'open' : 'full'; ?>">
+                                                <?php echo $freie_slots > 0 ? ($freie_slots . ' frei') : 'Voll'; ?>
+                                            </span>
+                                        </td>
+                                        <td class="col-aktion">
+                                            <?php if ($anmeldung_aktiv && $first_free_slot_id > 0): ?>
+                                                <?php $dienst_btn_color = $dp_get_verein_color($dienst); ?>
+                                                <?php if ($effective_admin_only && !$can_manage_dienste): ?>
+                                                    <span class="dp-grey-text">Admin-only</span>
+                                                <?php else: ?>
+                                                    <button type="button" class="dp-btn-anmelden" style="--dp-btn-accent:<?php echo esc_attr($dienst_btn_color); ?>;" onclick="return dpOpenTakeoverModal(<?php echo $first_free_slot_id; ?>, <?php echo intval($dienst->id); ?>, event, <?php echo intval($second_free_slot_id); ?>, <?php echo intval($dienst->splittbar ?? 0); ?>);">Übernehmen</button>
+                                                <?php endif; ?>
+                                            <?php elseif ($freie_slots === 0): ?>
+                                                <span class="dp-grey-text">Voll</span>
+                                            <?php else: ?>
+                                                <span class="dp-grey-text">—</span>
+                                            <?php endif; ?>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                            <?php if ($kp_has_gruppen): ?></div><?php endif; ?>
+                        <?php endforeach; // kp_gruppen_map ?>
                     </div>
                 <?php endforeach; ?>
             </div>
@@ -1387,36 +1417,72 @@ if ($dienst_start_dt !== null && $dienst_end_dt !== null) {
                 <?php foreach ($dienste_nach_tagen as $tag_id => $tag_dienste): 
                     $tag = null;
                     foreach ($tage as $t) {
-                        if ($t->id == $tag_id) {
-                            $tag = $t;
-                            break;
-                        }
+                        if ($t->id == $tag_id) { $tag = $t; break; }
                     }
-                    $tag_raw = $tag->tag_datum ?? ($tag->datum ?? null);
+                    $tag_raw   = $tag->tag_datum ?? ($tag->datum ?? null);
                     $tag_datum = $tag_raw ? date('d.m.Y', strtotime($tag_raw)) : 'Unbekannt';
+
+                    // Dienste dieses Tages nach Bereichsgruppe gruppieren
+                    $gruppen_map = []; // gruppe_id (oder 0 = ohne Gruppe) => ['gruppe' => obj|null, 'dienste' => []]
+                    foreach ($tag_dienste as $dienst) {
+                        $grp = $dp_get_bereichsgruppe(0, intval($dienst->taetigkeit_id ?? 0));
+                        $grp_key = $grp ? intval($grp->id) : 0;
+                        if (!isset($gruppen_map[$grp_key])) {
+                            $gruppen_map[$grp_key] = ['gruppe' => $grp, 'dienste' => []];
+                        }
+                        $gruppen_map[$grp_key]['dienste'][] = $dienst;
+                    }
+                    // Sortieren: Gruppen nach sortierung, dann ohne Gruppe zuletzt
+                    uasort($gruppen_map, function($a, $b) {
+                        $sa = $a['gruppe'] ? intval($a['gruppe']->sortierung) : 9999;
+                        $sb = $b['gruppe'] ? intval($b['gruppe']->sortierung) : 9999;
+                        return $sa <=> $sb;
+                    });
+                    $has_gruppen = count($gruppen_map) > 1 || (count($gruppen_map) === 1 && array_key_first($gruppen_map) !== 0);
                     ?>
                     
                     <div class="dp-day-section" data-tag-id="<?php echo intval($tag_id); ?>">
                         <h3 class="dp-day-title"><?php echo esc_html($tag_datum); ?></h3>
                         
-                        <div class="dp-dienste-cards">
-                            <?php foreach ($tag_dienste as $dienst): 
-                                $slots = $db->get_dienst_slots($dienst->id);
-                                $bereich = $db->get_bereich($dienst->bereich_id);
-                                $taetigkeit = $db->get_taetigkeit($dienst->taetigkeit_id);
-                                $freie_slots = count(array_filter($slots, function($s) { return empty($s->mitarbeiter_id); }));
-                                $has_my_slot = ($current_mitarbeiter_id > 0) ? count(array_filter($slots, function($s) use ($current_mitarbeiter_id) {
-                                    return intval($s->mitarbeiter_id ?? 0) === intval($current_mitarbeiter_id);
-                                })) > 0 : false;
-                                ?>
-                                
-                                <div class="dp-dienst-card" data-tag-id="<?php echo intval($tag_id); ?>" data-dienst-id="<?php echo $dienst->id; ?>" data-bereich-id="<?php echo intval($dienst->bereich_id); ?>" data-taetigkeit-id="<?php echo intval($dienst->taetigkeit_id); ?>" data-admin-only="<?php echo $taetigkeit->admin_only ? '1' : '0'; ?>" data-has-free="<?php echo $freie_slots > 0 ? '1' : '0'; ?>" data-has-mine="<?php echo $has_my_slot ? '1' : '0'; ?>">
-                                    <div class="dp-dienst-header">
-                                        <?php
-                                        $dienst_von = $dienst->von_zeit ?? ($dienst->zeit_von ?? '');
-                                        $dienst_bis = $dienst->bis_zeit ?? ($dienst->zeit_bis ?? '');
+                        <?php foreach ($gruppen_map as $grp_key => $grp_data):
+                            $grp_obj  = $grp_data['gruppe'];
+                            $grp_dienste = $grp_data['dienste'];
+                            if ($has_gruppen && $grp_obj): ?>
+                            <div class="dp-gruppe-section" style="margin-bottom:1.5rem;">
+                                <div class="dp-gruppe-title" style="display:flex;align-items:center;gap:0.6rem;margin-bottom:0.75rem;padding:0.55rem 0.9rem;border-radius:6px;background:<?php echo esc_attr($grp_obj->farbe ?? '#64748b'); ?>1a;border-left:4px solid <?php echo esc_attr($grp_obj->farbe ?? '#64748b'); ?>;">
+                                    <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:<?php echo esc_attr($grp_obj->farbe ?? '#64748b'); ?>;flex-shrink:0;"></span>
+                                    <strong style="font-size:0.95rem;color:#1e293b;"><?php echo esc_html($grp_obj->name); ?></strong>
+                                </div>
+                        <?php elseif ($has_gruppen): ?>
+                            <div class="dp-gruppe-section" style="margin-bottom:1.5rem;">
+                                <div class="dp-gruppe-title" style="display:flex;align-items:center;gap:0.6rem;margin-bottom:0.75rem;padding:0.55rem 0.9rem;border-radius:6px;background:#f1f5f9;border-left:4px solid #94a3b8;">
+                                    <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#94a3b8;flex-shrink:0;"></span>
+                                    <strong style="font-size:0.95rem;color:#64748b;"><?php _e('Weitere Bereiche', 'dienstplan-verwaltung'); ?></strong>
+                                </div>
+                        <?php else: ?>
+                            <div class="dp-gruppe-section">
+                        <?php endif; ?>
+                                <div class="dp-dienste-cards">
+                                    <?php foreach ($grp_dienste as $dienst): 
+                                        $slots = $db->get_dienst_slots($dienst->id);
+                                        $bereich = $db->get_bereich($dienst->bereich_id);
+                                        $taetigkeit = $db->get_taetigkeit($dienst->taetigkeit_id);
+                                        $freie_slots = count(array_filter($slots, function($s) { return empty($s->mitarbeiter_id); }));
+                                        $has_my_slot = ($current_mitarbeiter_id > 0) ? count(array_filter($slots, function($s) use ($current_mitarbeiter_id) {
+                                            return intval($s->mitarbeiter_id ?? 0) === intval($current_mitarbeiter_id);
+                                        })) > 0 : false;
+                                        $effective_admin_only = (!empty($dienst->admin_only) || !empty($taetigkeit->admin_only));
                                         ?>
-                                        <div class="dp-dienst-time-big"><?php echo substr($dienst_von, 0, 5) . ' - ' . substr($dienst_bis, 0, 5); ?></div>
+                                        
+                                        <div class="dp-dienst-card" data-tag-id="<?php echo intval($tag_id); ?>" data-dienst-id="<?php echo $dienst->id; ?>" data-bereich-id="<?php echo intval($dienst->bereich_id); ?>" data-taetigkeit-id="<?php echo intval($dienst->taetigkeit_id); ?>" data-admin-only="<?php echo $effective_admin_only ? '1' : '0'; ?>" data-has-free="<?php echo $freie_slots > 0 ? '1' : '0'; ?>" data-has-mine="<?php echo $has_my_slot ? '1' : '0'; ?>">
+                                            <div class="dp-dienst-header">
+                                                <?php
+                                                $dienst_von = $dienst->von_zeit ?? ($dienst->zeit_von ?? '');
+                                                $dienst_bis = $dienst->bis_zeit ?? ($dienst->zeit_bis ?? '');
+                                        $dienst_typ = $dienst->dienst_typ ?? 'dienst';
+                                        $is_mitbringen = ($dienst_typ === 'mitbringen');
+                                        ?>
+                                        <div class="dp-dienst-time-big"><?php echo $is_mitbringen ? __('Mitbringen', 'dienstplan-verwaltung') : (substr($dienst_von, 0, 5) . ' - ' . substr($dienst_bis, 0, 5)); ?></div>
                                         <span class="dp-bereich-badge" style="background-color: <?php echo esc_attr($bereich->farbe ?? '#e2e8f0'); ?>">
                                             <?php echo esc_html($bereich->name ?? ''); ?>
                                         </span>
@@ -1466,7 +1532,7 @@ if ($dienst_start_dt !== null && $dienst_end_dt !== null) {
                                                 <?php else: ?>
                                                     <?php if ($anmeldung_aktiv): ?>
                                                         <?php $dienst_btn_color = $dp_get_verein_color($dienst); ?>
-                                                        <?php $is_admin_only_blocked = !empty($taetigkeit->admin_only) && !$can_manage_dienste; ?>
+                                                        <?php $is_admin_only_blocked = $effective_admin_only && !$can_manage_dienste; ?>
                                                         <?php if ($is_admin_only_blocked): ?>
                                                             <span class="dp-slot-admin-only" style="color: #d97706; font-size: 0.875rem; display: flex; align-items: center; gap: 0.4rem; cursor: not-allowed; opacity: 0.6;">
                                                                 <span class="dashicons dashicons-lock" style="width: 18px; height: 18px; font-size: 18px;"></span> 
@@ -1483,16 +1549,18 @@ if ($dienst_start_dt !== null && $dienst_end_dt !== null) {
                                                             <span class="dashicons dashicons-lock"></span> Gesperrt
                                                         </span>
                                                     <?php endif; ?>
-                                                <?php endif; ?>
+                                        <?php endif; ?>
                                             </div>
                                         <?php endforeach; ?>
                                     </div>
                                 </div>
-                            <?php endforeach; ?>
-                        </div>
-                    </div>
-                <?php endforeach; ?>
-            </div>
+                            <?php endforeach; // dienste ?>
+                        </div><!-- .dp-dienste-cards -->
+                    </div><!-- .dp-gruppe-section -->
+                    <?php endforeach; // gruppen_map ?>
+                    </div><!-- .dp-day-section -->
+                <?php endforeach; // dienste_nach_tagen ?>
+            </div><!-- .dp-dienste-list -->
         <?php endif; ?>
     <?php endif; ?>
 </div>

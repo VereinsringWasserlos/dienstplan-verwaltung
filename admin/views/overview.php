@@ -153,7 +153,9 @@ if ($selected_veranstaltung > 0) {
         
         // Erstelle Zeit-String
         $zeit_display = 'Keine Zeiten';
-        if (!empty($dienst->von_zeit) && !empty($dienst->bis_zeit)) {
+        if (($dienst->dienst_typ ?? 'dienst') === 'mitbringen') {
+            $zeit_display = 'Mitbringen';
+        } elseif (!empty($dienst->von_zeit) && !empty($dienst->bis_zeit)) {
             $zeit_display = $dp_format_time($dienst->von_zeit) . ' - ' . $dp_format_time($dienst->bis_zeit);
             if ($dienst->bis_datum) {
                 $zeit_display .= ' (+1)';

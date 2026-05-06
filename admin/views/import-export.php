@@ -211,8 +211,8 @@ if (isset($stats['veranstaltungen'])) {
                     <small><?php _e('Datum: YYYY-MM-DD, Zeit: HH:MM', 'dienstplan-verwaltung'); ?></small></p>
                     
                     <p><strong><?php _e('Dienste:', 'dienstplan-verwaltung'); ?></strong><br>
-                    <code>datum,verein_kuerzel,bereich_name,taetigkeit_name,von_zeit,bis_zeit,anzahl_personen,splittbar,besonderheiten</code><br>
-                    <small><?php _e('Datum: YYYY-MM-DD (wird in Tag-Nummer umgerechnet), Zeit: HH:MM, splittbar: 1 oder 0', 'dienstplan-verwaltung'); ?><br>
+                    <code>datum,verein_kuerzel,dienst_typ,bereich_name,taetigkeit_name,von_zeit,bis_zeit,anzahl_personen,splittbar,admin_only,besonderheiten</code><br>
+                    <small><?php _e('Datum: YYYY-MM-DD (wird in Tag-Nummer umgerechnet), dienst_typ: dienst|mitbringen, Zeit: HH:MM (bei mitbringen optional), admin_only/splittbar: 1 oder 0', 'dienstplan-verwaltung'); ?><br>
                     <?php _e('Hinweis: Veranstaltung wird per Dropdown ausgewählt, nicht aus CSV importiert. Besonderheiten werden nur importiert wenn sie in der CSV vorhanden sind und nicht überschreiben bestehende Import-Warnungen.', 'dienstplan-verwaltung'); ?></small></p>
                     
                     <h4 style="margin-top: 1.5rem; color: #2271b1;">

@@ -547,12 +547,16 @@ class Dienstplan_Admin {
         }
         
         // Dienste
-        if (Dienstplan_Roles::can_manage_events() || current_user_can('manage_options')) {
+        if (Dienstplan_Roles::can_manage_events() || Dienstplan_Roles::can_manage_clubs() || current_user_can('manage_options')) {
+            $dienste_capability = (Dienstplan_Roles::can_manage_events() || current_user_can('manage_options'))
+                ? Dienstplan_Roles::CAP_MANAGE_EVENTS
+                : Dienstplan_Roles::CAP_MANAGE_CLUBS;
+
             add_submenu_page(
                 '',
                 __('Dienste', 'dienstplan-verwaltung'),
                 __('Dienste', 'dienstplan-verwaltung'),
-                Dienstplan_Roles::CAP_MANAGE_EVENTS,
+                $dienste_capability,
                 'dienstplan-dienste',
                 array($this, 'display_dienste')
             );
@@ -1488,7 +1492,16 @@ class Dienstplan_Admin {
             }
             
             // Prüfe welche Pflichtfelder gefüllt sind
-            $required = array('veranstaltung_id', 'tag_id', 'verein_id', 'bereich_id', 'taetigkeit_id', 'von_zeit', 'bis_zeit', 'anzahl_personen');
+            $dienst_typ = isset($_POST['dienst_typ']) ? sanitize_key($_POST['dienst_typ']) : 'dienst';
+            if (!in_array($dienst_typ, array('dienst', 'mitbringen'), true)) {
+                $dienst_typ = 'dienst';
+            }
+
+            $required = array('veranstaltung_id', 'tag_id', 'verein_id', 'bereich_id', 'taetigkeit_id', 'anzahl_personen');
+            if ($dienst_typ !== 'mitbringen') {
+                $required[] = 'von_zeit';
+                $required[] = 'bis_zeit';
+            }
             $all_required_filled = true;
             foreach ($required as $field) {
                 if (empty($_POST[$field])) {
@@ -1501,20 +1514,22 @@ class Dienstplan_Admin {
             $db = new Dienstplan_Database($this->db_prefix);
             
             // Formatiere Zeiten für Datenbank (HH:MM:SS Format) und konvertiere zu UTC
-            $von_zeit = !empty($_POST['von_zeit']) ? $this->convert_time_to_utc($_POST['von_zeit']) : null;
-            $bis_zeit = !empty($_POST['bis_zeit']) ? $this->convert_time_to_utc($_POST['bis_zeit']) : null;
+            $von_zeit = ($dienst_typ !== 'mitbringen' && !empty($_POST['von_zeit'])) ? $this->convert_time_to_utc($_POST['von_zeit']) : null;
+            $bis_zeit = ($dienst_typ !== 'mitbringen' && !empty($_POST['bis_zeit'])) ? $this->convert_time_to_utc($_POST['bis_zeit']) : null;
             
             $data = array(
                 'veranstaltung_id' => !empty($_POST['veranstaltung_id']) ? intval($_POST['veranstaltung_id']) : 0,
                 'tag_id' => !empty($_POST['tag_id']) ? intval($_POST['tag_id']) : 0,
                 'verein_id' => !empty($_POST['verein_id']) ? intval($_POST['verein_id']) : 0,
+                'dienst_typ' => $dienst_typ,
                 'bereich_id' => !empty($_POST['bereich_id']) ? intval($_POST['bereich_id']) : 0,
                 'taetigkeit_id' => !empty($_POST['taetigkeit_id']) ? intval($_POST['taetigkeit_id']) : 0,
                 'von_zeit' => $von_zeit,
                 'bis_zeit' => $bis_zeit,
-                'bis_datum' => !empty($_POST['bis_folgetag']) ? '1' : null,
+                'bis_datum' => ($dienst_typ !== 'mitbringen' && !empty($_POST['bis_folgetag'])) ? '1' : null,
                 'anzahl_personen' => !empty($_POST['anzahl_personen']) ? intval($_POST['anzahl_personen']) : 0,
-                'splittbar' => !empty($_POST['splittbar']) ? 1 : 0,
+                'splittbar' => ($dienst_typ !== 'mitbringen' && !empty($_POST['splittbar'])) ? 1 : 0,
+                'admin_only' => !empty($_POST['admin_only']) ? 1 : 0,
                 'besonderheiten' => sanitize_textarea_field($_POST['besonderheiten'] ?? ''),
                 'status' => $all_required_filled ? 'geplant' : 'unvollständig'
             );
@@ -1536,10 +1551,19 @@ class Dienstplan_Admin {
                 // Prüfe ob Slots neu erstellt werden müssen (bei Änderung von splittbar oder anzahl_personen)
                 global $wpdb;
                 $table_dienste = $wpdb->prefix . $this->db_prefix . 'dienste';
-                $old_dienst = $wpdb->get_row($wpdb->prepare("SELECT splittbar, anzahl_personen FROM {$table_dienste} WHERE id = %d", $dienst_id));
+                $old_dienst = $wpdb->get_row($wpdb->prepare("SELECT splittbar, anzahl_personen, dienst_typ, von_zeit, bis_zeit, bis_datum FROM {$table_dienste} WHERE id = %d", $dienst_id));
                 $preserved_assignments = 0;
+                $needs_slot_rebuild = false;
 
-                if ($old_dienst && ($old_dienst->splittbar != $data['splittbar'] || $old_dienst->anzahl_personen != $data['anzahl_personen'])) {
+                if ($old_dienst && (
+                    $old_dienst->splittbar != $data['splittbar']
+                    || $old_dienst->anzahl_personen != $data['anzahl_personen']
+                    || (string)($old_dienst->dienst_typ ?? 'dienst') !== (string)$data['dienst_typ']
+                    || (string)($old_dienst->von_zeit ?? '') !== (string)($data['von_zeit'] ?? '')
+                    || (string)($old_dienst->bis_zeit ?? '') !== (string)($data['bis_zeit'] ?? '')
+                    || (string)($old_dienst->bis_datum ?? '') !== (string)($data['bis_datum'] ?? '')
+                )) {
+                    $needs_slot_rebuild = true;
                     $existing_slots = $db->get_dienst_slots($dienst_id);
                     $assigned_mitarbeiter_ids = array();
                     foreach ($existing_slots as $existing_slot) {
@@ -1565,7 +1589,7 @@ class Dienstplan_Admin {
                 $return_id = $dienst_id;
                 
                 // Wenn splittbar oder anzahl_personen geändert wurde, Slots neu erstellen
-                if ($old_dienst && ($old_dienst->splittbar != $data['splittbar'] || $old_dienst->anzahl_personen != $data['anzahl_personen'])) {
+                if ($old_dienst && $needs_slot_rebuild) {
                     $existing_slots = isset($existing_slots) ? $existing_slots : $db->get_dienst_slots($dienst_id);
                     $assigned_mitarbeiter_ids = array();
                     foreach ($existing_slots as $existing_slot) {
@@ -1843,6 +1867,11 @@ class Dienstplan_Admin {
         $dienst = $db->get_dienst($dienst_id);
         if (!$dienst) {
             wp_send_json_error(array('message' => 'Dienst nicht gefunden'));
+            return;
+        }
+
+        if (($dienst->dienst_typ ?? 'dienst') === 'mitbringen') {
+            wp_send_json_error(array('message' => 'Mitbringen-Einträge können nicht gesplittet werden'));
             return;
         }
 
@@ -3614,7 +3643,7 @@ class Dienstplan_Admin {
 
                 case 'dienste':
                     if (!$can_manage_events) { fclose($out); ob_end_clean(); return ''; }
-                    fputcsv($out, array('veranstaltung_id', 'veranstaltung_name', 'tag_nummer', 'verein_id', 'verein_name', 'bereich_id', 'bereich_name', 'taetigkeit_id', 'taetigkeit_name', 'von_zeit', 'bis_zeit', 'bis_datum', 'anzahl_personen', 'splittbar', 'status'), ';');
+                    fputcsv($out, array('veranstaltung_id', 'veranstaltung_name', 'tag_nummer', 'verein_id', 'verein_name', 'dienst_typ', 'bereich_id', 'bereich_name', 'taetigkeit_id', 'taetigkeit_name', 'von_zeit', 'bis_zeit', 'bis_datum', 'anzahl_personen', 'splittbar', 'admin_only', 'status'), ';');
                     $rows = $db->get_dienste();
                     if ($rows) {
                         foreach ($rows as $r) {
@@ -3623,7 +3652,7 @@ class Dienstplan_Admin {
                                 $tag = $db->get_veranstaltung_tag($r->tag_id);
                                 if ($tag) { $tag_nummer = $tag->tag_nummer; }
                             }
-                            fputcsv($out, array($r->veranstaltung_id ?? '', '', $tag_nummer, $r->verein_id ?? '', $r->verein_name ?? '', $r->bereich_id ?? '', $r->bereich_name ?? '', $r->taetigkeit_id ?? '', $r->taetigkeit_name ?? '', $r->von_zeit ?? '', $r->bis_zeit ?? '', $r->bis_datum ?? '', $r->anzahl_personen ?? '', $r->splittbar ? '1' : '0', $r->status ?? 'geplant'), ';');
+                            fputcsv($out, array($r->veranstaltung_id ?? '', '', $tag_nummer, $r->verein_id ?? '', $r->verein_name ?? '', $r->dienst_typ ?? 'dienst', $r->bereich_id ?? '', $r->bereich_name ?? '', $r->taetigkeit_id ?? '', $r->taetigkeit_name ?? '', $r->von_zeit ?? '', $r->bis_zeit ?? '', $r->bis_datum ?? '', $r->anzahl_personen ?? '', $r->splittbar ? '1' : '0', !empty($r->admin_only) ? '1' : '0', $r->status ?? 'geplant'), ';');
                         }
                     }
                     break;
@@ -3747,7 +3776,7 @@ class Dienstplan_Admin {
                 break;
                 
             case 'dienste':
-                fputcsv($output, array('veranstaltung_id', 'veranstaltung_name', 'tag_nummer', 'verein_id', 'verein_name', 'bereich_id', 'bereich_name', 'taetigkeit_id', 'taetigkeit_name', 'von_zeit', 'bis_zeit', 'bis_datum', 'anzahl_personen', 'splittbar', 'status'), ';');
+                fputcsv($output, array('veranstaltung_id', 'veranstaltung_name', 'tag_nummer', 'verein_id', 'verein_name', 'dienst_typ', 'bereich_id', 'bereich_name', 'taetigkeit_id', 'taetigkeit_name', 'von_zeit', 'bis_zeit', 'bis_datum', 'anzahl_personen', 'splittbar', 'admin_only', 'status'), ';');
                 $data = $db->get_dienste();
                 if ($data) {
                     foreach ($data as $row) {
@@ -3766,6 +3795,7 @@ class Dienstplan_Admin {
                             $tag_nummer,
                             $row->verein_id ?? '',
                             $row->verein_name ?? '',
+                            $row->dienst_typ ?? 'dienst',
                             $row->bereich_id ?? '',
                             $row->bereich_name ?? '',
                             $row->taetigkeit_id ?? '',
@@ -3775,6 +3805,7 @@ class Dienstplan_Admin {
                             $row->bis_datum ?? '',
                             $row->anzahl_personen ?? '',
                             $row->splittbar ? '1' : '0',
+                            !empty($row->admin_only) ? '1' : '0',
                             $row->status ?? 'geplant'
                         ), ';');
                     }
@@ -4773,9 +4804,16 @@ class Dienstplan_Admin {
                         'veranstaltung_id' => $veranstaltung_id,
                         'tag_id' => $tag_id
                     );
+
+                    $dienst_typ = isset($data['dienst_typ']) ? sanitize_key(strtolower(trim((string) $data['dienst_typ']))) : '';
+                    if (!in_array($dienst_typ, array('dienst', 'mitbringen'), true)) {
+                        $dienst_typ = 'dienst';
+                    }
+                    $dienst_data['dienst_typ'] = $dienst_typ;
+                    $dienst_data['admin_only'] = (isset($data['admin_only']) && (string) $data['admin_only'] === '1') ? 1 : 0;
                     
                     // Zeiten hinzufügen falls vorhanden und normalisieren
-                    if (!empty($data['von_zeit'])) {
+                    if ($dienst_typ !== 'mitbringen' && !empty($data['von_zeit'])) {
                         // Normalisiere Zeit-Format: 19.00 -> 19:00:00
                         $von_zeit = str_replace('.', ':', $data['von_zeit']);
                         // Stelle sicher dass Format HH:MM:SS ist
@@ -4784,7 +4822,7 @@ class Dienstplan_Admin {
                         }
                         $dienst_data['von_zeit'] = $von_zeit;
                     }
-                    if (!empty($data['bis_zeit'])) {
+                    if ($dienst_typ !== 'mitbringen' && !empty($data['bis_zeit'])) {
                         // Normalisiere Zeit-Format: 01.00 -> 01:00:00
                         $bis_zeit = str_replace('.', ':', $data['bis_zeit']);
                         // Stelle sicher dass Format HH:MM:SS ist
@@ -4814,7 +4852,7 @@ class Dienstplan_Admin {
                     $missing_info = array();
                     
                     // Prüfe ob Zeiten fehlen
-                    if (empty($data['von_zeit']) || empty($data['bis_zeit'])) {
+                    if ($dienst_typ !== 'mitbringen' && (empty($data['von_zeit']) || empty($data['bis_zeit']))) {
                         $missing_info[] = "Zeiten (von/bis) fehlen";
                     }
                     
@@ -5378,19 +5416,34 @@ class Dienstplan_Admin {
         
         $bereich_id = isset($_POST['bereich_id']) ? intval($_POST['bereich_id']) : 0;
         $name = isset($_POST['bereich_name']) ? sanitize_text_field($_POST['bereich_name']) : (isset($_POST['name']) ? sanitize_text_field($_POST['name']) : '');
-        $farbe = isset($_POST['bereich_farbe']) ? sanitize_text_field($_POST['bereich_farbe']) : (isset($_POST['farbe']) ? sanitize_text_field($_POST['farbe']) : '#3b82f6');
-        $admin_only = isset($_POST['bereich_admin_only']) ? intval($_POST['bereich_admin_only']) : 0;
-        
+        $farbe = isset($_POST['bereich_farbe']) ? sanitize_text_field($_POST['bereich_farbe']) : (isset($_POST['farbe']) ? sanitize_text_field($_POST['farbe']) : '');
+        $admin_only = isset($_POST['bereich_admin_only']) ? intval($_POST['bereich_admin_only']) : null;
+        $gruppe_id   = array_key_exists('bereich_gruppe_id', $_POST) ? (intval($_POST['bereich_gruppe_id']) ?: null) : false;
+
+        $db = new Dienstplan_Database();
+
+        // Bei Update: fehlende Felder aus bestehenden Daten ergänzen
+        if ($bereich_id && empty($name)) {
+            $existing = $db->get_bereich($bereich_id);
+            if (!$existing) {
+                wp_send_json_error(array('message' => 'Bereich nicht gefunden'));
+                return;
+            }
+            $name       = $existing->name;
+            $farbe      = empty($farbe) ? $existing->farbe : $farbe;
+            $admin_only = ($admin_only === null) ? intval($existing->admin_only) : $admin_only;
+        }
+
         if (empty($name)) {
             wp_send_json_error(array('message' => 'Name ist erforderlich'));
             return;
         }
-        
-        $db = new Dienstplan_Database();
+
         $data = array(
-            'name' => $name,
-            'farbe' => $farbe,
-            'admin_only' => $admin_only
+            'name'       => $name,
+            'farbe'      => empty($farbe) ? '#3b82f6' : $farbe,
+            'admin_only' => intval($admin_only),
+            'gruppe_id'  => ($gruppe_id === false) ? null : $gruppe_id,
         );
         
         if ($bereich_id) {
@@ -5408,6 +5461,101 @@ class Dienstplan_Admin {
         }
     }
     
+    /**
+     * AJAX-Handler: Bereichsgruppe holen
+     */
+    public function ajax_get_bereichsgruppe() {
+        check_ajax_referer('dienstplan-nonce', 'nonce');
+        if (!Dienstplan_Roles::can_manage_events() && !current_user_can('manage_options')) {
+            wp_send_json_error(array('message' => 'Keine Berechtigung'));
+            return;
+        }
+        $gruppe_id = isset($_POST['gruppe_id']) ? intval($_POST['gruppe_id']) : 0;
+        if (!$gruppe_id) {
+            wp_send_json_error(array('message' => 'Keine Gruppen-ID'));
+            return;
+        }
+        $db = new Dienstplan_Database();
+        $gruppe = $db->get_bereichsgruppe($gruppe_id);
+        if (!$gruppe) {
+            wp_send_json_error(array('message' => 'Gruppe nicht gefunden'));
+            return;
+        }
+        wp_send_json_success($gruppe);
+    }
+
+    /**
+     * AJAX-Handler: Bereichsgruppe speichern (neu + bearbeiten)
+     */
+    public function ajax_save_bereichsgruppe() {
+        check_ajax_referer('dienstplan-nonce', 'nonce');
+        if (!Dienstplan_Roles::can_manage_events() && !current_user_can('manage_options')) {
+            wp_send_json_error(array('message' => 'Keine Berechtigung'));
+            return;
+        }
+        if ($this->is_restricted_club_admin()) {
+            wp_send_json_error(array('message' => 'Club-Admins dürfen Gruppen nicht bearbeiten.'));
+            return;
+        }
+        $gruppe_id    = isset($_POST['gruppe_id'])    ? intval($_POST['gruppe_id'])                          : 0;
+        $name         = isset($_POST['gruppe_name'])  ? sanitize_text_field($_POST['gruppe_name'])           : '';
+        $beschreibung = isset($_POST['gruppe_beschreibung']) ? sanitize_textarea_field($_POST['gruppe_beschreibung']) : '';
+        $farbe        = isset($_POST['gruppe_farbe']) ? sanitize_text_field($_POST['gruppe_farbe'])          : '#64748b';
+        $sortierung   = isset($_POST['gruppe_sortierung']) ? intval($_POST['gruppe_sortierung'])             : 0;
+        if (empty($name)) {
+            wp_send_json_error(array('message' => 'Name ist erforderlich'));
+            return;
+        }
+        $db   = new Dienstplan_Database();
+        $data = array(
+            'name'         => $name,
+            'beschreibung' => $beschreibung,
+            'farbe'        => $farbe,
+            'sortierung'   => $sortierung,
+            'aktiv'        => 1,
+        );
+        if ($gruppe_id) {
+            $result  = $db->update_bereichsgruppe($gruppe_id, $data);
+            $message = 'Gruppe erfolgreich aktualisiert';
+            $ret_id  = $gruppe_id;
+        } else {
+            $ret_id  = $db->add_bereichsgruppe($data);
+            $result  = $ret_id !== false;
+            $message = 'Gruppe erfolgreich erstellt';
+        }
+        if ($result !== false) {
+            wp_send_json_success(array('message' => $message, 'id' => $ret_id));
+        } else {
+            wp_send_json_error(array('message' => 'Fehler beim Speichern'));
+        }
+    }
+
+    /**
+     * AJAX-Handler: Bereichsgruppe löschen
+     */
+    public function ajax_delete_bereichsgruppe() {
+        check_ajax_referer('dienstplan-nonce', 'nonce');
+        if (!Dienstplan_Roles::can_manage_events() && !current_user_can('manage_options')) {
+            wp_send_json_error(array('message' => 'Keine Berechtigung'));
+            return;
+        }
+        if ($this->is_restricted_club_admin()) {
+            wp_send_json_error(array('message' => 'Club-Admins dürfen Gruppen nicht löschen.'));
+            return;
+        }
+        $gruppe_id = isset($_POST['gruppe_id']) ? intval($_POST['gruppe_id']) : 0;
+        if (!$gruppe_id) {
+            wp_send_json_error(array('message' => 'Keine Gruppen-ID'));
+            return;
+        }
+        $db = new Dienstplan_Database();
+        if ($db->delete_bereichsgruppe($gruppe_id)) {
+            wp_send_json_success(array('message' => 'Gruppe gelöscht. Zugehörige Bereiche sind jetzt ohne Gruppe.'));
+        } else {
+            wp_send_json_error(array('message' => 'Fehler beim Löschen'));
+        }
+    }
+
     /**
      * AJAX-Handler: Bereich löschen
      */
@@ -5486,6 +5634,7 @@ class Dienstplan_Admin {
         $beschreibung = isset($_POST['taetigkeit_beschreibung']) ? sanitize_textarea_field($_POST['taetigkeit_beschreibung']) : (isset($_POST['beschreibung']) ? sanitize_textarea_field($_POST['beschreibung']) : '');
         $aktiv = isset($_POST['taetigkeit_status']) ? (sanitize_text_field($_POST['taetigkeit_status']) === 'aktiv' ? 1 : 0) : (isset($_POST['aktiv']) ? intval($_POST['aktiv']) : 1);
         $admin_only = isset($_POST['taetigkeit_admin_only']) ? intval($_POST['taetigkeit_admin_only']) : 0;
+        $gruppe_id = array_key_exists('taetigkeit_gruppe_id', $_POST) ? (intval($_POST['taetigkeit_gruppe_id']) ?: null) : null;
         
         if (empty($name) || !$bereich_id) {
             wp_send_json_error(array('message' => 'Name und Bereich sind erforderlich'));
@@ -5498,7 +5647,8 @@ class Dienstplan_Admin {
             'name' => $name,
             'beschreibung' => $beschreibung,
             'aktiv' => $aktiv,
-            'admin_only' => $admin_only
+            'admin_only' => $admin_only,
+            'gruppe_id' => $gruppe_id,
         );
         
         if ($taetigkeit_id) {

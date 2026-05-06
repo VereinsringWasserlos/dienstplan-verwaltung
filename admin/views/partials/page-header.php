@@ -28,6 +28,7 @@ $page_icon = $page_icon ?? 'dashicons-admin-generic';
 $page_class = $page_class ?? 'header-vereine';
 $nav_items = $nav_items ?? [];
 $page_meta_badges = $page_meta_badges ?? [];
+$page_actions = $page_actions ?? [];
 $current_page = $_GET['page'] ?? '';
 
 /**
@@ -154,6 +155,41 @@ $can_show_nav_item = function($item) {
                 <span class="dashicons <?php echo esc_attr($icon); ?>"></span>
                 <?php echo esc_html($label); ?>
             </a>
+        <?php endforeach; ?>
+
+        <?php foreach ($page_actions as $action): ?>
+            <?php
+            if (!is_array($action)) {
+                continue;
+            }
+
+            if (!empty($action['show']) && !$action['show']) {
+                continue;
+            }
+
+            $action_label = isset($action['label']) ? (string) $action['label'] : '';
+            if ($action_label === '') {
+                continue;
+            }
+
+            $action_icon = isset($action['icon']) ? (string) $action['icon'] : 'dashicons-plus-alt';
+            $action_class = isset($action['class']) ? (string) $action['class'] : 'page-nav-button';
+            $action_style = isset($action['style']) ? (string) $action['style'] : '';
+            $action_attrs = isset($action['attrs']) ? (string) $action['attrs'] : '';
+            $action_href = isset($action['url']) ? (string) $action['url'] : '';
+            ?>
+
+            <?php if ($action_href !== ''): ?>
+                <a href="<?php echo esc_url($action_href); ?>" class="<?php echo esc_attr($action_class); ?>"<?php echo $action_style !== '' ? ' style="' . esc_attr($action_style) . '"' : ''; ?> <?php echo $action_attrs; ?>>
+                    <span class="dashicons <?php echo esc_attr($action_icon); ?>"></span>
+                    <?php echo esc_html($action_label); ?>
+                </a>
+            <?php else: ?>
+                <button type="button" class="<?php echo esc_attr($action_class); ?>"<?php echo $action_style !== '' ? ' style="' . esc_attr($action_style) . '"' : ''; ?> <?php echo $action_attrs; ?>>
+                    <span class="dashicons <?php echo esc_attr($action_icon); ?>"></span>
+                    <?php echo esc_html($action_label); ?>
+                </button>
+            <?php endif; ?>
         <?php endforeach; ?>
     </div>
     

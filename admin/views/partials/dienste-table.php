@@ -177,7 +177,12 @@ uasort($dienste_nach_tagen, function($a, $b) {
                                 <?php endif; ?>
                             </td>
                             <td>
-                                <?php if (!empty($dienst->von_zeit) && !empty($dienst->bis_zeit)): ?>
+                                <?php if (($dienst->dienst_typ ?? 'dienst') === 'mitbringen'): ?>
+                                    <span style="color: #0f766e; font-weight: 600;">
+                                        <span class="dashicons dashicons-carrot" style="font-size: 0.9rem;"></span>
+                                        Mitbringen
+                                    </span>
+                                <?php elseif (!empty($dienst->von_zeit) && !empty($dienst->bis_zeit)): ?>
                                     <strong><?php echo esc_html($dp_format_time($dienst->von_zeit)); ?></strong>
                                     -
                                     <strong><?php echo esc_html($dp_format_time($dienst->bis_zeit)); ?></strong>

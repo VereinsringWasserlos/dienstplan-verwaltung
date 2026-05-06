@@ -8,3 +8,4 @@ _release_stage_wp/
 # Lokal erzeugte ZIPs im Plugin-Root
 dienstplan-verwaltung-*.zip
 dienstplan-verwaltung-wp-install.zip
+tools/live-clone-*/

@@ -281,6 +281,10 @@ class Dienstplan_Verwaltung {
         $this->loader->add_action('wp_ajax_get_bereich', $plugin_admin, 'ajax_get_bereich');
         $this->loader->add_action('wp_ajax_save_bereich', $plugin_admin, 'ajax_save_bereich');
         $this->loader->add_action('wp_ajax_delete_bereich', $plugin_admin, 'ajax_delete_bereich');
+        // Bereichsgruppen
+        $this->loader->add_action('wp_ajax_get_bereichsgruppe', $plugin_admin, 'ajax_get_bereichsgruppe');
+        $this->loader->add_action('wp_ajax_save_bereichsgruppe', $plugin_admin, 'ajax_save_bereichsgruppe');
+        $this->loader->add_action('wp_ajax_delete_bereichsgruppe', $plugin_admin, 'ajax_delete_bereichsgruppe');
         $this->loader->add_action('wp_ajax_get_taetigkeit', $plugin_admin, 'ajax_get_taetigkeit');
         $this->loader->add_action('wp_ajax_save_taetigkeit', $plugin_admin, 'ajax_save_taetigkeit');
         $this->loader->add_action('wp_ajax_delete_taetigkeit', $plugin_admin, 'ajax_delete_taetigkeit');

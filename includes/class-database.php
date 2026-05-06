@@ -10,6 +10,36 @@ class Dienstplan_Database {
         $this->wpdb = $wpdb;
         $this->prefix = $wpdb->prefix . $db_prefix;
     }
+
+    /**
+     * Stellt sicher, dass bereiche.gruppe_id existiert (defensiver Check, einmal pro Request).
+     */
+    private function ensure_bereiche_gruppe_id() {
+        static $checked = false;
+        if ($checked) return;
+        $checked = true;
+        $col = $this->wpdb->get_results("SHOW COLUMNS FROM {$this->prefix}bereiche LIKE 'gruppe_id'");
+        if (empty($col)) {
+            $this->wpdb->query(
+                "ALTER TABLE {$this->prefix}bereiche ADD COLUMN gruppe_id mediumint(9) DEFAULT NULL, ADD KEY gruppe_id (gruppe_id)"
+            );
+        }
+    }
+
+    /**
+     * Stellt sicher, dass taetigkeiten.gruppe_id existiert (defensiver Check, einmal pro Request).
+     */
+    private function ensure_taetigkeiten_gruppe_id() {
+        static $checked = false;
+        if ($checked) return;
+        $checked = true;
+        $col = $this->wpdb->get_results("SHOW COLUMNS FROM {$this->prefix}taetigkeiten LIKE 'gruppe_id'");
+        if (empty($col)) {
+            $this->wpdb->query(
+                "ALTER TABLE {$this->prefix}taetigkeiten ADD COLUMN gruppe_id mediumint(9) DEFAULT NULL, ADD KEY gruppe_id (gruppe_id)"
+            );
+        }
+    }
     
     /**
      * Getter für wpdb (für externe Zugriffe)
@@ -258,6 +288,21 @@ class Dienstplan_Database {
         
         dbDelta($sql);
         
+        // Bereichsgruppen-Tabelle (übergeordnete Gruppenebene über Bereiche)
+        $sql = "CREATE TABLE IF NOT EXISTS {$this->prefix}bereichsgruppen (
+            id mediumint(9) NOT NULL AUTO_INCREMENT,
+            name varchar(100) NOT NULL,
+            beschreibung text,
+            farbe varchar(7) DEFAULT '#64748b',
+            sortierung int(3) DEFAULT 0,
+            aktiv tinyint(1) DEFAULT 1,
+            erstellt_am datetime DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (id),
+            UNIQUE KEY name (name)
+        ) $charset;";
+        
+        dbDelta($sql);
+        
         // Bereiche-Tabelle (z.B. Technik, Catering, Ordner, etc.)
         $sql = "CREATE TABLE IF NOT EXISTS {$this->prefix}bereiche (
             id mediumint(9) NOT NULL AUTO_INCREMENT,
@@ -267,9 +312,11 @@ class Dienstplan_Database {
             sortierung int(3) DEFAULT 0,
             aktiv tinyint(1) DEFAULT 1,
             admin_only tinyint(1) DEFAULT 0,
+            gruppe_id mediumint(9) DEFAULT NULL,
             erstellt_am datetime DEFAULT CURRENT_TIMESTAMP,
             PRIMARY KEY (id),
-            UNIQUE KEY name (name)
+            UNIQUE KEY name (name),
+            KEY gruppe_id (gruppe_id)
         ) $charset;";
         
         dbDelta($sql);
@@ -283,6 +330,19 @@ class Dienstplan_Database {
             $this->wpdb->query(
                 "ALTER TABLE {$this->prefix}bereiche 
                 ADD COLUMN admin_only tinyint(1) DEFAULT 0 AFTER aktiv"
+            );
+        }
+        
+        // Prüfe ob gruppe_id Spalte existiert, falls nicht hinzufügen (für Updates)
+        $gruppe_id_exists = $this->wpdb->get_results(
+            "SHOW COLUMNS FROM {$this->prefix}bereiche LIKE 'gruppe_id'"
+        );
+        
+        if (empty($gruppe_id_exists)) {
+            $this->wpdb->query(
+                "ALTER TABLE {$this->prefix}bereiche 
+                ADD COLUMN gruppe_id mediumint(9) DEFAULT NULL AFTER admin_only,
+                ADD KEY gruppe_id (gruppe_id)"
             );
         }
         
@@ -315,13 +375,26 @@ class Dienstplan_Database {
                 ADD COLUMN admin_only tinyint(1) DEFAULT 0 AFTER aktiv"
             );
         }
-        
+
+        // Prüfe ob gruppe_id Spalte in taetigkeiten existiert
+        $taetigkeit_gruppe_id = $this->wpdb->get_results(
+            "SHOW COLUMNS FROM {$this->prefix}taetigkeiten LIKE 'gruppe_id'"
+        );
+        if (empty($taetigkeit_gruppe_id)) {
+            $this->wpdb->query(
+                "ALTER TABLE {$this->prefix}taetigkeiten
+                ADD COLUMN gruppe_id mediumint(9) DEFAULT NULL AFTER admin_only,
+                ADD KEY gruppe_id (gruppe_id)"
+            );
+        }
+
         // Dienste-Tabelle
         $sql = "CREATE TABLE IF NOT EXISTS {$this->prefix}dienste (
             id mediumint(9) NOT NULL AUTO_INCREMENT,
             veranstaltung_id mediumint(9) NOT NULL,
             tag_id mediumint(9) NOT NULL,
             verein_id mediumint(9) NOT NULL,
+            dienst_typ varchar(20) DEFAULT 'dienst',
             bereich_id mediumint(9) NOT NULL,
             taetigkeit_id mediumint(9) NOT NULL,
             von_zeit time,
@@ -330,6 +403,7 @@ class Dienstplan_Database {
             anzahl_personen int(2) DEFAULT 1,
             besonderheiten text,
             splittbar tinyint(1) DEFAULT 0,
+            admin_only tinyint(1) DEFAULT 0,
             erstellt_am datetime DEFAULT CURRENT_TIMESTAMP,
             PRIMARY KEY (id),
             KEY veranstaltung_id (veranstaltung_id),
@@ -357,6 +431,30 @@ class Dienstplan_Database {
         $this->wpdb->query(
             "ALTER TABLE {$this->prefix}dienste MODIFY COLUMN splittbar tinyint(1) DEFAULT 0"
         );
+
+        // Prüfe ob dienst_typ Spalte existiert, falls nicht hinzufügen
+        $dienst_typ_exists = $this->wpdb->get_results(
+            "SHOW COLUMNS FROM {$this->prefix}dienste LIKE 'dienst_typ'"
+        );
+
+        if (empty($dienst_typ_exists)) {
+            $this->wpdb->query(
+                "ALTER TABLE {$this->prefix}dienste
+                ADD COLUMN dienst_typ varchar(20) DEFAULT 'dienst' AFTER verein_id"
+            );
+        }
+
+        // Prüfe ob admin_only Spalte in dienste existiert, falls nicht hinzufügen
+        $dienste_admin_only_exists = $this->wpdb->get_results(
+            "SHOW COLUMNS FROM {$this->prefix}dienste LIKE 'admin_only'"
+        );
+
+        if (empty($dienste_admin_only_exists)) {
+            $this->wpdb->query(
+                "ALTER TABLE {$this->prefix}dienste
+                ADD COLUMN admin_only tinyint(1) DEFAULT 0 AFTER splittbar"
+            );
+        }
         
         // Dienst-Slots-Tabelle (für Split-Dienste)
         $sql = "CREATE TABLE IF NOT EXISTS {$this->prefix}dienst_slots (
@@ -559,6 +657,16 @@ class Dienstplan_Database {
                 'version' => '0.9.5.45',
                 'method' => 'migrate_admin_only_flags'
             ),
+            array(
+                'id' => '0.9.5.63_bereiche_add_gruppe_id',
+                'version' => '0.9.5.63',
+                'method' => 'migrate_bereiche_add_gruppe_id'
+            ),
+            array(
+                'id' => '0.9.5.64_taetigkeiten_add_gruppe_id',
+                'version' => '0.9.5.64',
+                'method' => 'migrate_taetigkeiten_add_gruppe_id'
+            ),
         );
     }
     
@@ -655,6 +763,57 @@ class Dienstplan_Database {
         }
     }
     
+    /**
+     * Migration: Fügt gruppe_id zur Bereiche-Tabelle hinzu
+     */
+    public function migrate_bereiche_add_gruppe_id() {
+        $col_exists = $this->wpdb->get_results(
+            "SHOW COLUMNS FROM {$this->prefix}bereiche LIKE 'gruppe_id'"
+        );
+
+        if (empty($col_exists)) {
+            $this->wpdb->query(
+                "ALTER TABLE {$this->prefix}bereiche
+                ADD COLUMN gruppe_id mediumint(9) DEFAULT NULL AFTER admin_only,
+                ADD KEY gruppe_id (gruppe_id)"
+            );
+            error_log('Dienstplan Migration: gruppe_id Spalte für Bereiche hinzugefügt');
+        }
+
+        // Bereichsgruppen-Tabelle erstellen falls noch nicht vorhanden
+        $charset = $this->wpdb->get_charset_collate();
+        $sql = "CREATE TABLE IF NOT EXISTS {$this->prefix}bereichsgruppen (
+            id mediumint(9) NOT NULL AUTO_INCREMENT,
+            name varchar(100) NOT NULL,
+            beschreibung text,
+            farbe varchar(7) DEFAULT '#64748b',
+            sortierung int(3) DEFAULT 0,
+            aktiv tinyint(1) DEFAULT 1,
+            erstellt_am datetime DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (id),
+            UNIQUE KEY name (name)
+        ) $charset;";
+        require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
+        dbDelta($sql);
+    }
+
+    /**
+     * Migration: Fügt gruppe_id zur Tätigkeiten-Tabelle hinzu
+     */
+    public function migrate_taetigkeiten_add_gruppe_id() {
+        $col_exists = $this->wpdb->get_results(
+            "SHOW COLUMNS FROM {$this->prefix}taetigkeiten LIKE 'gruppe_id'"
+        );
+        if (empty($col_exists)) {
+            $this->wpdb->query(
+                "ALTER TABLE {$this->prefix}taetigkeiten
+                ADD COLUMN gruppe_id mediumint(9) DEFAULT NULL AFTER admin_only,
+                ADD KEY gruppe_id (gruppe_id)"
+            );
+            error_log('Dienstplan Migration: gruppe_id Spalte für Tätigkeiten hinzugefügt');
+        }
+    }
+
     /**
      * Migration: Fügt bereich_id zur Tätigkeiten-Tabelle hinzu
      */
@@ -1288,16 +1447,65 @@ class Dienstplan_Database {
     
     // === BEREICHE METHODEN ===
     
-    public function get_bereiche($aktiv_only = false) {
-        $sql = "SELECT * FROM {$this->prefix}bereiche";
+    // === BEREICHSGRUPPEN METHODEN ===
+
+    public function get_bereichsgruppen($aktiv_only = false) {
+        $sql = "SELECT * FROM {$this->prefix}bereichsgruppen";
         if ($aktiv_only) {
-            $sql = $this->wpdb->prepare(
-                "SELECT * FROM {$this->prefix}bereiche WHERE aktiv = %d ORDER BY sortierung ASC, name ASC",
-                1
-            );
-            return $this->wpdb->get_results($sql);
+            $sql .= " WHERE aktiv = 1";
         }
         $sql .= " ORDER BY sortierung ASC, name ASC";
+        return $this->wpdb->get_results($sql);
+    }
+
+    public function get_bereichsgruppe($id) {
+        return $this->wpdb->get_row($this->wpdb->prepare(
+            "SELECT * FROM {$this->prefix}bereichsgruppen WHERE id = %d",
+            $id
+        ));
+    }
+
+    public function add_bereichsgruppe($data) {
+        $result = $this->wpdb->insert($this->prefix . 'bereichsgruppen', $data);
+        return $result ? $this->wpdb->insert_id : false;
+    }
+
+    public function update_bereichsgruppe($id, $data) {
+        return $this->wpdb->update(
+            $this->prefix . 'bereichsgruppen',
+            $data,
+            array('id' => $id),
+            null,
+            array('%d')
+        );
+    }
+
+    public function delete_bereichsgruppe($id) {
+        // Bereiche aus Gruppe auskoppeln (nicht löschen)
+        $this->wpdb->update(
+            $this->prefix . 'bereiche',
+            array('gruppe_id' => null),
+            array('gruppe_id' => $id),
+            array('%s'),
+            array('%d')
+        );
+        return $this->wpdb->delete(
+            $this->prefix . 'bereichsgruppen',
+            array('id' => $id),
+            array('%d')
+        );
+    }
+
+    // === BEREICHE METHODEN ===
+
+    public function get_bereiche($aktiv_only = false) {
+        $this->ensure_bereiche_gruppe_id();
+        $where = $aktiv_only ? "WHERE b.aktiv = 1" : "";
+        $sql = "SELECT b.*, g.name AS gruppe_name, g.farbe AS gruppe_farbe, g.sortierung AS gruppe_sortierung
+                FROM {$this->prefix}bereiche b
+                LEFT JOIN {$this->prefix}bereichsgruppen g ON b.gruppe_id = g.id
+                {$where}
+                ORDER BY g.sortierung ASC, ISNULL(b.gruppe_id) ASC, b.sortierung ASC, b.name ASC";
         return $this->wpdb->get_results($sql);
     }
     
@@ -1392,21 +1600,27 @@ class Dienstplan_Database {
     
     // Alle Tätigkeiten laden (für Admin-Übersicht)
     public function get_taetigkeiten($aktiv_only = false) {
-        $sql = "SELECT t.*, b.name AS bereich_name, b.farbe AS bereich_farbe 
-                FROM {$this->prefix}taetigkeiten t 
-                LEFT JOIN {$this->prefix}bereiche b ON t.bereich_id = b.id";
+        $this->ensure_taetigkeiten_gruppe_id();
+        $sql = "SELECT t.*, b.name AS bereich_name, b.farbe AS bereich_farbe,
+                       g.name AS gruppe_name, g.farbe AS gruppe_farbe, g.sortierung AS gruppe_sortierung
+                FROM {$this->prefix}taetigkeiten t
+                LEFT JOIN {$this->prefix}bereiche b ON t.bereich_id = b.id
+                LEFT JOIN {$this->prefix}bereichsgruppen g ON t.gruppe_id = g.id";
         if ($aktiv_only) {
             $sql .= " WHERE t.aktiv = 1";
         }
-        $sql .= " ORDER BY b.sortierung ASC, b.name ASC, t.sortierung ASC, t.name ASC";
+        $sql .= " ORDER BY g.sortierung ASC, ISNULL(t.gruppe_id) ASC, b.sortierung ASC, b.name ASC, t.sortierung ASC, t.name ASC";
         return $this->wpdb->get_results($sql);
     }
-    
+
     public function get_taetigkeit($id) {
+        $this->ensure_taetigkeiten_gruppe_id();
         return $this->wpdb->get_row($this->wpdb->prepare(
-            "SELECT t.*, b.name as bereich_name 
+            "SELECT t.*, b.name AS bereich_name,
+                    g.name AS gruppe_name, g.farbe AS gruppe_farbe
              FROM {$this->prefix}taetigkeiten t
              LEFT JOIN {$this->prefix}bereiche b ON t.bereich_id = b.id
+             LEFT JOIN {$this->prefix}bereichsgruppen g ON t.gruppe_id = g.id
              WHERE t.id = %d",
             $id
         ));
@@ -1527,7 +1741,7 @@ class Dienstplan_Database {
                 LEFT JOIN {$this->prefix}bereiche b ON d.bereich_id = b.id
                 LEFT JOIN {$this->prefix}taetigkeiten t ON d.taetigkeit_id = t.id
                 {$where_sql}
-                ORDER BY d.von_zeit ASC";
+                ORDER BY CASE WHEN d.von_zeit IS NULL THEN 1 ELSE 0 END ASC, d.von_zeit ASC, d.id ASC";
         
         if (!empty($params)) {
             $sql = $this->wpdb->prepare($sql, $params);
@@ -1559,12 +1773,13 @@ class Dienstplan_Database {
         return $this->wpdb->get_row($this->wpdb->prepare(
             "SELECT d.id, d.veranstaltung_id, d.tag_id, d.verein_id, 
                     d.bereich_id, d.taetigkeit_id,
+                    d.dienst_typ, d.admin_only,
                     d.von_zeit, d.bis_zeit, d.bis_datum, 
                     d.anzahl_personen, d.besonderheiten, d.splittbar, d.erstellt_am,
                     v.name as verein_name,
                     ve.name as veranstaltung_name,
                     b.name as bereich_name, b.farbe as bereich_farbe,
-                    t.name as taetigkeit_name,
+                    t.name as taetigkeit_name, t.admin_only as taetigkeit_admin_only,
                     vt.tag_nummer, vt.tag_datum
              FROM {$this->prefix}dienste d
              LEFT JOIN {$this->prefix}vereine v ON d.verein_id = v.id
@@ -1599,6 +1814,7 @@ class Dienstplan_Database {
         $veranstaltung_id = isset($data['veranstaltung_id']) ? intval($data['veranstaltung_id']) : 0;
         $tag_id = isset($data['tag_id']) ? intval($data['tag_id']) : 0;
         $verein_id = isset($data['verein_id']) ? intval($data['verein_id']) : 0;
+        $dienst_typ = isset($data['dienst_typ']) && $data['dienst_typ'] === 'mitbringen' ? 'mitbringen' : 'dienst';
         $bereich_id = isset($data['bereich_id']) ? intval($data['bereich_id']) : 0;
         $taetigkeit_id = isset($data['taetigkeit_id']) ? intval($data['taetigkeit_id']) : 0;
         $von_zeit = isset($data['von_zeit']) && $data['von_zeit'] !== '' ? (string) $data['von_zeit'] : null;
@@ -1610,12 +1826,13 @@ class Dienstplan_Database {
         }
 
         return $this->wpdb->get_row($this->wpdb->prepare(
-            "SELECT id, veranstaltung_id, tag_id, verein_id, bereich_id, taetigkeit_id,
-                    von_zeit, bis_zeit, bis_datum, anzahl_personen, splittbar, status, besonderheiten
+                        "SELECT id, veranstaltung_id, tag_id, verein_id, dienst_typ, bereich_id, taetigkeit_id,
+                                        von_zeit, bis_zeit, bis_datum, anzahl_personen, splittbar, status, besonderheiten
              FROM {$this->prefix}dienste
              WHERE veranstaltung_id = %d
                AND tag_id = %d
                AND verein_id = %d
+                             AND dienst_typ = %s
                AND bereich_id = %d
                AND taetigkeit_id = %d
                AND von_zeit <=> %s
@@ -1625,6 +1842,7 @@ class Dienstplan_Database {
             $veranstaltung_id,
             $tag_id,
             $verein_id,
+                        $dienst_typ,
             $bereich_id,
             $taetigkeit_id,
             $von_zeit,

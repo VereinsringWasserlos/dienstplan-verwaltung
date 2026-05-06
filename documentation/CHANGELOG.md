@@ -11,6 +11,21 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ---
 
+## [0.9.5.63] - 2025-06-XX 🗂️ Bereichsgruppen: 3-Ebenen-Gruppierung (Gruppe → Bereich → Dienst)
+
+### ✨ Neue Features
+
+- **Datenbank: Tabelle `bereichsgruppen`**: Neue Tabelle für Gruppen-Verwaltung mit Feldern `name`, `beschreibung`, `farbe`, `sortierung`, `aktiv`.
+- **Datenbank: Spalte `gruppe_id` in `bereiche`**: Arbeitsbereich kann nun einer Bereichsgruppe zugeordnet werden. Migration `0.9.5.63_bereiche_add_gruppe_id` ergänzt.
+- **Backend: Bereiche & Tätigkeiten – 3-Ebenen-Hierarchie**: Die Verwaltungsansicht zeigt Gruppen → Bereiche → Tätigkeiten. Vollständiges CRUD für Bereichsgruppen (inkl. Farbwahl), Schnellzuordnung von Bereichen zu Gruppen sowie Zuordnungs-Dropdown im Bereich-Modal.
+- **Frontend: Dienste nach Bereichsgruppe gruppiert**: In allen 3 Ansichten (Kachel, Kompakt/Tabelle, Timeline) werden Dienste innerhalb eines Tages nach ihrer Bereichsgruppe mit farbigen Gruppen-Headern gegliedert. Dienste ohne Gruppe erscheinen unter „Weitere Bereiche".
+
+### 🐛 Bugfixes
+
+- **Frontend: 5 statt 3 Toggle-Buttons**: Der doppelte `dp-view-toggle-mobile`-Block (2 Buttons) wurde entfernt. Auf mobilen Geräten übernimmt `dp-view-toggle-header` (3 Buttons) die Darstellung, gesteuert via `dp-public.css`.
+
+---
+
 ## [0.9.5.62] - 2026-04-10 🛠️ Kritische Datenbankfehler: SQL-Spaltennamen und fehlende Tabelle + Mail-Debug-Logs
 
 ### 🐛 Bugfixes

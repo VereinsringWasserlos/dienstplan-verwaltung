@@ -58,13 +58,15 @@
         ],
         dienste: [
             { key: 'datum',           label: 'Datum',               required: true  },
+            { key: 'dienst_typ',      label: 'Dienst-Typ (dienst|mitbringen)', required: false },
+            { key: 'bereich_name',    label: 'Bereich Name',        required: false },
+            { key: 'taetigkeit_name', label: 'Tätigkeit Name',      required: false },
             { key: 'von_zeit',        label: 'Von Zeit (HH:MM)',    required: false },
             { key: 'bis_zeit',        label: 'Bis Zeit (HH:MM)',    required: false },
             { key: 'verein_kuerzel',  label: 'Verein Kürzel',       required: false },
-            { key: 'bereich_name',    label: 'Bereich Name',        required: false },
-            { key: 'taetigkeit_name', label: 'Tätigkeit Name',      required: false },
             { key: 'anzahl_personen', label: 'Anzahl Personen',     required: false },
             { key: 'splittbar',       label: 'Splittbar (1/0)',     required: false },
+            { key: 'admin_only',      label: 'Admin-Only (1/0)',    required: false },
             { key: 'besonderheiten',  label: 'Besonderheiten',      required: false }
         ]
     };
@@ -92,7 +94,7 @@
     const templateHeaders = [
         'datum', 'von_zeit', 'bis_zeit', 'bereich_name', 'bereich_farbe',
         'bereich_admin_only', 'taetigkeit_name', 'taetigkeit_admin_only',
-        'verein_kuerzel', 'verein_name', 'anzahl_personen', 'splittbar', 'besonderheiten'
+        'verein_kuerzel', 'verein_name', 'dienst_typ', 'bereich_name', 'taetigkeit_name', 'anzahl_personen', 'splittbar', 'admin_only', 'besonderheiten'
     ];
 
     const templatePresets = {
@@ -127,6 +129,7 @@
         },
         dienste: {
             datum: 'datum',
+            dienst_typ: 'dienst_typ',
             von_zeit: 'von_zeit',
             bis_zeit: 'bis_zeit',
             verein_kuerzel: 'verein_kuerzel',
@@ -134,6 +137,7 @@
             taetigkeit_name: 'taetigkeit_name',
             anzahl_personen: 'anzahl_personen',
             splittbar: 'splittbar',
+            admin_only: 'admin_only',
             besonderheiten: 'besonderheiten'
         }
     };

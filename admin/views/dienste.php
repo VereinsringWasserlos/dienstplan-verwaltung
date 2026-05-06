@@ -16,6 +16,9 @@ $selected_verein = isset($_GET['verein']) ? intval($_GET['verein']) : 0;
 $filter_status = isset($_GET['status']) ? sanitize_text_field($_GET['status']) : '';
 $filter_mitarbeiter = isset($_GET['mitarbeiter']) ? intval($_GET['mitarbeiter']) : 0;
 $filter_mitarbeiter_name = '';
+$scoped_verein_ids = isset($allowed_verein_ids) && is_array($allowed_verein_ids)
+    ? array_values(array_filter(array_map('intval', $allowed_verein_ids)))
+    : array();
 
 $mitarbeiter_filter_liste = $db->get_mitarbeiter_with_stats(
     $selected_verein,
@@ -35,9 +38,6 @@ if ($filter_mitarbeiter > 0) {
 
 // Dienste laden (mit Filtern)
 $dienste = array();
-$scoped_verein_ids = isset($allowed_verein_ids) && is_array($allowed_verein_ids)
-    ? array_values(array_filter(array_map('intval', $allowed_verein_ids)))
-    : array();
 if ($selected_veranstaltung > 0) {
     $all_dienste = $db->get_dienste($selected_veranstaltung, $selected_verein, null, $scoped_verein_ids);
 
@@ -108,10 +108,18 @@ $nav_items = [
     
     <!-- Filter-Bereich -->
     <div class="dp-filter-bar" style="background: #fff; padding: 1.5rem; border: 1px solid #c3c4c7; border-radius: 4px; margin: 1.5rem 0;">
-        <h3 style="margin-top: 0;">
-            <span class="dashicons dashicons-filter"></span>
-            <?php _e('Filter', 'dienstplan-verwaltung'); ?>
-        </h3>
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 0.75rem;">
+            <h3 style="margin: 0;">
+                <span class="dashicons dashicons-filter"></span>
+                <?php _e('Filter', 'dienstplan-verwaltung'); ?>
+            </h3>
+            <?php if (!$is_restricted_club_admin): ?>
+                <button type="button" class="button button-primary" onclick="openDienstModal(); return false;" style="display: inline-flex; align-items: center; gap: 0.35rem;">
+                    <span class="dashicons dashicons-plus-alt" style="font-size: 16px; width: 16px; height: 16px;"></span>
+                    <?php _e('Neuer Dienst', 'dienstplan-verwaltung'); ?>
+                </button>
+            <?php endif; ?>
+        </div>
 
         <?php if ($filter_mitarbeiter > 0): ?>
             <div class="notice notice-info" style="margin: 0 0 1rem 0; padding: 0.75rem 1rem;">

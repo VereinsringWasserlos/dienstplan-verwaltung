@@ -560,6 +560,36 @@ class Dienstplan_Public {
             
             require_once DIENSTPLAN_PLUGIN_PATH . 'includes/class-database.php';
             $db = new Dienstplan_Database($this->db_prefix);
+            $can_manage_frontend_assignments = is_user_logged_in()
+                && (
+                    current_user_can('manage_options')
+                    || Dienstplan_Roles::can_manage_events()
+                    || Dienstplan_Roles::can_manage_clubs()
+                );
+
+            $wpdb = $db->get_wpdb();
+            $prefix = $db->get_prefix();
+
+            $slot_context = $wpdb->get_row($wpdb->prepare(
+                "SELECT s.id as slot_id, d.id as dienst_id, d.admin_only as dienst_admin_only, t.admin_only as taetigkeit_admin_only
+                 FROM {$prefix}dienst_slots s
+                 INNER JOIN {$prefix}dienste d ON s.dienst_id = d.id
+                 LEFT JOIN {$prefix}taetigkeiten t ON d.taetigkeit_id = t.id
+                 WHERE s.id = %d",
+                intval($_POST['slot_id'])
+            ));
+
+            if (!$slot_context) {
+                wp_send_json_error(array('message' => 'Dienst-Slot nicht gefunden.'));
+                return;
+            }
+
+            if ((!empty($slot_context->dienst_admin_only) || !empty($slot_context->taetigkeit_admin_only)) && !$can_manage_frontend_assignments) {
+                wp_send_json_error(array(
+                    'message' => '⛔ Dieser Eintrag ist für spezielle Anforderungen reserviert und kann nur durch Administratoren zugewiesen werden.'
+                ));
+                return;
+            }
             
             // Prüfe ob Mitarbeiter bereits existiert (per Email)
             $mitarbeiter_id = null;
@@ -609,8 +639,6 @@ class Dienstplan_Public {
                 : (!empty($mitarbeiter->email) && strpos($mitarbeiter->email, '@dienstplan.local') === false
                     ? sanitize_email($mitarbeiter->email)
                     : '');
-            $wpdb = $db->get_wpdb();
-            $prefix = $db->get_prefix();
             $dienst_for_slot = $wpdb->get_row($wpdb->prepare(
                 "SELECT d.verein_id
                  FROM {$prefix}dienst_slots s
@@ -801,6 +829,12 @@ class Dienstplan_Public {
             
             require_once DIENSTPLAN_PLUGIN_PATH . 'includes/class-database.php';
             $db = new Dienstplan_Database($this->db_prefix);
+            $can_manage_frontend_assignments = is_user_logged_in()
+                && (
+                    current_user_can('manage_options')
+                    || Dienstplan_Roles::can_manage_events()
+                    || Dienstplan_Roles::can_manage_clubs()
+                );
             
             $dienst_id = intval($_POST['dienst_id']);
             
@@ -813,6 +847,14 @@ class Dienstplan_Public {
             if (!$dienst) {
                 error_log('DP: Dienst nicht gefunden für ID: ' . $dienst_id);
                 wp_send_json_error(array('message' => 'Dienst nicht gefunden (ID: ' . $dienst_id . ')'));
+                return;
+            }
+
+            $taetigkeit = $db->get_taetigkeit($dienst->taetigkeit_id);
+            if ((!empty($dienst->admin_only) || ($taetigkeit && !empty($taetigkeit->admin_only))) && !$can_manage_frontend_assignments) {
+                wp_send_json_error(array(
+                    'message' => '⛔ Dieser Eintrag ist für spezielle Anforderungen reserviert und kann nur durch Administratoren zugewiesen werden.'
+                ));
                 return;
             }
             
@@ -881,6 +923,9 @@ class Dienstplan_Public {
             
             // Prüfe ob Dienst geteilt werden soll (Split)
             $split_dienst = isset($_POST['split_dienst']) && $_POST['split_dienst'] === 'on';
+            if (($dienst->dienst_typ ?? 'dienst') === 'mitbringen') {
+                $split_dienst = false;
+            }
             $gewaehlter_slot = 1; // Default: Slot 1
             
             if ($split_dienst) {
@@ -1712,15 +1757,15 @@ class Dienstplan_Public {
             return;
         }
 
-        // Prüfe ob die Tätigkeit admin-only ist
+        // Prüfe ob Dienst oder Tätigkeit admin-only ist
         $taetigkeit = $wpdb->get_row($wpdb->prepare(
             "SELECT * FROM {$prefix}taetigkeiten WHERE id = %d",
             $dienst->taetigkeit_id
         ));
 
-        if ($taetigkeit && !empty($taetigkeit->admin_only) && !$can_manage_frontend_assignments) {
+        if ((!empty($dienst->admin_only) || ($taetigkeit && !empty($taetigkeit->admin_only))) && !$can_manage_frontend_assignments) {
             wp_send_json_error(array(
-                'message' => '⛔ Diese Tätigkeit ist für spezielle Anforderungen reserviert und kann nur durch Administratoren zugewiesen werden.'
+                'message' => '⛔ Dieser Eintrag ist für spezielle Anforderungen reserviert und kann nur durch Administratoren zugewiesen werden.'
             ));
             return;
         }

@@ -77,6 +77,18 @@ if (!defined('ABSPATH')) exit;
                         </td>
                     </tr>
                     
+                    <!-- Diensttyp -->
+                    <tr>
+                        <th><label for="d_dienst_typ"><?php _e('Typ', 'dienstplan-verwaltung'); ?> *</label></th>
+                        <td>
+                            <select id="d_dienst_typ" name="dienst_typ" class="regular-text" style="width: 100%; max-width: 320px;">
+                                <option value="dienst"><?php _e('Dienst (mit Uhrzeit)', 'dienstplan-verwaltung'); ?></option>
+                                <option value="mitbringen"><?php _e('Mitbringen (ohne Uhrzeit)', 'dienstplan-verwaltung'); ?></option>
+                            </select>
+                            <p class="description"><?php _e('Mitbringen-Posten sind tagbezogen und haben keine festen Uhrzeiten.', 'dienstplan-verwaltung'); ?></p>
+                        </td>
+                    </tr>
+
                     <!-- Bereich -->
                     <tr>
                         <th><label for="d_bereich_id"><?php _e('Bereich', 'dienstplan-verwaltung'); ?> *</label></th>
@@ -125,7 +137,7 @@ if (!defined('ABSPATH')) exit;
                     </tr>
                     
                     <!-- Dienstzeit -->
-                    <tr>
+                    <tr id="dienstzeit-row">
                         <th><label><?php _e('Dienstzeit', 'dienstplan-verwaltung'); ?> *</label></th>
                         <td>
                             <div style="display: flex; gap: 1rem; align-items: center;">
@@ -167,7 +179,7 @@ if (!defined('ABSPATH')) exit;
                     </tr>
                     
                     <!-- Splittbar -->
-                    <tr>
+                    <tr id="splittbar-row">
                         <th><label for="d_splittbar"><?php _e('Splittbar', 'dienstplan-verwaltung'); ?></label></th>
                         <td>
                             <label>
@@ -175,6 +187,18 @@ if (!defined('ABSPATH')) exit;
                                 <?php _e('Dienst kann in halbe Dienste aufgeteilt werden', 'dienstplan-verwaltung'); ?>
                             </label>
                             <p class="description"><?php _e('Wenn aktiviert, können sich Personen für halbe Dienste eintragen.', 'dienstplan-verwaltung'); ?></p>
+                        </td>
+                    </tr>
+
+                    <!-- Nur durch Admin -->
+                    <tr>
+                        <th><label for="d_admin_only"><?php _e('Zuweisung', 'dienstplan-verwaltung'); ?></label></th>
+                        <td>
+                            <label>
+                                <input type="checkbox" id="d_admin_only" name="admin_only" value="1">
+                                <?php _e('Nur durch Admin zuweisbar', 'dienstplan-verwaltung'); ?>
+                            </label>
+                            <p class="description"><?php _e('Wenn aktiviert, können nur Administratoren diesen Dienst im Portal vergeben.', 'dienstplan-verwaltung'); ?></p>
                         </td>
                     </tr>
                     

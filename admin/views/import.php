@@ -331,10 +331,11 @@ if (isset($stats['veranstaltungen'])) {
                     <thead><tr><th><?php _e('Spaltenname', 'dienstplan-verwaltung'); ?></th><th><?php _e('Pflicht', 'dienstplan-verwaltung'); ?></th><th><?php _e('Beispiel', 'dienstplan-verwaltung'); ?></th><th><?php _e('Hinweis', 'dienstplan-verwaltung'); ?></th></tr></thead>
                     <tbody>
                         <tr><td><code>datum</code></td><td>✅</td><td><code>2024-07-20</code></td><td><?php _e('Auch DD.MM.YYYY', 'dienstplan-verwaltung'); ?></td></tr>
-                        <tr><td><code>von_zeit</code></td><td></td><td><code>08:00</code></td><td></td></tr>
-                        <tr><td><code>bis_zeit</code></td><td></td><td><code>16:00</code></td><td><?php _e('< von_zeit = nächster Tag', 'dienstplan-verwaltung'); ?></td></tr>
+                        <tr><td><code>dienst_typ</code></td><td></td><td><code>mitbringen</code></td><td><?php _e('dienst oder mitbringen', 'dienstplan-verwaltung'); ?></td></tr>
                         <tr><td><code>bereich_name</code></td><td></td><td><code>Sicherheit</code></td><td><?php _e('Wird angelegt wenn fehlend', 'dienstplan-verwaltung'); ?></td></tr>
                         <tr><td><code>taetigkeit_name</code></td><td></td><td><code>Einlasskontrolle</code></td><td><?php _e('Wird angelegt wenn fehlend', 'dienstplan-verwaltung'); ?></td></tr>
+                        <tr><td><code>von_zeit</code></td><td></td><td><code>08:00</code></td><td></td></tr>
+                        <tr><td><code>bis_zeit</code></td><td></td><td><code>16:00</code></td><td><?php _e('< von_zeit = nächster Tag', 'dienstplan-verwaltung'); ?></td></tr>
                         <tr><td><code>bereich_farbe</code></td><td></td><td><code>#ef4444</code></td><td><?php _e('Farbe beim Anlegen des Bereichs', 'dienstplan-verwaltung'); ?></td></tr>
                         <tr><td><code>bereich_admin_only</code></td><td></td><td><code>0</code></td><td><?php _e('1 = nur Admin sichtbar', 'dienstplan-verwaltung'); ?></td></tr>
                         <tr><td><code>taetigkeit_admin_only</code></td><td></td><td><code>0</code></td><td><?php _e('1 = nur Admin sichtbar', 'dienstplan-verwaltung'); ?></td></tr>
@@ -342,6 +343,7 @@ if (isset($stats['veranstaltungen'])) {
                         <tr><td><code>verein_name</code></td><td></td><td><code>SC Jugend</code></td><td><?php _e('Für Anlage benötigt', 'dienstplan-verwaltung'); ?></td></tr>
                         <tr><td><code>anzahl_personen</code></td><td></td><td><code>2</code></td><td></td></tr>
                         <tr><td><code>splittbar</code></td><td></td><td><code>1</code></td><td><?php _e('1 oder 0', 'dienstplan-verwaltung'); ?></td></tr>
+                        <tr><td><code>admin_only</code></td><td></td><td><code>1</code></td><td><?php _e('1 oder 0', 'dienstplan-verwaltung'); ?></td></tr>
                         <tr><td><code>besonderheiten</code></td><td></td><td><code>Bitte pünktlich</code></td><td></td></tr>
                     </tbody>
                 </table>

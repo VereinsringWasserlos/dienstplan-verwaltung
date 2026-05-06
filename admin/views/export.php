@@ -83,7 +83,7 @@ if (!$can_manage_clubs && !$can_manage_events) {
             <div class="postbox-header"><h2>📑 <?php _e('Dienste', 'dienstplan-verwaltung'); ?></h2></div>
             <div class="inside">
                 <p class="description"><?php printf(_n('%d Eintrag', '%d Einträge', count($stats['dienste']), 'dienstplan-verwaltung'), count($stats['dienste'])); ?></p>
-                <p class="description" style="font-size:0.85em; color:#6b7280;"><?php _e('Spalten: veranstaltung_id, tag_nummer, verein_kuerzel, bereich_name, taetigkeit_name, von_zeit, bis_zeit, anzahl_personen, splittbar, status', 'dienstplan-verwaltung'); ?></p>
+                <p class="description" style="font-size:0.85em; color:#6b7280;"><?php _e('Spalten: veranstaltung_id, tag_nummer, verein_kuerzel, dienst_typ, bereich_name, taetigkeit_name, von_zeit, bis_zeit, anzahl_personen, splittbar, admin_only, status', 'dienstplan-verwaltung'); ?></p>
                 <button class="button button-primary dp-export-btn" style="width:100%;" data-type="dienste">
                     <span class="dashicons dashicons-download" style="margin-top:3px;"></span>
                     <?php _e('Dienste exportieren', 'dienstplan-verwaltung'); ?>
