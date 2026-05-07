@@ -26,6 +26,7 @@ $is_admin_user = current_user_can('manage_options')
     || Dienstplan_Roles::can_manage_events()
     || Dienstplan_Roles::can_manage_clubs();
 $is_hauptadmin = current_user_can('manage_options') || current_user_can(Dienstplan_Roles::CAP_MANAGE_SETTINGS);
+$is_slim_mode = defined('DIENSTPLAN_SLIM_MODE') && DIENSTPLAN_SLIM_MODE;
 ?>
 
 <div class="wrap dienstplan-admin-container">
@@ -73,7 +74,7 @@ $is_hauptadmin = current_user_can('manage_options') || current_user_can(Dienstpl
         </a>
 
         <!-- Bereiche & Tätigkeiten -->
-        <?php if (!isset($is_restricted_club_admin) || !$is_restricted_club_admin): ?>
+        <?php if ((!isset($is_restricted_club_admin) || !$is_restricted_club_admin) && !$is_slim_mode): ?>
         <a href="<?php echo admin_url('admin.php?page=dienstplan-bereiche'); ?>" class="dashboard-admin-card card-bereiche">
             <div class="dashboard-admin-card-header">
                 <span class="dashicons dashicons-category dashboard-admin-card-icon"></span>
@@ -81,7 +82,7 @@ $is_hauptadmin = current_user_can('manage_options') || current_user_can(Dienstpl
             </div>
             <p class="dashboard-admin-card-description"><?php _e('Arbeitsbereiche und Aufgaben verwalten', 'dienstplan-verwaltung'); ?></p>
         </a>
-        <?php endif; // !is_restricted_club_admin ?>
+        <?php endif; // !is_restricted_club_admin && !is_slim_mode ?>
         
         <!-- Mitarbeiter -->
         <a href="<?php echo admin_url('admin.php?page=dienstplan-mitarbeiter'); ?>" class="dashboard-admin-card card-mitarbeiter">
@@ -100,6 +101,15 @@ $is_hauptadmin = current_user_can('manage_options') || current_user_can(Dienstpl
             </div>
             <p class="dashboard-admin-card-description"><?php _e('Dienst-Übersicht als Timeline', 'dienstplan-verwaltung'); ?></p>
         </a>
+
+        <!-- Mitbringen -->
+        <a href="<?php echo admin_url('admin.php?page=dienstplan-mitbringen'); ?>" class="dashboard-admin-card card-dienste">
+            <div class="dashboard-admin-card-header">
+                <span class="dashicons dashicons-cart dashboard-admin-card-icon"></span>
+                <h3 class="dashboard-admin-card-title"><?php _e('Mitbringen', 'dienstplan-verwaltung'); ?></h3>
+            </div>
+            <p class="dashboard-admin-card-description"><?php _e('Mitbringen-Items erstellen und zuweisen', 'dienstplan-verwaltung'); ?></p>
+        </a>
         
     </div>
     <?php endif; ?>
@@ -112,6 +122,7 @@ $is_hauptadmin = current_user_can('manage_options') || current_user_can(Dienstpl
     <div class="dashboard-compact-grid">
         
         <!-- Dokumentation -->
+        <?php if (!$is_slim_mode): ?>
         <a href="<?php echo admin_url('admin.php?page=dienstplan-dokumentation'); ?>" class="dashboard-admin-card card-documentation">
             <div class="dashboard-admin-card-header">
                 <span class="dashicons dashicons-book dashboard-admin-card-icon"></span>
@@ -119,6 +130,7 @@ $is_hauptadmin = current_user_can('manage_options') || current_user_can(Dienstpl
             </div>
             <p class="dashboard-admin-card-description"><?php _e('Anleitungen, Handbücher & technische Dokumentation', 'dienstplan-verwaltung'); ?></p>
         </a>
+        <?php endif; ?>
 
         <?php if (Dienstplan_Roles::can_manage_users() || current_user_can('manage_options')): ?>
         <a href="<?php echo admin_url('admin.php?page=dienstplan-benutzer'); ?>" class="dashboard-admin-card card-mitarbeiter">
@@ -131,7 +143,7 @@ $is_hauptadmin = current_user_can('manage_options') || current_user_can(Dienstpl
         <?php endif; ?>
 
         <!-- Event-Statistik (nur Admins, nicht für eingeschränkte Vereins-Admins) -->
-        <?php if ($is_admin_user && (!isset($is_restricted_club_admin) || !$is_restricted_club_admin)): ?>
+        <?php if (!$is_slim_mode && $is_admin_user && (!isset($is_restricted_club_admin) || !$is_restricted_club_admin)): ?>
         <a href="<?php echo admin_url('admin.php?page=dienstplan-statistik'); ?>" class="dashboard-admin-card card-timeline">
             <div class="dashboard-admin-card-header">
                 <span class="dashicons dashicons-chart-line dashboard-admin-card-icon"></span>
@@ -151,7 +163,7 @@ $is_hauptadmin = current_user_can('manage_options') || current_user_can(Dienstpl
         </a>
 
         <!-- Updates -->
-        <?php if (current_user_can('manage_options')): ?>
+        <?php if (!$is_slim_mode && current_user_can('manage_options')): ?>
         <a href="<?php echo admin_url('admin.php?page=dienstplan-updates'); ?>" class="dashboard-admin-card card-updates">
             <div class="dashboard-admin-card-header">
                 <span class="dashicons dashicons-update dashboard-admin-card-icon"></span>
@@ -181,7 +193,7 @@ $is_hauptadmin = current_user_can('manage_options') || current_user_can(Dienstpl
         <?php endif; ?>
 
         <!-- Debug -->
-        <?php if (current_user_can('manage_options')): ?>
+        <?php if (!$is_slim_mode && current_user_can('manage_options')): ?>
         <a href="<?php echo admin_url('admin.php?page=dienstplan-debug'); ?>" class="dashboard-admin-card card-debug">
             <div class="dashboard-admin-card-header">
                 <span class="dashicons dashicons-admin-tools dashboard-admin-card-icon"></span>
@@ -193,7 +205,7 @@ $is_hauptadmin = current_user_can('manage_options') || current_user_can(Dienstpl
         
     </div>
 
-    <?php if ($is_hauptadmin): ?>
+    <?php if ($is_hauptadmin && !$is_slim_mode): ?>
     <h2 class="dashboard-section-heading">
         <span class="dashicons dashicons-admin-home"></span>
         <?php _e('Frontend-Portal', 'dienstplan-verwaltung'); ?>

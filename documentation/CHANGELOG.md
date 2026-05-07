@@ -11,6 +11,34 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ---
 
+## [0.9.6.1] - 2026-05-07 🚀 Release: Mitbringen-Modal & Snapshot-Stabilisierung
+
+### ✨ Neu
+
+- **Mitbringen-Übernahme ohne Browser-Prompts**: Die mehrstufige Prompt-Strecke wurde durch ein einheitliches Modal mit Feldern für Vorname, Nachname und Mitbring-Beschreibung ersetzt.
+- **Bessere Bedienbarkeit im Frontend**: Validierung und fokussierte Fehlermeldungen erfolgen direkt im Modal; ESC schließt den Dialog.
+
+### 🧹 Verbesserungen
+
+- **Release-Snapshot aktualisiert**: Der aktuelle Projektstand wurde als neues Patch-Release paketiert.
+
+---
+
+## [0.9.6.0] - 2026-05-06 🚀 Release: Slim-Mode Baseline & Dashboard-Aufräumung
+
+### ✨ Neu
+
+- **Slim-Mode als Standardprofil**: Neue Baseline mit Fokus auf Kernmodule (Vereine, Veranstaltungen, Bereiche/Dienste, Mitbringen, Mitarbeiter).
+- **Neue FE-Einzelseiten-Shortcodes**: `dienstplan_verein_seite` und `dienstplan_veranstaltung_seite` für klare Verein-/Veranstaltungsseiten.
+- **Admin-only Mail im Slim-Mode**: Mail-Queue filtert Empfänger im Slim-Profil auf Administratoren.
+
+### 🧹 Verbesserungen
+
+- **Dashboard aufgeräumt**: Nicht-kritische Zusatzkacheln werden im Slim-Mode ausgeblendet; Kernnavigation bleibt sichtbar.
+- **Aktiv-Fokus bei Event-Auswahl**: Dashboard-nahe Ansichten zeigen standardmäßig nur nicht abgeschlossene Veranstaltungen.
+
+---
+
 ## [0.9.5.66] - 2026-05-06 📦 Release: Mitbringen-Trennung & Export-Hotfix
 
 ### ✨ Neu

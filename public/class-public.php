@@ -44,6 +44,10 @@ class Dienstplan_Public {
      */
     private $db_prefix;
 
+    private function is_slim_mode() {
+        return defined('DIENSTPLAN_SLIM_MODE') && DIENSTPLAN_SLIM_MODE;
+    }
+
     /**
      * Initialisierung
      *
@@ -288,12 +292,77 @@ class Dienstplan_Public {
      */
     public function register_shortcodes() {
         add_shortcode('dienstplan', array($this, 'shortcode_dienstplan'));
-        add_shortcode('dienstplan_hub', array($this, 'shortcode_dienstplan_hub')); // NEU: Frontend Portal
         add_shortcode('dienstplan_vereine', array($this, 'shortcode_vereine'));
         add_shortcode('dienstplan_veranstaltungen', array($this, 'shortcode_veranstaltungen'));
         add_shortcode('dienstplan_veranstaltung', array($this, 'shortcode_veranstaltung_verein')); // NEU: Für Verein-spezifische Anmeldung
-        add_shortcode('meine_dienste', array($this, 'shortcode_meine_dienste'));
-        add_shortcode('profil_bearbeiten', array($this, 'shortcode_profil_bearbeiten'));
+
+        // Schlanke FE-Basis: explizite Einzelseiten-Shortcodes.
+        add_shortcode('dienstplan_verein_seite', array($this, 'shortcode_verein_seite'));
+        add_shortcode('dienstplan_veranstaltung_seite', array($this, 'shortcode_veranstaltung_seite'));
+
+        // Erweiterte Portalfunktionen nur außerhalb des Slim-Profils.
+        if (!$this->is_slim_mode()) {
+            add_shortcode('dienstplan_hub', array($this, 'shortcode_dienstplan_hub'));
+            add_shortcode('meine_dienste', array($this, 'shortcode_meine_dienste'));
+            add_shortcode('profil_bearbeiten', array($this, 'shortcode_profil_bearbeiten'));
+        }
+    }
+
+    /**
+     * Shortcode: [dienstplan_verein_seite verein_id="123"]
+     */
+    public function shortcode_verein_seite($atts) {
+        $atts = shortcode_atts(array(
+            'verein_id' => isset($_GET['verein_id']) ? intval($_GET['verein_id']) : 0,
+        ), $atts, 'dienstplan_verein_seite');
+
+        $verein_id = intval($atts['verein_id']);
+        if ($verein_id <= 0) {
+            return '<div class="dp-notice dp-notice-error"><p>Fehler: Keine Vereins-ID angegeben.</p></div>';
+        }
+
+        require_once DIENSTPLAN_PLUGIN_PATH . 'includes/class-database.php';
+        $db = new Dienstplan_Database($this->db_prefix);
+        $verein = $db->get_verein($verein_id);
+        if (!$verein) {
+            return '<div class="dp-notice dp-notice-error"><p>Verein nicht gefunden.</p></div>';
+        }
+
+        ob_start();
+        include DIENSTPLAN_PLUGIN_PATH . 'public/templates/verein-seite-slim.php';
+        return ob_get_clean();
+    }
+
+    /**
+     * Shortcode: [dienstplan_veranstaltung_seite veranstaltung_id="123" verein_id="0"]
+     */
+    public function shortcode_veranstaltung_seite($atts) {
+        $atts = shortcode_atts(array(
+            'veranstaltung_id' => isset($_GET['veranstaltung_id']) ? intval($_GET['veranstaltung_id']) : 0,
+            'verein_id' => isset($_GET['verein_id']) ? intval($_GET['verein_id']) : 0,
+        ), $atts, 'dienstplan_veranstaltung_seite');
+
+        $veranstaltung_id = intval($atts['veranstaltung_id']);
+        $verein_id = intval($atts['verein_id']);
+        if ($veranstaltung_id <= 0) {
+            return '<div class="dp-notice dp-notice-error"><p>Fehler: Keine Veranstaltungs-ID angegeben.</p></div>';
+        }
+
+        require_once DIENSTPLAN_PLUGIN_PATH . 'includes/class-database.php';
+        $db = new Dienstplan_Database($this->db_prefix);
+        $veranstaltung = $db->get_veranstaltung($veranstaltung_id);
+        if (!$veranstaltung) {
+            return '<div class="dp-notice dp-notice-error"><p>Veranstaltung nicht gefunden.</p></div>';
+        }
+
+        $verein = null;
+        if ($verein_id > 0) {
+            $verein = $db->get_verein($verein_id);
+        }
+
+        ob_start();
+        include DIENSTPLAN_PLUGIN_PATH . 'public/templates/veranstaltung-seite-slim.php';
+        return ob_get_clean();
     }
 
     /**
@@ -923,9 +992,6 @@ class Dienstplan_Public {
             
             // Prüfe ob Dienst geteilt werden soll (Split)
             $split_dienst = isset($_POST['split_dienst']) && $_POST['split_dienst'] === 'on';
-            if (($dienst->dienst_typ ?? 'dienst') === 'mitbringen') {
-                $split_dienst = false;
-            }
             $gewaehlter_slot = 1; // Default: Slot 1
             
             if ($split_dienst) {
@@ -1225,6 +1291,188 @@ class Dienstplan_Public {
             wp_send_json_success(array('message' => 'Sie wurden erfolgreich ausgetragen'));
             
         } catch (Exception $e) {
+            wp_send_json_error(array('message' => 'Fehler: ' . $e->getMessage()));
+        }
+    }
+
+    /**
+     * AJAX: Mitbringen-Eintrag im Frontend übernehmen
+     *
+     * @since 1.0.0
+     */
+    public function ajax_take_mitbringen_item() {
+        try {
+            if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'dp_public_nonce')) {
+                wp_send_json_error(array('message' => 'Sicherheitsprüfung fehlgeschlagen'));
+                return;
+            }
+
+            $mitbringen_id = isset($_POST['mitbringen_id']) ? intval($_POST['mitbringen_id']) : 0;
+            if ($mitbringen_id <= 0) {
+                wp_send_json_error(array('message' => 'Mitbringen-ID fehlt.'));
+                return;
+            }
+
+            $mitbringen_beschreibung = isset($_POST['mitbringen_beschreibung'])
+                ? sanitize_text_field(wp_unslash($_POST['mitbringen_beschreibung']))
+                : '';
+            if ($mitbringen_beschreibung === '') {
+                wp_send_json_error(array('message' => 'Bitte beschreiben, was du mitbringst (z. B. Kuchenart).'));
+                return;
+            }
+
+            require_once DIENSTPLAN_PLUGIN_PATH . 'includes/class-database.php';
+            $db = new Dienstplan_Database($this->db_prefix);
+            $wpdb = $db->get_wpdb();
+            $prefix = $wpdb->prefix . $this->db_prefix;
+
+            $mitarbeiter_id = $this->get_current_mitarbeiter_id();
+
+            // Ohne Login: Mitarbeiterprofil aus übergebenem Namen erstellen/verwenden.
+            if (!$mitarbeiter_id) {
+                $vorname = isset($_POST['vorname']) ? sanitize_text_field(wp_unslash($_POST['vorname'])) : '';
+                $nachname = isset($_POST['nachname']) ? sanitize_text_field(wp_unslash($_POST['nachname'])) : '';
+                $email = isset($_POST['email']) ? sanitize_email(trim((string) wp_unslash($_POST['email']))) : '';
+
+                if (empty($vorname) || empty($nachname)) {
+                    wp_send_json_error(array(
+                        'message' => 'Bitte Vor- und Nachnamen angeben.',
+                        'code' => 'missing_identity'
+                    ));
+                    return;
+                }
+
+                $mitarbeiter_columns = $wpdb->get_col("SHOW COLUMNS FROM {$prefix}mitarbeiter", 0);
+                $existing_mitarbeiter = null;
+
+                if (!empty($email) && is_email($email)) {
+                    $existing_mitarbeiter = $wpdb->get_row($wpdb->prepare(
+                        "SELECT id FROM {$prefix}mitarbeiter WHERE email = %s LIMIT 1",
+                        $email
+                    ));
+                }
+
+                if ($existing_mitarbeiter) {
+                    $mitarbeiter_id = intval($existing_mitarbeiter->id);
+                } else {
+                    $insert_data = array(
+                        'vorname' => $vorname,
+                        'nachname' => $nachname,
+                        'email' => $email,
+                    );
+
+                    if (in_array('telefon', $mitarbeiter_columns, true)) {
+                        $insert_data['telefon'] = '';
+                    }
+
+                    if (in_array('notizen', $mitarbeiter_columns, true)) {
+                        $insert_data['notizen'] = 'Mitbringen-Übernahme ohne Login';
+                    }
+
+                    if (in_array('datenschutz_akzeptiert', $mitarbeiter_columns, true)) {
+                        $insert_data['datenschutz_akzeptiert'] = 0;
+                    }
+
+                    if (in_array('created_at', $mitarbeiter_columns, true)) {
+                        $insert_data['created_at'] = current_time('mysql');
+                    }
+
+                    if (in_array('updated_at', $mitarbeiter_columns, true)) {
+                        $insert_data['updated_at'] = current_time('mysql');
+                    }
+
+                    $insert_format = array();
+                    foreach ($insert_data as $column => $value) {
+                        $insert_format[] = $column === 'datenschutz_akzeptiert' ? '%d' : '%s';
+                    }
+
+                    $inserted = $wpdb->insert($prefix . 'mitarbeiter', $insert_data, $insert_format);
+                    if ($inserted === false || empty($wpdb->insert_id)) {
+                        wp_send_json_error(array('message' => 'Mitarbeiterprofil konnte nicht angelegt werden.'));
+                        return;
+                    }
+
+                    $mitarbeiter_id = intval($wpdb->insert_id);
+                }
+
+                if ($mitarbeiter_id > 0) {
+                    $remote_addr = isset($_SERVER['REMOTE_ADDR']) ? (string) $_SERVER['REMOTE_ADDR'] : '';
+                    $user_agent = isset($_SERVER['HTTP_USER_AGENT']) ? (string) $_SERVER['HTTP_USER_AGENT'] : '';
+                    $transient_key = 'dp_mitarbeiter_' . md5($remote_addr . $user_agent);
+                    set_transient($transient_key, $mitarbeiter_id, WEEK_IN_SECONDS);
+
+                    $cookie_path = defined('COOKIEPATH') ? COOKIEPATH : '/';
+                    $cookie_domain = defined('COOKIE_DOMAIN') ? COOKIE_DOMAIN : '';
+                    setcookie('dp_mitarbeiter_id', (string) $mitarbeiter_id, time() + WEEK_IN_SECONDS, $cookie_path, $cookie_domain, is_ssl(), true);
+                }
+            }
+
+            if (!$mitarbeiter_id) {
+                wp_send_json_error(array('message' => 'Kein Mitarbeiterprofil verfügbar.'));
+                return;
+            }
+
+            $item = $db->get_mitbringen_item($mitbringen_id);
+            if (!$item) {
+                wp_send_json_error(array('message' => 'Mitbringen-Eintrag nicht gefunden.'));
+                return;
+            }
+
+            $can_manage_frontend_assignments = is_user_logged_in() && (
+                current_user_can('manage_options')
+                || Dienstplan_Roles::can_manage_events()
+                || Dienstplan_Roles::can_manage_clubs()
+            );
+
+            if (!empty($item->admin_only) && !$can_manage_frontend_assignments) {
+                wp_send_json_error(array('message' => 'Dieser Mitbringen-Eintrag ist nur für Verantwortliche freigegeben.'));
+                return;
+            }
+
+            $existing_mitarbeiter_id = intval($item->mitarbeiter_id ?? 0);
+            if (($item->status ?? 'offen') === 'vergeben' && $existing_mitarbeiter_id > 0) {
+                if ($existing_mitarbeiter_id === intval($mitarbeiter_id)) {
+                    wp_send_json_success(array('message' => 'Dieser Mitbringen-Eintrag ist bereits dir zugeteilt.'));
+                    return;
+                }
+
+                wp_send_json_error(array('message' => 'Dieser Mitbringen-Eintrag wurde bereits vergeben.'));
+                return;
+            }
+
+            $existing_besetzung_info = trim((string) ($item->besetzung_info ?? ''));
+            $takeover_info = 'Mitgebracht: ' . $mitbringen_beschreibung;
+            $besetzung_info_value = $existing_besetzung_info !== ''
+                ? ($existing_besetzung_info . ' | ' . $takeover_info)
+                : $takeover_info;
+
+            $updated = $db->update_mitbringen_item($mitbringen_id, array(
+                'veranstaltung_id' => intval($item->veranstaltung_id),
+                'tag_id' => intval($item->tag_id),
+                'verein_id' => intval($item->verein_id),
+                'mitarbeiter_id' => intval($mitarbeiter_id),
+                'admin_only' => intval($item->admin_only ?? 0),
+                'bereich_name' => (string) ($item->mitbringen_bereich_name ?? $item->bereich_name ?? ''),
+                'bezeichnung' => (string) ($item->bezeichnung ?? ''),
+                'menge' => 1,
+                'einheit' => '',
+                'hinweis' => (string) ($item->hinweis ?? ''),
+                'besetzung_info' => $besetzung_info_value,
+                'status' => 'vergeben',
+            ));
+
+            if ($updated === false) {
+                wp_send_json_error(array('message' => 'Mitbringen konnte nicht übernommen werden.'));
+                return;
+            }
+
+            wp_send_json_success(array(
+                'message' => 'Mitbringen erfolgreich übernommen.',
+                'mitbringen_id' => $mitbringen_id,
+                'mitarbeiter_id' => intval($mitarbeiter_id),
+                'mitbringen_beschreibung' => $mitbringen_beschreibung,
+            ));
+        } catch (Throwable $e) {
             wp_send_json_error(array('message' => 'Fehler: ' . $e->getMessage()));
         }
     }

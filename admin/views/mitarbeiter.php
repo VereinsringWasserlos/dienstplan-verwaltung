@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Mitarbeiter Verwaltung
  * Modernes Design wie Dienste-Seite
@@ -24,11 +25,11 @@ if (!isset($mitarbeiter) || !is_array($mitarbeiter)) {
 
 // Portal-Filter anwenden (da nicht in DB-Funktion)
 if ($filter_portal === 'active') {
-    $mitarbeiter = array_filter($mitarbeiter, function($ma) {
+    $mitarbeiter = array_filter($mitarbeiter, function ($ma) {
         return isset($ma->user_id) && $ma->user_id;
     });
 } elseif ($filter_portal === 'inactive') {
-    $mitarbeiter = array_filter($mitarbeiter, function($ma) {
+    $mitarbeiter = array_filter($mitarbeiter, function ($ma) {
         return !isset($ma->user_id) || !$ma->user_id;
     });
 }
@@ -44,7 +45,7 @@ foreach ($mitarbeiter as $ma) {
         // Mitarbeiter kann mehreren Vereinen zugeordnet sein
         $verein_ids = explode(',', $ma->verein_ids);
         $verein_namen = explode(',', $ma->verein_namen);
-        
+
         foreach ($verein_ids as $index => $verein_id) {
             if (!isset($mitarbeiter_nach_vereinen[$verein_id])) {
                 $mitarbeiter_nach_vereinen[$verein_id] = array(
@@ -105,53 +106,65 @@ $nav_items = [
 <div class="wrap dienstplan-wrap">
     <?php include DIENSTPLAN_PLUGIN_PATH . 'admin/views/partials/page-header.php'; ?>
 
-<?php
-ksort($mitarbeiter_nach_vereinen);
+    <?php
+    ksort($mitarbeiter_nach_vereinen);
 
-$get_dienst_count_for_verein = function($ma, $verein_id) {
-    $verein_id = intval($verein_id);
+    $get_dienst_count_for_verein = function ($ma, $verein_id) {
+        $verein_id = intval($verein_id);
 
-    if ($verein_id <= 0) {
-        return intval($ma->dienst_count ?? 0);
-    }
-
-    $raw_map = isset($ma->dienst_count_by_verein) ? (string) $ma->dienst_count_by_verein : '';
-    if ($raw_map === '') {
-        return intval($ma->dienst_count ?? 0);
-    }
-
-    $entries = explode(',', $raw_map);
-    foreach ($entries as $entry) {
-        $parts = explode(':', $entry, 2);
-        if (count($parts) !== 2) {
-            continue;
+        if ($verein_id <= 0) {
+            return intval($ma->dienst_count ?? 0);
         }
 
-        if (intval($parts[0]) === $verein_id) {
-            return intval($parts[1]);
+        $raw_map = isset($ma->dienst_count_by_verein) ? (string) $ma->dienst_count_by_verein : '';
+        if ($raw_map === '') {
+            return intval($ma->dienst_count ?? 0);
         }
-    }
 
-    return 0;
-};
-?>
-    
+        $entries = explode(',', $raw_map);
+        foreach ($entries as $entry) {
+            $parts = explode(':', $entry, 2);
+            if (count($parts) !== 2) {
+                continue;
+            }
+
+            if (intval($parts[0]) === $verein_id) {
+                return intval($parts[1]);
+            }
+        }
+
+        return 0;
+    };
+    ?>
+
     <?php if (isset($_GET['message'])): ?>
         <div class="notice notice-success is-dismissible">
             <p><?php echo esc_html($_GET['message']); ?></p>
         </div>
     <?php endif; ?>
-    
+
     <!-- Filter-Bereich -->
     <div class="dp-filter-bar" style="background: #fff; padding: 1.5rem; border: 1px solid #c3c4c7; border-radius: 4px; margin: 1.5rem 0;">
-        <h3 style="margin-top: 0;">
-            <span class="dashicons dashicons-filter"></span>
-            <?php _e('Filter', 'dienstplan-verwaltung'); ?>
-        </h3>
-        
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 0.75rem;">
+            <h3 style="margin: 0;">
+                <span class="dashicons dashicons-filter"></span>
+                <?php _e('Filter', 'dienstplan-verwaltung'); ?>
+            </h3>
+            <div class="dp-filter-action-group">
+                <button type="button" class="button button-primary dp-filter-action-btn" onclick="openMitarbeiterModal(); return false;">
+                    <span class="dashicons dashicons-plus-alt"></span>
+                    <?php _e('Neuer Mitarbeiter', 'dienstplan-verwaltung'); ?>
+                </button>
+                <button type="button" class="button button-primary dp-open-import-popup dp-filter-action-btn" data-import-type="dienstplan">
+                    <span class="dashicons dashicons-upload"></span>
+                    <?php _e('Import', 'dienstplan-verwaltung'); ?>
+                </button>
+            </div>
+        </div>
+
         <form method="get" action="" style="display: flex; gap: 1rem; flex-wrap: wrap; align-items: flex-end;">
             <input type="hidden" name="page" value="dienstplan-mitarbeiter">
-            
+
             <div style="flex: 1; min-width: 250px;">
                 <label for="filter-verein" style="display: block; margin-bottom: 0.5rem; font-weight: 600;">
                     <?php _e('Verein', 'dienstplan-verwaltung'); ?>
@@ -165,7 +178,7 @@ $get_dienst_count_for_verein = function($ma, $verein_id) {
                     <?php endforeach; ?>
                 </select>
             </div>
-            
+
             <div style="flex: 1; min-width: 250px;">
                 <label for="filter-veranstaltung" style="display: block; margin-bottom: 0.5rem; font-weight: 600;">
                     <?php _e('Veranstaltung', 'dienstplan-verwaltung'); ?>
@@ -180,7 +193,7 @@ $get_dienst_count_for_verein = function($ma, $verein_id) {
                     <?php endforeach; ?>
                 </select>
             </div>
-            
+
             <div style="flex: 1; min-width: 250px;">
                 <label for="filter-portal" style="display: block; margin-bottom: 0.5rem; font-weight: 600;">
                     <?php _e('Portal-Zugriff', 'dienstplan-verwaltung'); ?>
@@ -191,16 +204,16 @@ $get_dienst_count_for_verein = function($ma, $verein_id) {
                     <option value="inactive" <?php selected(isset($_GET['filter_portal']) ? $_GET['filter_portal'] : '', 'inactive'); ?>><?php _e('Ohne Portal-Zugriff', 'dienstplan-verwaltung'); ?></option>
                 </select>
             </div>
-            
+
             <div style="flex: 1; min-width: 250px;">
                 <label for="search" style="display: block; margin-bottom: 0.5rem; font-weight: 600;">
                     <?php _e('Suche', 'dienstplan-verwaltung'); ?>
                 </label>
-                <input type="search" id="search" name="search" value="<?php echo esc_attr($search); ?>" 
-                       placeholder="<?php _e('Name, E-Mail oder Telefon...', 'dienstplan-verwaltung'); ?>" 
-                       class="regular-text" style="width: 100%;">
+                <input type="search" id="search" name="search" value="<?php echo esc_attr($search); ?>"
+                    placeholder="<?php _e('Name, E-Mail oder Telefon...', 'dienstplan-verwaltung'); ?>"
+                    class="regular-text" style="width: 100%;">
             </div>
-            
+
             <div>
                 <button type="submit" class="button button-primary">
                     <span class="dashicons dashicons-search"></span>
@@ -214,7 +227,7 @@ $get_dienst_count_for_verein = function($ma, $verein_id) {
             </div>
         </form>
     </div>
-    
+
     <?php if (empty($mitarbeiter)): ?>
         <div style="background: #fff; border: 1px solid #c3c4c7; border-radius: 4px; padding: 3rem; text-align: center; margin-top: 2rem;">
             <span class="dashicons dashicons-groups" style="font-size: 64px; color: #c3c4c7; margin-bottom: 1rem;"></span>
@@ -222,7 +235,7 @@ $get_dienst_count_for_verein = function($ma, $verein_id) {
                 <?php echo ($filter_verein || $filter_veranstaltung || $search) ? __('Keine Mitarbeiter gefunden', 'dienstplan-verwaltung') : __('Noch keine Mitarbeiter', 'dienstplan-verwaltung'); ?>
             </h2>
             <p style="color: #787c82; margin-bottom: 2rem;">
-                <?php echo ($filter_verein || $filter_veranstaltung || $search) 
+                <?php echo ($filter_verein || $filter_veranstaltung || $search)
                     ? __('Keine Mitarbeiter entsprechen den Filterkriterien.', 'dienstplan-verwaltung')
                     : __('Fügen Sie den ersten Mitarbeiter hinzu.', 'dienstplan-verwaltung'); ?>
             </p>
@@ -234,7 +247,7 @@ $get_dienst_count_for_verein = function($ma, $verein_id) {
             <?php endif; ?>
         </div>
     <?php else: ?>
-        
+
         <!-- Statistik -->
         <div style="margin: 1.5rem 0; padding: 1rem; background: #f9fafb; border-radius: 8px; display: flex; gap: 2rem;">
             <div>
@@ -252,32 +265,32 @@ $get_dienst_count_for_verein = function($ma, $verein_id) {
                 </div>
             <?php endif; ?>
         </div>
-        
+
         <!-- Mitarbeiter nach Vereinen -->
         <div class="mitarbeiter-list" style="margin-top: 2rem;">
-            
-            <?php foreach ($mitarbeiter_nach_vereinen as $verein_id => $verein_data): 
+
+            <?php foreach ($mitarbeiter_nach_vereinen as $verein_id => $verein_data):
                 $verein_mitarbeiter = $verein_data['mitarbeiter'];
                 $collapse_id = 'verein-' . $verein_id;
             ?>
                 <div class="verein-gruppe" style="margin-bottom: 1.5rem; border: 1px solid #c3c4c7; border-radius: 4px; position: relative;">
                     <!-- Verein Header -->
-                    <h3 class="verein-header-collapsible" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 1rem 1.5rem; margin: 0; display: flex; align-items: center; gap: 1rem; transition: all 0.3s;">
+                    <h3 class="verein-header-collapsible" style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; padding: 1rem 1.5rem; margin: 0; display: flex; align-items: center; gap: 1rem; transition: all 0.3s;">
                         <span class="dashicons dashicons-arrow-down-alt2 collapse-icon" id="icon-<?php echo $collapse_id; ?>" onclick="toggleVereinGroup('<?php echo $collapse_id; ?>')" style="transition: transform 0.3s; font-size: 20px; cursor: pointer;"></span>
-                        
+
                         <span onclick="toggleVereinGroup('<?php echo $collapse_id; ?>')" style="flex: 1; display: flex; align-items: center; gap: 1rem; cursor: pointer;">
                             <span class="dashicons dashicons-flag" style="font-size: 24px;"></span>
                             <strong style="font-size: 1.1rem;"><?php echo esc_html($verein_data['verein_name']); ?></strong>
                         </span>
-                        
+
                         <span style="background: rgba(255,255,255,0.2); padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.9rem;">
                             <?php echo count($verein_mitarbeiter); ?> Mitarbeiter
                         </span>
                     </h3>
-                    
+
                     <!-- Einklappbarer Content -->
                     <div id="<?php echo $collapse_id; ?>" class="verein-content" style="display: block;">
-                        
+
                         <!-- Bulk-Aktionen Toolbar -->
                         <div class="bulk-actions-toolbar" style="background: #f9fafb; padding: 1rem; border: 1px solid #e5e7eb; border-bottom: none; display: flex;">
                             <div style="display: flex; gap: 1rem; align-items: center;">
@@ -304,7 +317,7 @@ $get_dienst_count_for_verein = function($ma, $verein_id) {
                                 </button>
                             </div>
                         </div>
-                        
+
                         <!-- Mitarbeiter Tabelle -->
                         <div style="overflow: visible;">
                             <table class="wp-list-table widefat striped" style="border: none; margin: 0; table-layout: auto;">
@@ -363,10 +376,10 @@ $get_dienst_count_for_verein = function($ma, $verein_id) {
                                                     </span>
                                                 <?php else: ?>
                                                     <?php if (isset($ma->email) && !empty($ma->email)): ?>
-                                                        <button class="button button-small" 
-                                                                onclick="activatePortalAccess(<?php echo $ma->id; ?>); event.stopPropagation();"
-                                                                title="<?php _e('Portal-Zugriff aktivieren', 'dienstplan-verwaltung'); ?>"
-                                                                style="padding: 0.25rem 0.5rem; font-size: 0.75rem;">
+                                                        <button class="button button-small"
+                                                            onclick="activatePortalAccess(<?php echo $ma->id; ?>); event.stopPropagation();"
+                                                            title="<?php _e('Portal-Zugriff aktivieren', 'dienstplan-verwaltung'); ?>"
+                                                            style="padding: 0.25rem 0.5rem; font-size: 0.75rem;">
                                                             <span class="dashicons dashicons-lock" style="font-size: 14px; line-height: 1;"></span>
                                                             <?php _e('Aktivieren', 'dienstplan-verwaltung'); ?>
                                                         </button>
@@ -380,9 +393,9 @@ $get_dienst_count_for_verein = function($ma, $verein_id) {
                                             </td>
                                             <td style="text-align: center;">
                                                 <button type="button"
-                                                   onclick="openMitarbeiterDiensteModal(<?php echo intval($ma->id); ?>); return false;"
-                                                   title="<?php esc_attr_e('Dienste dieses Mitarbeiters anzeigen', 'dienstplan-verwaltung'); ?>"
-                                                   style="display: inline-block; padding: 0.2rem 0.75rem; border-radius: 12px; font-size: 0.85rem; font-weight: 600; background: #dbeafe; color: #1e40af; text-decoration: none; border: 1px solid #bfdbfe; cursor: pointer;">
+                                                    onclick="openMitarbeiterDiensteModal(<?php echo intval($ma->id); ?>); return false;"
+                                                    title="<?php esc_attr_e('Dienste dieses Mitarbeiters anzeigen', 'dienstplan-verwaltung'); ?>"
+                                                    style="display: inline-block; padding: 0.2rem 0.75rem; border-radius: 12px; font-size: 0.85rem; font-weight: 600; background: #dbeafe; color: #1e40af; text-decoration: none; border: 1px solid #bfdbfe; cursor: pointer;">
                                                     <?php echo $get_dienst_count_for_verein($ma, $verein_id); ?>
                                                 </button>
                                             </td>
@@ -417,7 +430,7 @@ $get_dienst_count_for_verein = function($ma, $verein_id) {
                     </div>
                 </div>
             <?php endforeach; ?>
-            
+
             <!-- Mitarbeiter ohne Verein -->
             <?php if (!empty($mitarbeiter_ohne_verein)): ?>
                 <div class="verein-gruppe" style="margin-bottom: 1.5rem; border: 1px solid #c3c4c7; border-radius: 4px; position: relative;">
@@ -428,7 +441,7 @@ $get_dienst_count_for_verein = function($ma, $verein_id) {
                             <?php echo count($mitarbeiter_ohne_verein); ?> Mitarbeiter
                         </span>
                     </h3>
-                    
+
                     <div style="overflow: visible;">
                         <table class="wp-list-table widefat striped" style="border: none; margin: 0; table-layout: auto;">
                             <thead>
@@ -479,9 +492,9 @@ $get_dienst_count_for_verein = function($ma, $verein_id) {
                                         </td>
                                         <td style="text-align: center;">
                                             <button type="button"
-                                               onclick="openMitarbeiterDiensteModal(<?php echo intval($ma->id); ?>); return false;"
-                                               title="<?php esc_attr_e('Dienste dieses Mitarbeiters anzeigen', 'dienstplan-verwaltung'); ?>"
-                                               style="display: inline-block; padding: 0.2rem 0.75rem; border-radius: 12px; font-size: 0.85rem; font-weight: 600; background: #dbeafe; color: #1e40af; text-decoration: none; border: 1px solid #bfdbfe; cursor: pointer;">
+                                                onclick="openMitarbeiterDiensteModal(<?php echo intval($ma->id); ?>); return false;"
+                                                title="<?php esc_attr_e('Dienste dieses Mitarbeiters anzeigen', 'dienstplan-verwaltung'); ?>"
+                                                style="display: inline-block; padding: 0.2rem 0.75rem; border-radius: 12px; font-size: 0.85rem; font-weight: 600; background: #dbeafe; color: #1e40af; text-decoration: none; border: 1px solid #bfdbfe; cursor: pointer;">
                                                 <?php echo $ma->dienst_count ?? 0; ?>
                                             </button>
                                         </td>
@@ -515,28 +528,27 @@ $get_dienst_count_for_verein = function($ma, $verein_id) {
                     </div>
                 </div>
             <?php endif; ?>
-            
+
         </div>
     <?php endif; ?>
 </div>
 
 <script>
-// Einklappen/Ausklappen
-function toggleVereinGroup(collapseId) {
-    const content = document.getElementById(collapseId);
-    const icon = document.getElementById('icon-' + collapseId);
-    
-    if (content.style.display === 'none') {
-        content.style.display = 'block';
-        icon.classList.remove('dashicons-arrow-right-alt2');
-        icon.classList.add('dashicons-arrow-down-alt2');
-    } else {
-        content.style.display = 'none';
-        icon.classList.remove('dashicons-arrow-down-alt2');
-        icon.classList.add('dashicons-arrow-right-alt2');
-    }
-}
+    // Einklappen/Ausklappen
+    function toggleVereinGroup(collapseId) {
+        const content = document.getElementById(collapseId);
+        const icon = document.getElementById('icon-' + collapseId);
 
+        if (content.style.display === 'none') {
+            content.style.display = 'block';
+            icon.classList.remove('dashicons-arrow-right-alt2');
+            icon.classList.add('dashicons-arrow-down-alt2');
+        } else {
+            content.style.display = 'none';
+            icon.classList.remove('dashicons-arrow-down-alt2');
+            icon.classList.add('dashicons-arrow-right-alt2');
+        }
+    }
 </script>
 
 <?php

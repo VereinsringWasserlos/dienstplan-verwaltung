@@ -84,6 +84,16 @@ if ($is_restricted_crew) {
     }
 }
 
+$mitbringen_items = array();
+if (!$is_restricted_crew || !empty($crew_allowed_verein_ids)) {
+    $mitbringen_items = $db->get_mitbringen_items(
+        $veranstaltung_id,
+        $verein_id > 0 ? $verein_id : null,
+        '',
+        $is_restricted_crew ? $crew_allowed_verein_ids : array()
+    );
+}
+
 // Lade Veranstaltungstage
 $tage = $db->get_veranstaltung_tage($veranstaltung_id);
 
@@ -103,6 +113,20 @@ foreach ($services as $service) {
     $dienste_nach_tagen[$tag_id][] = $service;
 }
 ksort($dienste_nach_tagen);
+
+$mitbringen_nach_tagen = array();
+foreach ($mitbringen_items as $mitbringen_item) {
+    if (!empty($mitbringen_item->admin_only) && !$can_manage_dienste) {
+        continue;
+    }
+
+    $mitbringen_tag_id = intval($mitbringen_item->tag_id ?? 0);
+    if (!isset($mitbringen_nach_tagen[$mitbringen_tag_id])) {
+        $mitbringen_nach_tagen[$mitbringen_tag_id] = array();
+    }
+    $mitbringen_nach_tagen[$mitbringen_tag_id][] = $mitbringen_item;
+}
+ksort($mitbringen_nach_tagen);
 
 // Bereichsgruppen laden (für Frontend-Gruppierung nach Tätigkeit)
 $alle_bereichsgruppen = $db->get_bereichsgruppen(true); // nur aktive
@@ -210,6 +234,21 @@ if (isset($_GET['dpdebug'])) {
 $dp_debug_enabled = ($dp_debug_query === '1') && current_user_can('manage_options');
 $request_uri = isset($_SERVER['REQUEST_URI']) ? wp_unslash($_SERVER['REQUEST_URI']) : '/';
 $current_request_url = set_url_scheme(home_url($request_uri), is_ssl() ? 'https' : 'http');
+$view_base_url = remove_query_arg(array('view'), $current_request_url);
+$view_kachel_url = add_query_arg(array('view' => 'kachel'), $view_base_url);
+$view_kompakt_url = add_query_arg(array('view' => 'kompakt'), $view_base_url);
+$view_timeline_url = add_query_arg(array('view' => 'timeline'), $view_base_url);
+
+if ($veranstaltung_id > 0) {
+    $admin_dienste_url = add_query_arg(
+        array(
+            'page' => 'dienstplan-dienste',
+            'veranstaltung' => intval($veranstaltung_id),
+            'verein' => intval($verein_id),
+        ),
+        admin_url('admin.php')
+    );
+}
 
 // Status-Anzeige und Anmeldungs-Logik
 $anmeldung_aktiv = ($veranstaltung->status === 'geplant');
@@ -324,9 +363,9 @@ if ($dienst_start_dt !== null && $dienst_end_dt !== null) {
     <?php endif; ?>
 
     <!-- Moderner Header mit optimiertem Layout -->
-    <div class="dp-event-header" style="background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); border-radius: 12px; padding: 2rem; margin-bottom: 2rem; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
-        <div class="dp-event-header-top" style="display: flex; justify-content: space-between; align-items: start; gap: 2rem; flex-wrap: wrap;">
-            <div style="flex: 1; min-width: 300px;">
+    <div class="dp-event-header" style="background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); border-radius: 12px; padding: 1.25rem 1.5rem; margin-bottom: 1.25rem; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+        <div class="dp-event-header-top" style="display: flex; justify-content: space-between; align-items: start; gap: 1.1rem; flex-wrap: wrap;">
+            <div class="dp-header-main" style="flex: 1; min-width: 300px;">
                 <div class="dp-title-row">
                     <h1 class="dp-event-title" style="margin: 0; font-size: 2rem; color: #0f172a;"><?php echo esc_html($veranstaltung->name); ?></h1>
                     <?php if (!empty($dienst_zeitraum_label)): ?>
@@ -336,89 +375,131 @@ if ($dienst_start_dt !== null && $dienst_end_dt !== null) {
                         </div>
                     <?php endif; ?>
                 </div>
-                <div class="dp-header-chip-row" style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
-                    <?php if ($verein_id > 0 && isset($verein)): ?>
-                        <?php
-                        $verein_color = !empty($verein->farbe) ? sanitize_hex_color($verein->farbe) : '#0ea5e9';
-                        if (empty($verein_color)) {
-                            $verein_color = '#0ea5e9';
-                        }
-                        $verein_bg_start = $dp_hex_to_rgba($verein_color, 0.18);
-                        $verein_bg_end = $dp_hex_to_rgba($verein_color, 0.35);
-                        ?>
-                        <div class="dp-header-chip" style="background: linear-gradient(135deg, <?php echo esc_attr($verein_bg_start); ?> 0%, <?php echo esc_attr($verein_bg_end); ?> 100%); border-color: <?php echo esc_attr($verein_color); ?>; color: #0f172a;">
-                            <span class="dashicons dashicons-groups" style="font-size: 16px;"></span>
-                            <span title="<?php echo esc_attr($verein->name); ?>"><?php echo esc_html(!empty($verein->kuerzel) ? $verein->kuerzel : $dp_get_verein_abbrev($verein->name)); ?></span>
-                        </div>
-                    <?php elseif ($verein_id == 0 && !empty($alle_vereine_in_services)): ?>
-                        <?php foreach ($alle_vereine_in_services as $vid => $vname): ?>
-                            <?php
-                            $v_obj = $db->get_verein($vid);
-                            $v_color = (!empty($v_obj) && !empty($v_obj->farbe)) ? sanitize_hex_color($v_obj->farbe) : '#0ea5e9';
-                            if (empty($v_color)) {
-                                $v_color = '#0ea5e9';
-                            }
-                            $v_bg_start = $dp_hex_to_rgba($v_color, 0.18);
-                            $v_bg_end = $dp_hex_to_rgba($v_color, 0.35);
-                            ?>
-                            <div class="dp-header-chip" style="background: linear-gradient(135deg, <?php echo esc_attr($v_bg_start); ?> 0%, <?php echo esc_attr($v_bg_end); ?> 100%); border-color: <?php echo esc_attr($v_color); ?>; color: #0f172a;">
-                                <span class="dashicons dashicons-groups" style="font-size: 14px;"></span>
-                                <span title="<?php echo esc_attr($vname); ?>"><?php echo esc_html(!empty($v_obj->kuerzel) ? $v_obj->kuerzel : $dp_get_verein_abbrev($vname)); ?></span>
-                            </div>
-                        <?php endforeach; ?>
-                    <?php endif; ?>
-
-                    <?php if ($status_message): ?>
-                        <div class="dp-header-chip" style="<?php echo $status_style; ?>">
-                            <span><?php echo $status_icon; ?></span>
-                            <span><?php echo esc_html($status_message); ?></span>
-                        </div>
-                    <?php endif; ?>
-
-                    <?php if ($can_manage_dienste): ?>
-                        <a class="dp-header-chip dp-header-chip-link" style="background: #e0f2fe; border-color: #7dd3fc; color: #0c4a6e;" href="<?php echo esc_url($admin_dienste_url); ?>">
-                            <span class="dashicons dashicons-admin-tools"></span>
-                            <span>Backend</span>
+                <div class="dp-header-view-tools">
+                    <div class="dp-view-toggle dp-view-toggle-header" aria-label="Ansicht wechseln">
+                        <a href="<?php echo esc_url($view_kachel_url); ?>" 
+                           class="dp-view-btn <?php echo $view_mode === 'kachel' ? 'active' : ''; ?>" title="Kachelansicht" aria-label="Kachelansicht">
+                            <span class="dp-view-icon-emoji" aria-hidden="true">&#9638;</span>
+                            <span class="dp-view-btn-text">Kachel</span>
                         </a>
-                    <?php endif; ?>
-
-                    <?php if ($anmeldung_aktiv): ?>
-                        <?php if ($is_logged_in): ?>
-                            <a class="dp-header-chip dp-header-chip-link" style="background: #ffffff; border-color: #fca5a5; color: #991b1b;" href="<?php echo esc_url(wp_logout_url($current_request_url)); ?>">
-                                <span class="dashicons dashicons-unlock"></span>
-                                <span>Ausloggen</span>
-                            </a>
-                        <?php else: ?>
-                            <button type="button" class="dp-header-chip dp-header-chip-link" style="background: #ffffff; border-color: #86efac; color: #166534;" onclick="dpOpenLoginModal()">
-                                <span class="dashicons dashicons-lock"></span>
-                                <span>Einloggen</span>
-                            </button>
-                        <?php endif; ?>
-                    <?php endif; ?>
+                        <a href="<?php echo esc_url($view_kompakt_url); ?>" 
+                           class="dp-view-btn <?php echo $view_mode === 'kompakt' ? 'active' : ''; ?>" title="Kompakte Liste" aria-label="Kompakte Liste">
+                            <span class="dp-view-icon-emoji" aria-hidden="true">&#8801;</span>
+                            <span class="dp-view-btn-text">Kompakt</span>
+                        </a>
+                        <a href="<?php echo esc_url($view_timeline_url); ?>" 
+                           class="dp-view-btn <?php echo $view_mode === 'timeline' ? 'active' : ''; ?>" title="Timeline" aria-label="Timeline">
+                            <span class="dp-view-icon-emoji" aria-hidden="true">&#8644;</span>
+                            <span class="dp-view-btn-text">Timeline</span>
+                        </a>
+                    </div>
                 </div>
             </div>
 
-            <div class="dp-header-view-tools">
-                <div class="dp-view-toggle dp-view-toggle-header" aria-label="Ansicht wechseln">
-                    <a href="?veranstaltung_id=<?php echo $veranstaltung_id; ?><?php echo ($verein_id > 0 ? '&verein_id=' . $verein_id : ''); ?>&view=kachel" 
-                       class="dp-view-btn <?php echo $view_mode === 'kachel' ? 'active' : ''; ?>" title="Kachelansicht" aria-label="Kachelansicht">
-                        <span class="dp-view-icon-emoji dashicons dashicons-screenoptions" aria-hidden="true"></span>
-                        <span class="dp-view-btn-text">Kachel</span>
+            <div class="dp-header-chip-row" style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
+                <?php if ($verein_id > 0 && isset($verein)): ?>
+                    <?php
+                    $verein_color = !empty($verein->farbe) ? sanitize_hex_color($verein->farbe) : '#0ea5e9';
+                    if (empty($verein_color)) {
+                        $verein_color = '#0ea5e9';
+                    }
+                    $verein_bg_start = $dp_hex_to_rgba($verein_color, 0.18);
+                    $verein_bg_end = $dp_hex_to_rgba($verein_color, 0.35);
+                    ?>
+                    <div class="dp-header-chip" style="background: linear-gradient(135deg, <?php echo esc_attr($verein_bg_start); ?> 0%, <?php echo esc_attr($verein_bg_end); ?> 100%); border-color: <?php echo esc_attr($verein_color); ?>; color: #0f172a;">
+                        <span class="dashicons dashicons-groups" style="font-size: 16px;"></span>
+                        <span title="<?php echo esc_attr($verein->name); ?>"><?php echo esc_html(!empty($verein->kuerzel) ? $verein->kuerzel : $dp_get_verein_abbrev($verein->name)); ?></span>
+                    </div>
+                <?php elseif ($verein_id == 0 && !empty($alle_vereine_in_services)): ?>
+                    <?php foreach ($alle_vereine_in_services as $vid => $vname): ?>
+                        <?php
+                        $v_obj = $db->get_verein($vid);
+                        $v_color = (!empty($v_obj) && !empty($v_obj->farbe)) ? sanitize_hex_color($v_obj->farbe) : '#0ea5e9';
+                        if (empty($v_color)) {
+                            $v_color = '#0ea5e9';
+                        }
+                        $v_bg_start = $dp_hex_to_rgba($v_color, 0.18);
+                        $v_bg_end = $dp_hex_to_rgba($v_color, 0.35);
+                        ?>
+                        <div class="dp-header-chip" style="background: linear-gradient(135deg, <?php echo esc_attr($v_bg_start); ?> 0%, <?php echo esc_attr($v_bg_end); ?> 100%); border-color: <?php echo esc_attr($v_color); ?>; color: #0f172a;">
+                            <span class="dashicons dashicons-groups" style="font-size: 14px;"></span>
+                            <span title="<?php echo esc_attr($vname); ?>"><?php echo esc_html(!empty($v_obj->kuerzel) ? $v_obj->kuerzel : $dp_get_verein_abbrev($vname)); ?></span>
+                        </div>
+                    <?php endforeach; ?>
+                <?php endif; ?>
+
+                <?php if ($status_message): ?>
+                    <div class="dp-header-chip" style="<?php echo $status_style; ?>">
+                        <span><?php echo $status_icon; ?></span>
+                        <span><?php echo esc_html($status_message); ?></span>
+                    </div>
+                <?php endif; ?>
+
+                <?php if ($can_manage_dienste): ?>
+                    <a class="dp-header-chip dp-header-chip-link" style="background: #e0f2fe; border-color: #7dd3fc; color: #0c4a6e;" href="<?php echo esc_url($admin_dienste_url); ?>">
+                        <span class="dashicons dashicons-admin-tools"></span>
+                        <span>Backend</span>
                     </a>
-                    <a href="?veranstaltung_id=<?php echo $veranstaltung_id; ?><?php echo ($verein_id > 0 ? '&verein_id=' . $verein_id : ''); ?>&view=kompakt" 
-                       class="dp-view-btn <?php echo $view_mode === 'kompakt' ? 'active' : ''; ?>" title="Kompakte Liste" aria-label="Kompakte Liste">
-                        <span class="dp-view-icon-emoji dashicons dashicons-list-view" aria-hidden="true"></span>
-                        <span class="dp-view-btn-text">Kompakt</span>
-                    </a>
-                    <a href="?veranstaltung_id=<?php echo $veranstaltung_id; ?><?php echo ($verein_id > 0 ? '&verein_id=' . $verein_id : ''); ?>&view=timeline" 
-                       class="dp-view-btn <?php echo $view_mode === 'timeline' ? 'active' : ''; ?>" title="Timeline" aria-label="Timeline">
-                        <span class="dp-view-icon-emoji dashicons dashicons-chart-bar" aria-hidden="true"></span>
-                        <span class="dp-view-btn-text">Timeline</span>
-                    </a>
-                </div>
+                <?php endif; ?>
+
+                <?php if ($anmeldung_aktiv): ?>
+                    <?php if ($is_logged_in): ?>
+                        <a class="dp-header-chip dp-header-chip-link" style="background: #ffffff; border-color: #fca5a5; color: #991b1b;" href="<?php echo esc_url(wp_logout_url($current_request_url)); ?>">
+                            <span class="dashicons dashicons-unlock"></span>
+                            <span>Ausloggen</span>
+                        </a>
+                    <?php else: ?>
+                        <button type="button" class="dp-header-chip dp-header-chip-link" style="background: #ffffff; border-color: #86efac; color: #166534;" onclick="dpOpenLoginModal()">
+                            <span class="dashicons dashicons-lock"></span>
+                            <span>Einloggen</span>
+                        </button>
+                    <?php endif; ?>
+                <?php endif; ?>
             </div>
         </div>
     </div>
+
+    <?php if (!empty($mitbringen_nach_tagen)): ?>
+        <?php
+        $mitbringen_total = 0;
+        $mitbringen_offen = 0;
+        $mitbringen_vergeben = 0;
+        $mitbringen_first_tag_id = 0;
+        foreach ($mitbringen_nach_tagen as $mb_tag_id => $mb_items) {
+            if ($mitbringen_first_tag_id === 0) {
+                $mitbringen_first_tag_id = intval($mb_tag_id);
+            }
+            foreach ($mb_items as $mb_item) {
+                $mitbringen_total++;
+                if (($mb_item->status ?? 'offen') === 'vergeben') {
+                    $mitbringen_vergeben++;
+                } else {
+                    $mitbringen_offen++;
+                }
+            }
+        }
+        ?>
+        <div class="dp-mitbringen-list" style="margin: 0 0 1.5rem 0;">
+            <div class="dp-mitbringen-summary-card">
+                <div class="dp-mitbringen-summary-title">
+                    <span class="dashicons dashicons-cart" style="font-size: 1.25rem;"></span>
+                    <strong><?php _e('Mitbringen', 'dienstplan-verwaltung'); ?></strong>
+                </div>
+                <div class="dp-mitbringen-summary-stats">
+                    <span class="dp-mitbringen-stat"><?php echo intval($mitbringen_total); ?> gesamt</span>
+                    <span class="dp-mitbringen-stat is-open"><?php echo intval($mitbringen_offen); ?> offen</span>
+                    <span class="dp-mitbringen-stat is-done"><?php echo intval($mitbringen_vergeben); ?> vergeben</span>
+                </div>
+                <button
+                    type="button"
+                    class="dp-btn-secondary"
+                    onclick="dpOpenMitbringenModal(<?php echo intval($mitbringen_first_tag_id); ?>)"
+                >
+                    Mitbringen anzeigen
+                </button>
+            </div>
+        </div>
+    <?php endif; ?>
     
     <?php 
     // Kontaktinformationen bei Status "aktiv" anzeigen (für Absagen)
@@ -500,7 +581,9 @@ if ($dienst_start_dt !== null && $dienst_end_dt !== null) {
     <?php
     $filter_tage = array();
     $filter_tag_counter = 1;
-    foreach (array_keys($dienste_nach_tagen) as $filter_tag_id) {
+    $filter_tag_ids = array_unique(array_merge(array_keys($dienste_nach_tagen), array_keys($mitbringen_nach_tagen)));
+    sort($filter_tag_ids);
+    foreach ($filter_tag_ids as $filter_tag_id) {
         $filter_tag_obj = null;
         foreach ($tage as $filter_tag_item) {
             if (intval($filter_tag_item->id) === intval($filter_tag_id)) {
@@ -754,7 +837,10 @@ if ($dienst_start_dt !== null && $dienst_end_dt !== null) {
     }
 
     .dp-view-toggle-header .dp-view-btn-text {
-        display: none;
+        display: inline;
+        font-size: 0.85rem;
+        font-weight: 600;
+        line-height: 1;
     }
 
     .dp-view-icon-emoji {
@@ -946,9 +1032,9 @@ if ($dienst_start_dt !== null && $dienst_end_dt !== null) {
         </div>
     </div>
 
-    <?php if (empty($services)): ?>
+    <?php if (empty($services) && empty($mitbringen_items)): ?>
         <div class="dp-notice dp-notice-info" style="padding: 2rem; text-align: center; background: #f0f9ff; border: 1px solid #0ea5e9; border-radius: 8px;">
-            <p><strong>Keine Dienste verfügbar<?php echo ($verein_id > 0 ? ' für ' . esc_html($verein->name) : ''); ?>.</strong></p>
+            <p><strong>Keine Dienste oder Mitbringen-Einträge verfügbar<?php echo ($verein_id > 0 ? ' für ' . esc_html($verein->name) : ''); ?>.</strong></p>
         </div>
     <?php else: ?>
         
@@ -1353,18 +1439,12 @@ if ($dienst_start_dt !== null && $dienst_end_dt !== null) {
                                     }
                                     $dienst_von          = $dienst->von_zeit ?? ($dienst->zeit_von ?? '');
                                     $dienst_bis          = $dienst->bis_zeit ?? ($dienst->zeit_bis ?? '');
-                                    $dienst_typ          = $dienst->dienst_typ ?? 'dienst';
-                                    $is_mitbringen       = ($dienst_typ === 'mitbringen');
                                     $dienst_beschreibung = $dienst->beschreibung ?? ($dienst->besonderheiten ?? '');
                                     $effective_admin_only = (!empty($dienst->admin_only) || !empty($taetigkeit->admin_only));
                                 ?>
                                     <tr class="dp-dienst-row" data-tag-id="<?php echo intval($tag_id); ?>" data-dienst-id="<?php echo $dienst->id; ?>" data-bereich-id="<?php echo intval($dienst->bereich_id); ?>" data-taetigkeit-id="<?php echo intval($dienst->taetigkeit_id); ?>" data-admin-only="<?php echo $effective_admin_only ? '1' : '0'; ?>" data-has-free="<?php echo $freie_slots > 0 ? '1' : '0'; ?>" data-has-mine="<?php echo $has_my_slot ? '1' : '0'; ?>">
                                         <td class="col-zeit">
-                                            <?php if ($is_mitbringen): ?>
-                                                <strong><?php _e('Mitbringen', 'dienstplan-verwaltung'); ?></strong>
-                                            <?php else: ?>
-                                                <strong><?php echo substr($dienst_von, 0, 5) . ' - ' . substr($dienst_bis, 0, 5); ?></strong>
-                                            <?php endif; ?>
+                                            <strong><?php echo substr($dienst_von, 0, 5) . ' - ' . substr($dienst_bis, 0, 5); ?></strong>
                                         </td>
                                         <td class="col-bereich">
                                             <span class="dp-bereich-badge" style="background-color:<?php echo esc_attr($bereich->farbe ?? '#e2e8f0'); ?>;">
@@ -1468,6 +1548,14 @@ if ($dienst_start_dt !== null && $dienst_end_dt !== null) {
                                         $bereich = $db->get_bereich($dienst->bereich_id);
                                         $taetigkeit = $db->get_taetigkeit($dienst->taetigkeit_id);
                                         $freie_slots = count(array_filter($slots, function($s) { return empty($s->mitarbeiter_id); }));
+                                        $sorted_slots = $slots;
+                                        usort($sorted_slots, function($a, $b) {
+                                            return intval($a->slot_nummer ?? 0) <=> intval($b->slot_nummer ?? 0);
+                                        });
+                                        $split_slot_primary_id = !empty($sorted_slots[0]) ? intval($sorted_slots[0]->id) : 0;
+                                        $split_slot_secondary_id = !empty($sorted_slots[1]) ? intval($sorted_slots[1]->id) : 0;
+                                        $is_split_dienst = (intval($dienst->splittbar ?? 0) === 1) && $split_slot_primary_id > 0 && $split_slot_secondary_id > 0;
+                                        $show_split_slot_wahl = $is_split_dienst && $freie_slots >= 2;
                                         $has_my_slot = ($current_mitarbeiter_id > 0) ? count(array_filter($slots, function($s) use ($current_mitarbeiter_id) {
                                             return intval($s->mitarbeiter_id ?? 0) === intval($current_mitarbeiter_id);
                                         })) > 0 : false;
@@ -1479,10 +1567,8 @@ if ($dienst_start_dt !== null && $dienst_end_dt !== null) {
                                                 <?php
                                                 $dienst_von = $dienst->von_zeit ?? ($dienst->zeit_von ?? '');
                                                 $dienst_bis = $dienst->bis_zeit ?? ($dienst->zeit_bis ?? '');
-                                        $dienst_typ = $dienst->dienst_typ ?? 'dienst';
-                                        $is_mitbringen = ($dienst_typ === 'mitbringen');
                                         ?>
-                                        <div class="dp-dienst-time-big"><?php echo $is_mitbringen ? __('Mitbringen', 'dienstplan-verwaltung') : (substr($dienst_von, 0, 5) . ' - ' . substr($dienst_bis, 0, 5)); ?></div>
+                                        <div class="dp-dienst-time-big"><?php echo substr($dienst_von, 0, 5) . ' - ' . substr($dienst_bis, 0, 5); ?></div>
                                         <span class="dp-bereich-badge" style="background-color: <?php echo esc_attr($bereich->farbe ?? '#e2e8f0'); ?>">
                                             <?php echo esc_html($bereich->name ?? ''); ?>
                                         </span>
@@ -1532,6 +1618,13 @@ if ($dienst_start_dt !== null && $dienst_end_dt !== null) {
                                                 <?php else: ?>
                                                     <?php if ($anmeldung_aktiv): ?>
                                                         <?php $dienst_btn_color = $dp_get_verein_color($dienst); ?>
+                                                        <?php
+                                                            $slot_id_int = intval($slot->id ?? 0);
+                                                            $slot_partner_id = 0;
+                                                            if ($show_split_slot_wahl) {
+                                                                $slot_partner_id = ($slot_id_int === $split_slot_primary_id) ? $split_slot_secondary_id : $split_slot_primary_id;
+                                                            }
+                                                        ?>
                                                         <?php $is_admin_only_blocked = $effective_admin_only && !$can_manage_dienste; ?>
                                                         <?php if ($is_admin_only_blocked): ?>
                                                             <span class="dp-slot-admin-only" style="color: #d97706; font-size: 0.875rem; display: flex; align-items: center; gap: 0.4rem; cursor: not-allowed; opacity: 0.6;">
@@ -1539,7 +1632,7 @@ if ($dienst_start_dt !== null && $dienst_end_dt !== null) {
                                                                 Admin-only
                                                             </span>
                                                         <?php else: ?>
-                                                            <span class="dp-slot-offen-label" style="--dp-btn-accent:<?php echo esc_attr($dienst_btn_color); ?>;" onclick="return dpOpenTakeoverModal(<?php echo intval($slot->id); ?>, <?php echo intval($dienst->id); ?>, event);" title="<?php echo $is_admin_only_blocked ? 'Nur Admins können diese Tätigkeit zuweisen' : 'Dienst übernehmen'; ?>">
+                                                            <span class="dp-slot-offen-label" style="--dp-btn-accent:<?php echo esc_attr($dienst_btn_color); ?>;" onclick="return dpOpenTakeoverModal(<?php echo $slot_id_int; ?>, <?php echo intval($dienst->id); ?>, event, <?php echo intval($slot_partner_id); ?>, <?php echo $show_split_slot_wahl ? 1 : 0; ?>);" title="<?php echo $is_admin_only_blocked ? 'Nur Admins können diese Tätigkeit zuweisen' : 'Dienst übernehmen'; ?>">
                                                                 <span class="dashicons dashicons-unlock"></span>
                                                                 Übernehmen
                                                             </span>
@@ -1562,6 +1655,112 @@ if ($dienst_start_dt !== null && $dienst_end_dt !== null) {
                 <?php endforeach; // dienste_nach_tagen ?>
             </div><!-- .dp-dienste-list -->
         <?php endif; ?>
+    <?php endif; ?>
+
+    <?php if (!empty($mitbringen_nach_tagen)): ?>
+        <div id="dp-mitbringen-modal" class="dp-modal" style="display: none;">
+            <div class="dp-modal-content dp-mitbringen-modal-content">
+                <div class="dp-modal-header">
+                    <h2>Mitbringen-Übersicht</h2>
+                    <button class="dp-modal-close" onclick="dpCloseMitbringenModal()">&times;</button>
+                </div>
+                <div class="dp-modal-body">
+                    <div class="dp-mitbringen-tabs">
+                        <?php foreach ($mitbringen_nach_tagen as $mitbringen_tag_id => $mitbringen_tag_items): ?>
+                            <?php
+                            $mitbringen_tag_obj = $tage_by_id[intval($mitbringen_tag_id)] ?? null;
+                            $mitbringen_tag_raw = $mitbringen_tag_obj->tag_datum ?? ($mitbringen_tag_obj->datum ?? null);
+                            $mitbringen_tag_label = $mitbringen_tag_raw ? date('d.m.Y', strtotime($mitbringen_tag_raw)) : __('Ohne Tag', 'dienstplan-verwaltung');
+                            ?>
+                            <button
+                                type="button"
+                                class="dp-mitbringen-tab"
+                                data-mitbringen-tag="<?php echo intval($mitbringen_tag_id); ?>"
+                                onclick="dpSwitchMitbringenTag(<?php echo intval($mitbringen_tag_id); ?>)"
+                            >
+                                <?php echo esc_html($mitbringen_tag_label); ?>
+                            </button>
+                        <?php endforeach; ?>
+                    </div>
+
+                    <?php foreach ($mitbringen_nach_tagen as $mitbringen_tag_id => $mitbringen_tag_items): ?>
+                        <?php
+                        $mitbringen_tag_obj = $tage_by_id[intval($mitbringen_tag_id)] ?? null;
+                        $mitbringen_tag_raw = $mitbringen_tag_obj->tag_datum ?? ($mitbringen_tag_obj->datum ?? null);
+                        $mitbringen_tag_label = $mitbringen_tag_raw ? date('d.m.Y', strtotime($mitbringen_tag_raw)) : __('Ohne Tag', 'dienstplan-verwaltung');
+                        ?>
+                        <div class="dp-mitbringen-panel" data-mitbringen-panel="<?php echo intval($mitbringen_tag_id); ?>" style="display:none;">
+                            <h3 class="dp-day-title" style="border-left-color: #0f766e;"><?php echo esc_html($mitbringen_tag_label); ?></h3>
+                            <table class="dp-dienste-table">
+                                <thead>
+                                    <tr>
+                                        <th><?php _e('Bereich', 'dienstplan-verwaltung'); ?></th>
+                                        <th><?php _e('Mitbringen', 'dienstplan-verwaltung'); ?></th>
+                                        <th><?php _e('Menge', 'dienstplan-verwaltung'); ?></th>
+                                        <th><?php _e('Person', 'dienstplan-verwaltung'); ?></th>
+                                        <th><?php _e('Hinweis', 'dienstplan-verwaltung'); ?></th>
+                                        <th><?php _e('Status', 'dienstplan-verwaltung'); ?></th>
+                                        <th><?php _e('Aktion', 'dienstplan-verwaltung'); ?></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php foreach ($mitbringen_tag_items as $mitbringen_item): ?>
+                                        <?php
+                                        $mitbringen_status = ($mitbringen_item->status ?? 'offen') === 'vergeben' ? __('Vergeben', 'dienstplan-verwaltung') : __('Offen', 'dienstplan-verwaltung');
+                                        $mitbringen_status_class = ($mitbringen_item->status ?? 'offen') === 'vergeben' ? 'full' : 'open';
+                                        $menge_value = intval($mitbringen_item->menge ?? 1);
+                                        $einheit_value = trim((string) ($mitbringen_item->einheit ?? ''));
+                                        $is_my_mitbringen = ($current_mitarbeiter_id > 0 && intval($mitbringen_item->mitarbeiter_id ?? 0) === intval($current_mitarbeiter_id));
+                                        ?>
+                                        <tr>
+                                            <td><?php echo esc_html($mitbringen_item->mitbringen_bereich_name ?? ''); ?></td>
+                                            <td><strong><?php echo esc_html($mitbringen_item->bezeichnung ?? ''); ?></strong></td>
+                                            <td><?php echo esc_html($menge_value . ($einheit_value !== '' ? ' ' . $einheit_value : '')); ?></td>
+                                            <td>
+                                                <?php if (!empty(trim((string) ($mitbringen_item->mitarbeiter_name ?? '')))): ?>
+                                                    <?php echo esc_html(trim((string) $mitbringen_item->mitarbeiter_name)); ?>
+                                                <?php else: ?>
+                                                    <span class="dp-empty">—</span>
+                                                <?php endif; ?>
+                                            </td>
+                                            <td>
+                                                <?php if (!empty($mitbringen_item->hinweis)): ?>
+                                                    <span class="dp-dienst-hint"><?php echo esc_html($mitbringen_item->hinweis); ?></span>
+                                                <?php else: ?>
+                                                    <span class="dp-empty">—</span>
+                                                <?php endif; ?>
+                                                <?php if (!empty($mitbringen_item->besetzung_info)): ?>
+                                                    <div style="margin-top: 0.25rem;"><span class="dp-dienst-hint"><?php echo esc_html($mitbringen_item->besetzung_info); ?></span></div>
+                                                <?php endif; ?>
+                                            </td>
+                                            <td><span class="dp-status-badge <?php echo esc_attr($mitbringen_status_class); ?>"><?php echo esc_html($mitbringen_status); ?></span></td>
+                                            <td>
+                                                <?php if (($mitbringen_item->status ?? 'offen') === 'offen'): ?>
+                                                    <button
+                                                        type="button"
+                                                        class="dp-btn-mitbringen-uebernehmen"
+                                                        data-mitbringen-id="<?php echo intval($mitbringen_item->id); ?>"
+                                                    >
+                                                        Übernehmen
+                                                    </button>
+                                                <?php elseif ($is_my_mitbringen): ?>
+                                                    <span class="dp-mitbringen-action-own">von dir</span>
+                                                <?php else: ?>
+                                                    <span class="dp-empty">—</span>
+                                                <?php endif; ?>
+                                            </td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+                <div class="dp-modal-footer">
+                    <button type="button" class="dp-btn-secondary" onclick="dpCloseMitbringenModal()">Schließen</button>
+                </div>
+            </div>
+        </div>
     <?php endif; ?>
 </div>
 
@@ -1586,6 +1785,7 @@ window.dpTrace = function(message, payload) {
 };
 
 window.dpTrace('Script geladen: veranstaltung-verein');
+document.body.classList.add('dp-shortcode-page');
 window.dpLoggedIn = <?php echo $is_logged_in ? 'true' : 'false'; ?>;
 window.dpCanManageDienste = <?php echo $can_manage_dienste ? 'true' : 'false'; ?>;
 <?php if ($can_manage_dienste): ?>window.dpAdminNonce = '<?php echo esc_js(wp_create_nonce('dp_ajax_nonce')); ?>';<?php endif; ?>
@@ -1659,7 +1859,9 @@ window.dpOpenTakeoverModal = function(slotId, dienstId, event, slot2Id, isSplitt
         return false;
     }
 
-    if (window.dpLoggedIn) {
+    // Im Frontend soll nur die Admin-Rolle das Zuweisungs-Modal sehen.
+    // Normale Mitarbeiter nutzen immer das Eingabe-Modal.
+    if (window.dpLoggedIn && window.dpCanManageDienste) {
         return window.dpOpenLoggedInModal(slotId, dienstId, event, slot2Id, showSplitChoice);
     }
 
@@ -1781,6 +1983,57 @@ window.dpCloseLoggedInModal = function() {
     if (form) {
         form.reset();
     }
+};
+
+window.dpSwitchMitbringenTag = function(tagId) {
+    tagId = parseInt(tagId || '0', 10);
+    if (!tagId) {
+        return;
+    }
+
+    document.querySelectorAll('.dp-mitbringen-tab').forEach(function(tab) {
+        var isActive = parseInt(tab.getAttribute('data-mitbringen-tag') || '0', 10) === tagId;
+        tab.classList.toggle('active', isActive);
+    });
+
+    document.querySelectorAll('.dp-mitbringen-panel').forEach(function(panel) {
+        var isActive = parseInt(panel.getAttribute('data-mitbringen-panel') || '0', 10) === tagId;
+        panel.style.display = isActive ? '' : 'none';
+    });
+};
+
+window.dpOpenMitbringenModal = function(tagId) {
+    var modal = document.getElementById('dp-mitbringen-modal');
+    if (!modal) {
+        return false;
+    }
+
+    modal.classList.add('dp-modal-force-open');
+    modal.style.setProperty('display', 'block', 'important');
+    modal.style.setProperty('visibility', 'visible', 'important');
+    modal.style.setProperty('opacity', '1', 'important');
+    jQuery('#dp-mitbringen-modal').stop(true, true).fadeIn(150);
+    jQuery('body').css('overflow', 'hidden');
+
+    var firstTab = document.querySelector('.dp-mitbringen-tab');
+    var firstTagId = firstTab ? parseInt(firstTab.getAttribute('data-mitbringen-tag') || '0', 10) : 0;
+    window.dpSwitchMitbringenTag(tagId || firstTagId);
+    return false;
+};
+
+window.dpCloseMitbringenModal = function() {
+    var modal = document.getElementById('dp-mitbringen-modal');
+    if (modal) {
+        modal.classList.remove('dp-modal-force-open');
+    }
+    jQuery('#dp-mitbringen-modal').stop(true, true).fadeOut(150, function() {
+        if (modal) {
+            modal.style.setProperty('display', 'none', 'important');
+            modal.style.removeProperty('visibility');
+            modal.style.removeProperty('opacity');
+        }
+    });
+    jQuery('body').css('overflow', 'auto');
 };
 
 window.dpApplyAdminMitarbeiterSelection = function() {
@@ -1930,7 +2183,7 @@ function dpApplyFrontendFilters() {
         item.style.display = show ? '' : 'none';
     });
 
-    document.querySelectorAll('.dp-day-section').forEach(function(section) {
+    document.querySelectorAll('.dp-dienste-list .dp-day-section').forEach(function(section) {
         var sectionTag = section.getAttribute('data-tag-id') || '';
         var visibleCards = section.querySelectorAll('.dp-dienst-card:not([style*="display: none"])').length;
         var tagMatches = (tag === 'all' || sectionTag === tag);
@@ -2581,13 +2834,148 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
+    jQuery(document).on('click', '#dp-mitbringen-modal', function(e) {
+        if (e.target === this) {
+            dpCloseMitbringenModal();
+        }
+    });
+
+    jQuery(document).on('click', '.dp-btn-mitbringen-uebernehmen', function() {
+        var btn = jQuery(this);
+        var mitbringenId = parseInt(btn.data('mitbringen-id') || 0, 10);
+
+        if (!mitbringenId) {
+            alert('Mitbringen-ID fehlt.');
+            return;
+        }
+
+        window.dpMitbringenTakeoverBtn = btn;
+        window.dpMitbringenTakeover = { mitbringenId: mitbringenId };
+        dpOpenMitbringenTakeoverModal();
+    });
+
+    window.dpOpenMitbringenTakeoverModal = function() {
+        var modal = document.getElementById('dp-mitbringen-takeover-modal');
+        if (!modal) {
+            alert('Übernahme-Modal nicht verfügbar.');
+            return;
+        }
+        jQuery('#dp-mitbringen-takeover-vorname').val('').focus();
+        jQuery('#dp-mitbringen-takeover-nachname').val('');
+        jQuery('#dp-mitbringen-takeover-beschreibung').val('');
+        jQuery(modal).fadeIn(200);
+    };
+
+    window.dpCloseMitbringenTakeoverModal = function() {
+        jQuery('#dp-mitbringen-takeover-modal').fadeOut(200);
+        window.dpMitbringenTakeover = null;
+    };
+
+    jQuery('#dp-mitbringen-takeover-submit').on('click', function() {
+        var vorname = jQuery('#dp-mitbringen-takeover-vorname').val().trim();
+        var nachname = jQuery('#dp-mitbringen-takeover-nachname').val().trim();
+        var beschreibung = jQuery('#dp-mitbringen-takeover-beschreibung').val().trim();
+        var dpConfig = window.dpPublic || window.dpAjax || null;
+
+        if (!vorname) {
+            alert('Bitte Vorname eingeben.');
+            jQuery('#dp-mitbringen-takeover-vorname').focus();
+            return;
+        }
+        if (!nachname) {
+            alert('Bitte Nachname eingeben.');
+            jQuery('#dp-mitbringen-takeover-nachname').focus();
+            return;
+        }
+        if (!beschreibung) {
+            alert('Bitte beschreiben, was du mitbringst.');
+            jQuery('#dp-mitbringen-takeover-beschreibung').focus();
+            return;
+        }
+        if (!dpConfig || !dpConfig.ajaxurl || !dpConfig.nonce) {
+            alert('Konfiguration fehlt. Bitte Seite neu laden.');
+            return;
+        }
+
+        var btn = window.dpMitbringenTakeoverBtn;
+        var mitbringenId = (window.dpMitbringenTakeover || {}).mitbringenId || 0;
+        var originalText = btn.text();
+        btn.prop('disabled', true).text('Wird übernommen...');
+        dpCloseMitbringenTakeoverModal();
+
+        jQuery.ajax({
+            url: dpConfig.ajaxurl,
+            type: 'POST',
+            data: {
+                action: 'dp_take_mitbringen_item',
+                nonce: dpConfig.nonce,
+                mitbringen_id: mitbringenId,
+                vorname: vorname,
+                nachname: nachname,
+                mitbringen_beschreibung: beschreibung
+            },
+            success: function(response) {
+                if (response && response.success) {
+                    alert((response.data && response.data.message) ? response.data.message : 'Mitbringen übernommen.');
+                    window.location.reload();
+                    return;
+                }
+                var message = (response && response.data && response.data.message) ? response.data.message : 'Übernahme fehlgeschlagen.';
+                alert(message);
+                btn.prop('disabled', false).text(originalText);
+            },
+            error: function(xhr) {
+                var serverHint = '';
+                if (xhr && xhr.responseText) {
+                    serverHint = '\n\nServer-Antwort: ' + String(xhr.responseText).replace(/\s+/g, ' ').substring(0, 220);
+                }
+                alert('Serverfehler bei der Mitbringen-Übernahme.' + serverHint);
+                btn.prop('disabled', false).text(originalText);
+            }
+        });
+    });
+
     jQuery(document).on('keydown', function(e) {
         if (e.key === 'Escape' && jQuery('#dp-login-modal').is(':visible')) {
             dpCloseLoginModal();
         }
+        if (e.key === 'Escape' && jQuery('#dp-mitbringen-modal').is(':visible')) {
+            dpCloseMitbringenModal();
+        }
+        if (e.key === 'Escape' && jQuery('#dp-mitbringen-takeover-modal').is(':visible')) {
+            dpCloseMitbringenTakeoverModal();
+        }
     });
 });
 </script>
+
+<!-- Mitbringen-Übernahme Modal -->
+<div id="dp-mitbringen-takeover-modal" class="dp-modal" style="display: none;">
+    <div class="dp-modal-content" style="max-width: 500px;">
+        <div class="dp-modal-header">
+            <h2>Mitbringen übernehmen</h2>
+            <button type="button" class="dp-modal-close" onclick="dpCloseMitbringenTakeoverModal()">&times;</button>
+        </div>
+        <div class="dp-modal-body">
+            <div class="dp-form-group">
+                <label for="dp-mitbringen-takeover-vorname">Vorname *</label>
+                <input type="text" id="dp-mitbringen-takeover-vorname" placeholder="Dein Vorname" required>
+            </div>
+            <div class="dp-form-group">
+                <label for="dp-mitbringen-takeover-nachname">Nachname *</label>
+                <input type="text" id="dp-mitbringen-takeover-nachname" placeholder="Dein Nachname" required>
+            </div>
+            <div class="dp-form-group">
+                <label for="dp-mitbringen-takeover-beschreibung">Was bringst du mit? *</label>
+                <input type="text" id="dp-mitbringen-takeover-beschreibung" placeholder="z. B. Käsekuchen" required>
+            </div>
+        </div>
+        <div class="dp-modal-footer">
+            <button type="button" class="dp-btn-secondary" onclick="dpCloseMitbringenTakeoverModal()">Abbrechen</button>
+            <button type="button" id="dp-mitbringen-takeover-submit" class="dp-btn-primary" style="margin-left: 0.5rem;">Übernehmen</button>
+        </div>
+    </div>
+</div>
 
 <!-- Anmelde-Modal (wird vom JavaScript eingefügt) -->
 <div id="dp-anmelde-modal" class="dp-modal" style="display: none;">
@@ -2800,12 +3188,33 @@ document.addEventListener('DOMContentLoaded', function() {
         display: none !important;
     }
 
+    body.dp-shortcode-page .entry-header,
+    body.dp-shortcode-page .page-header,
+    body.dp-shortcode-page .ast-archive-description,
+    body.dp-shortcode-page .entry-title,
+    body.dp-shortcode-page .page-title,
+    body.dp-shortcode-page .elementor-page-title,
+    body.dp-shortcode-page .wp-block-post-title {
+        display: none !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        min-height: 0 !important;
+    }
+
+    body.dp-shortcode-page .site-content,
+    body.dp-shortcode-page .content-area,
+    body.dp-shortcode-page .site-main,
+    body.dp-shortcode-page .entry-content {
+        margin-top: 0 !important;
+        padding-top: 0 !important;
+    }
+
     .dp-frontend-container.dp-verein-specific {
         width: 100%;
         max-width: none;
         margin-left: 0;
         margin-right: 0;
-        padding: 1.5rem;
+        padding: 0.6rem 1.5rem 1.5rem;
         overflow-x: clip;
         box-sizing: border-box;
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
@@ -2820,9 +3229,44 @@ document.addEventListener('DOMContentLoaded', function() {
     .dp-title-row {
         display: flex;
         align-items: center;
+        justify-content: center;
         gap: 0.75rem;
         flex-wrap: wrap;
-        margin: 0 0 1rem 0;
+        margin: 0 0 0.55rem 0;
+        text-align: center;
+    }
+
+    .dp-event-header-top {
+        display: grid !important;
+        grid-template-columns: minmax(0, 1fr) auto !important;
+        align-items: start !important;
+        gap: 1.2rem !important;
+        width: 100%;
+    }
+
+    .dp-header-main {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.4rem;
+        min-width: 0;
+        width: 100%;
+    }
+
+    .dp-header-chip-row {
+        display: flex;
+        flex-direction: column;
+        gap: 0.4rem !important;
+        align-items: flex-end !important;
+        justify-content: flex-start !important;
+        flex-wrap: nowrap;
+        min-width: 260px;
+        max-width: 420px;
+        margin-left: auto;
+    }
+
+    .dp-event-header {
+        margin-top: 0 !important;
     }
 
     .dp-title-chip {
@@ -2849,7 +3293,7 @@ document.addEventListener('DOMContentLoaded', function() {
             max-width: none;
             margin-left: 0;
             margin-right: 0;
-            padding: 1rem;
+            padding: 0.35rem 1rem 1rem;
         }
 
         .dp-event-header {
@@ -2859,7 +3303,14 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         .dp-event-header-top {
+            display: flex !important;
+            flex-direction: column;
+            align-items: stretch !important;
             gap: 0.8rem !important;
+        }
+
+        .dp-header-main {
+            align-items: flex-start;
         }
 
         .dp-event-title {
@@ -2868,8 +3319,10 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         .dp-title-row {
+            justify-content: flex-start;
             gap: 0.45rem;
             margin-bottom: 0.65rem;
+            text-align: left;
         }
 
         .dp-title-chip {
@@ -2886,7 +3339,12 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         .dp-header-chip-row {
+            flex-direction: row;
+            align-items: center !important;
+            justify-content: flex-start !important;
+            flex-wrap: wrap;
             gap: 0.5rem !important;
+            margin-left: 0;
         }
 
         .dp-header-chip {
@@ -2910,64 +3368,71 @@ document.addEventListener('DOMContentLoaded', function() {
     
     .dp-view-toggle {
         display: flex;
-        gap: 0.5rem;
-        margin-bottom: 1.5rem;
+        gap: 0.35rem;
+        margin-bottom: 0;
         flex-wrap: wrap;
         background: #f8fafc;
-        border: 1px solid #e2e8f0;
-        border-radius: 12px;
-        padding: 0.45rem;
+        border: 1px solid #dbe3ee;
+        border-radius: 10px;
+        padding: 0.3rem;
         width: fit-content;
     }
 
     .dp-view-toggle-header {
         margin-bottom: 0;
         background: #ffffff;
-        box-shadow: 0 4px 14px rgba(15, 23, 42, 0.08);
+        box-shadow: 0 1px 4px rgba(15, 23, 42, 0.08);
     }
 
     .dp-header-view-tools {
-        margin-left: auto;
-        align-self: flex-start;
+        margin-left: 0;
+        align-self: center;
+        flex: 0 0 auto;
+        margin-top: 0.1rem;
     }
     
     .dp-view-btn {
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        width: 48px;
-        height: 48px;
-        border: 2px solid #cbd5e1;
-        border-radius: 10px;
+        gap: 0.32rem;
+        min-width: 44px;
+        height: 36px;
+        padding: 0 0.6rem;
+        border: 1px solid #cbd5e1;
+        border-radius: 8px;
         background: white;
         color: #64748b;
         text-decoration: none;
         transition: all 0.2s ease;
+        font-size: 0.81rem;
+        font-weight: 600;
+        line-height: 1;
     }
 
     .dp-view-icon-emoji {
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        width: 22px;
-        height: 22px;
-        font-size: 18px;
+        width: 14px;
+        height: 14px;
+        font-size: 14px;
         line-height: 1;
-        filter: saturate(1.1);
+        filter: none;
     }
     
     .dp-view-btn:hover {
-        background: #f1f5f9;
-        color: #0284c7;
-        border-color: #0ea5e9;
-        transform: translateY(-1px) scale(1.02);
+        background: #f8fafc;
+        color: #0f172a;
+        border-color: #94a3b8;
+        transform: none;
     }
     
     .dp-view-btn.active {
-        background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
-        color: white;
-        border-color: #0284c7;
-        box-shadow: 0 2px 8px rgba(14, 165, 233, 0.3);
+        background: #eff6ff;
+        color: #0f172a;
+        border-color: #60a5fa;
+        box-shadow: inset 0 0 0 1px rgba(59, 130, 246, 0.18);
     }
 
     .dp-view-btn.active .dp-view-icon-emoji {
@@ -4363,7 +4828,147 @@ document.addEventListener('DOMContentLoaded', function() {
         background: #e2e8f0;
     }
 
+    .dp-mitbringen-summary-card {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        flex-wrap: wrap;
+        padding: 0.9rem 1rem;
+        border: 1px solid #99f6e4;
+        background: linear-gradient(135deg, #f0fdfa 0%, #ecfeff 100%);
+        border-radius: 10px;
+    }
+
+    .dp-mitbringen-summary-title {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.45rem;
+        color: #0f766e;
+        font-size: 1rem;
+    }
+
+    .dp-mitbringen-summary-stats {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.55rem;
+        flex-wrap: wrap;
+    }
+
+    .dp-mitbringen-stat {
+        display: inline-flex;
+        align-items: center;
+        border-radius: 999px;
+        border: 1px solid #bae6fd;
+        background: #ffffff;
+        color: #0f172a;
+        padding: 0.22rem 0.55rem;
+        font-size: 0.78rem;
+        font-weight: 600;
+    }
+
+    .dp-mitbringen-stat.is-open {
+        border-color: #86efac;
+        color: #166534;
+    }
+
+    .dp-mitbringen-stat.is-done {
+        border-color: #93c5fd;
+        color: #1d4ed8;
+    }
+
+    .dp-mitbringen-modal-content {
+        max-width: min(1200px, 96vw);
+        width: min(1200px, 96vw);
+    }
+
+    .dp-mitbringen-tabs {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.45rem;
+        margin-bottom: 0.8rem;
+    }
+
+    .dp-mitbringen-tab {
+        border: 1px solid #cbd5e1;
+        background: #ffffff;
+        color: #334155;
+        padding: 0.35rem 0.7rem;
+        border-radius: 8px;
+        font-size: 0.82rem;
+        font-weight: 600;
+        cursor: pointer;
+    }
+
+    .dp-mitbringen-tab.active {
+        border-color: #14b8a6;
+        background: #ccfbf1;
+        color: #134e4a;
+    }
+
+    .dp-mitbringen-panel {
+        margin-top: 0.5rem;
+    }
+
+    .dp-mitbringen-panel .dp-dienste-table {
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        overflow: hidden;
+    }
+
+    .dp-btn-mitbringen-uebernehmen {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid #93c5fd;
+        background: #eff6ff;
+        color: #1d4ed8;
+        border-radius: 6px;
+        font-size: 0.78rem;
+        font-weight: 600;
+        padding: 0.3rem 0.55rem;
+        cursor: pointer;
+    }
+
+    .dp-btn-mitbringen-uebernehmen:hover {
+        background: #dbeafe;
+    }
+
+    .dp-btn-mitbringen-uebernehmen:disabled {
+        opacity: 0.65;
+        cursor: default;
+    }
+
+    .dp-mitbringen-action-own {
+        display: inline-flex;
+        align-items: center;
+        border: 1px solid #86efac;
+        background: #f0fdf4;
+        color: #166534;
+        border-radius: 999px;
+        font-size: 0.75rem;
+        font-weight: 700;
+        padding: 0.2rem 0.5rem;
+    }
+
     @media (max-width: 768px) {
+        .dp-mitbringen-summary-card {
+            align-items: flex-start;
+            padding: 0.75rem;
+        }
+
+        .dp-mitbringen-modal-content {
+            width: 96vw;
+            max-width: 96vw;
+        }
+
+        .dp-mitbringen-panel {
+            overflow-x: auto;
+        }
+
+        .dp-header-chip-row {
+            min-width: 0;
+        }
+
         .dp-header-view-tools {
             margin-left: 0;
             width: 100%;
@@ -4371,7 +4976,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         .dp-view-toggle-header {
             width: 100%;
-            justify-content: flex-end;
+            justify-content: flex-start;
         }
 
         .dp-view-toggle {
@@ -4382,9 +4987,15 @@ document.addEventListener('DOMContentLoaded', function() {
 
         .dp-view-btn {
             width: 40px;
+            min-width: 40px;
             height: 40px;
+            padding: 0;
             border-radius: 8px;
             border-width: 1px;
+        }
+
+        .dp-view-toggle-header .dp-view-btn-text {
+            display: none;
         }
 
         .dp-view-icon-emoji {

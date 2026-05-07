@@ -19,6 +19,19 @@ class Dienstplan_Mail_Queue {
     const CRON_SCHEDULE = 'dp_mail_queue_interval';
     const MAX_LOG_ITEMS = 250;
 
+    /**
+     * Paket A: globale Feature-Pruefung fuer Mailversand.
+     *
+     * @return bool
+     */
+    private static function is_mail_enabled() {
+        if (defined('DIENSTPLAN_FEATURE_MAIL') && !DIENSTPLAN_FEATURE_MAIL) {
+            return false;
+        }
+
+        return (bool) apply_filters('dienstplan_feature_mail_enabled', true);
+    }
+
     private static function resolve_meta_type($meta) {
         if (!is_array($meta)) {
             return '';
@@ -71,6 +84,11 @@ class Dienstplan_Mail_Queue {
     }
 
     public static function ensure_scheduled() {
+        if (!self::is_mail_enabled()) {
+            wp_clear_scheduled_hook(self::CRON_HOOK);
+            return;
+        }
+
         if (self::get_delivery_mode() !== 'queue') {
             wp_clear_scheduled_hook(self::CRON_HOOK);
             return;
@@ -90,6 +108,23 @@ class Dienstplan_Mail_Queue {
     }
 
     public static function enqueue_mail($to, $subject, $message, $headers = array(), $meta = array()) {
+        if (!self::is_mail_enabled()) {
+            self::append_log(array(
+                'time' => current_time('mysql'),
+                'status' => 'skipped',
+                'to' => is_array($to) ? implode(', ', $to) : (string) $to,
+                'subject' => (string) $subject,
+                'error' => '',
+                'attempts' => 0,
+                'type' => self::resolve_meta_type($meta),
+                'source' => self::resolve_meta_value($meta, 'source'),
+                'reason' => 'mail_feature_disabled',
+            ));
+
+            // No-op mit Erfolg, damit Kern-Workflows nicht abbrechen.
+            return true;
+        }
+
         $mail_type = self::resolve_meta_type($meta);
         $mail_source = self::resolve_meta_value($meta, 'source');
         $mail_reason = self::resolve_meta_value($meta, 'reason');
@@ -170,6 +205,12 @@ class Dienstplan_Mail_Queue {
     }
 
     public static function process_queue() {
+        if (!self::is_mail_enabled()) {
+            $remaining = self::clear_queue();
+            update_option(self::LAST_RUN_OPTION, current_time('mysql'), false);
+            return array('processed' => 0, 'sent' => 0, 'failed' => 0, 'remaining' => $remaining);
+        }
+
         $queue = get_option(self::QUEUE_OPTION, array());
         if (!is_array($queue) || empty($queue)) {
             update_option(self::LAST_RUN_OPTION, current_time('mysql'), false);
@@ -270,6 +311,16 @@ class Dienstplan_Mail_Queue {
         );
     }
 
+    private static function clear_queue() {
+        $queue = get_option(self::QUEUE_OPTION, array());
+        if (!is_array($queue)) {
+            $queue = array();
+        }
+        $count = count($queue);
+        update_option(self::QUEUE_OPTION, array(), false);
+        return $count;
+    }
+
     public static function get_queue_items() {
         $queue = get_option(self::QUEUE_OPTION, array());
         return is_array($queue) ? $queue : array();
@@ -331,6 +382,46 @@ class Dienstplan_Mail_Queue {
             }
         }
 
-        return array_values(array_unique($recipients));
+        $recipients = array_values(array_unique($recipients));
+
+        if (defined('DIENSTPLAN_SLIM_MODE') && DIENSTPLAN_SLIM_MODE) {
+            $admin_emails = self::get_admin_emails();
+            if (!empty($admin_emails)) {
+                $recipients = array_values(array_intersect($recipients, $admin_emails));
+            } else {
+                $recipients = array();
+            }
+        }
+
+        return $recipients;
+    }
+
+    private static function get_admin_emails() {
+        static $cache = null;
+        if (is_array($cache)) {
+            return $cache;
+        }
+
+        $cache = array();
+        $users = get_users(array(
+            'role' => 'administrator',
+            'fields' => array('user_email'),
+        ));
+
+        foreach ((array) $users as $user) {
+            $email = '';
+            if (is_object($user) && isset($user->user_email)) {
+                $email = sanitize_email((string) $user->user_email);
+            } elseif (is_array($user) && isset($user['user_email'])) {
+                $email = sanitize_email((string) $user['user_email']);
+            }
+
+            if ($email !== '' && is_email($email)) {
+                $cache[] = $email;
+            }
+        }
+
+        $cache = array_values(array_unique($cache));
+        return $cache;
     }
 }

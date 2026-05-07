@@ -40,6 +40,95 @@ class Dienstplan_Database {
             );
         }
     }
+
+    /**
+     * Stellt sicher, dass mitbringen_items.bereich_name existiert.
+     */
+    private function ensure_mitbringen_bereich_name() {
+        static $checked = false;
+        if ($checked) return;
+        $checked = true;
+
+        $col = $this->wpdb->get_results("SHOW COLUMNS FROM {$this->prefix}mitbringen_items LIKE 'bereich_name'");
+        if (empty($col)) {
+            $this->wpdb->query(
+                "ALTER TABLE {$this->prefix}mitbringen_items ADD COLUMN bereich_name varchar(191) DEFAULT '' AFTER verein_id"
+            );
+        }
+    }
+
+    /**
+     * Stellt sicher, dass mitbringen_items.mitarbeiter_id existiert.
+     */
+    private function ensure_mitbringen_mitarbeiter_id() {
+        static $checked = false;
+        if ($checked) return;
+        $checked = true;
+
+        $col = $this->wpdb->get_results("SHOW COLUMNS FROM {$this->prefix}mitbringen_items LIKE 'mitarbeiter_id'");
+        if (empty($col)) {
+            $this->wpdb->query(
+                "ALTER TABLE {$this->prefix}mitbringen_items ADD COLUMN mitarbeiter_id mediumint(9) DEFAULT NULL AFTER verein_id"
+            );
+            $this->wpdb->query(
+                "ALTER TABLE {$this->prefix}mitbringen_items ADD KEY mitarbeiter_id (mitarbeiter_id)"
+            );
+        }
+    }
+
+    /**
+     * Stellt sicher, dass mitbringen_items.admin_only existiert.
+     */
+    private function ensure_mitbringen_admin_only() {
+        static $checked = false;
+        if ($checked) return;
+        $checked = true;
+
+        $col = $this->wpdb->get_results("SHOW COLUMNS FROM {$this->prefix}mitbringen_items LIKE 'admin_only'");
+        if (empty($col)) {
+            $this->wpdb->query(
+                "ALTER TABLE {$this->prefix}mitbringen_items ADD COLUMN admin_only tinyint(1) DEFAULT 0 AFTER mitarbeiter_id"
+            );
+            $this->wpdb->query(
+                "ALTER TABLE {$this->prefix}mitbringen_items ADD KEY admin_only (admin_only)"
+            );
+        }
+    }
+
+    /**
+     * Stellt sicher, dass mitbringen_items.besetzung_info existiert.
+     */
+    private function ensure_mitbringen_besetzung_info() {
+        static $checked = false;
+        if ($checked) return;
+        $checked = true;
+
+        $col = $this->wpdb->get_results("SHOW COLUMNS FROM {$this->prefix}mitbringen_items LIKE 'besetzung_info'");
+        if (empty($col)) {
+            $this->wpdb->query(
+                "ALTER TABLE {$this->prefix}mitbringen_items ADD COLUMN besetzung_info text AFTER hinweis"
+            );
+        }
+    }
+
+    /**
+     * Stellt sicher, dass mitarbeiter_vereine.source existiert.
+     */
+    private function ensure_mitarbeiter_vereine_source() {
+        static $checked = false;
+        if ($checked) return;
+        $checked = true;
+
+        $col = $this->wpdb->get_results("SHOW COLUMNS FROM {$this->prefix}mitarbeiter_vereine LIKE 'source'");
+        if (empty($col)) {
+            $this->wpdb->query(
+                "ALTER TABLE {$this->prefix}mitarbeiter_vereine ADD COLUMN source varchar(50) DEFAULT 'slot_assignment' AFTER verein_id"
+            );
+            $this->wpdb->query(
+                "UPDATE {$this->prefix}mitarbeiter_vereine SET source = 'slot_assignment' WHERE source IS NULL OR source = ''"
+            );
+        }
+    }
     
     /**
      * Getter für wpdb (für externe Zugriffe)
@@ -263,16 +352,25 @@ class Dienstplan_Database {
 
         dbDelta($sql);
 
-                $this->wpdb->query(
-                        "INSERT IGNORE INTO {$this->prefix}mitarbeiter_vereine (mitarbeiter_id, verein_id, source)
-                         SELECT DISTINCT s.mitarbeiter_id, d.verein_id, 'slot_assignment'
-                         FROM {$this->prefix}dienst_slots s
-                         INNER JOIN {$this->prefix}dienste d ON s.dienst_id = d.id
-                         WHERE s.mitarbeiter_id IS NOT NULL
-                             AND s.mitarbeiter_id > 0
-                             AND d.verein_id IS NOT NULL
-                             AND d.verein_id > 0"
-                );
+        $dienst_slots_table_exists = $this->wpdb->get_var(
+            $this->wpdb->prepare('SHOW TABLES LIKE %s', $this->prefix . 'dienst_slots')
+        );
+        $dienste_table_exists = $this->wpdb->get_var(
+            $this->wpdb->prepare('SHOW TABLES LIKE %s', $this->prefix . 'dienste')
+        );
+
+        if ($dienst_slots_table_exists && $dienste_table_exists) {
+            $this->wpdb->query(
+                "INSERT IGNORE INTO {$this->prefix}mitarbeiter_vereine (mitarbeiter_id, verein_id, source)
+                 SELECT DISTINCT s.mitarbeiter_id, d.verein_id, 'slot_assignment'
+                 FROM {$this->prefix}dienst_slots s
+                 INNER JOIN {$this->prefix}dienste d ON s.dienst_id = d.id
+                 WHERE s.mitarbeiter_id IS NOT NULL
+                     AND s.mitarbeiter_id > 0
+                     AND d.verein_id IS NOT NULL
+                     AND d.verein_id > 0"
+            );
+        }
         
         // Veranstaltung-Verantwortliche Zuordnung (m:n)
         $sql = "CREATE TABLE IF NOT EXISTS {$this->prefix}veranstaltung_verantwortliche (
@@ -463,12 +561,16 @@ class Dienstplan_Database {
             veranstaltung_id mediumint(9) NOT NULL,
             tag_id mediumint(9) DEFAULT NULL,
             verein_id mediumint(9) NOT NULL,
+            mitarbeiter_id mediumint(9) DEFAULT NULL,
+            admin_only tinyint(1) DEFAULT 0,
+            bereich_name varchar(191) DEFAULT '',
             bereich_id mediumint(9) DEFAULT NULL,
             taetigkeit_id mediumint(9) DEFAULT NULL,
             bezeichnung varchar(255) NOT NULL,
             menge int(4) DEFAULT 1,
             einheit varchar(50) DEFAULT '',
             hinweis text,
+            besetzung_info text,
             status varchar(20) DEFAULT 'offen',
             erstellt_am datetime DEFAULT CURRENT_TIMESTAMP,
             PRIMARY KEY (id),
@@ -476,20 +578,71 @@ class Dienstplan_Database {
             KEY veranstaltung_id (veranstaltung_id),
             KEY tag_id (tag_id),
             KEY verein_id (verein_id),
+            KEY mitarbeiter_id (mitarbeiter_id),
+            KEY admin_only (admin_only),
             KEY status (status)
         ) $charset;";
 
         dbDelta($sql);
 
+        $mitbringen_bereich_name_exists = $this->wpdb->get_results(
+            "SHOW COLUMNS FROM {$this->prefix}mitbringen_items LIKE 'bereich_name'"
+        );
+        if (empty($mitbringen_bereich_name_exists)) {
+            $this->wpdb->query(
+                "ALTER TABLE {$this->prefix}mitbringen_items
+                 ADD COLUMN bereich_name varchar(191) DEFAULT '' AFTER verein_id"
+            );
+        }
+
+        $mitbringen_mitarbeiter_exists = $this->wpdb->get_results(
+            "SHOW COLUMNS FROM {$this->prefix}mitbringen_items LIKE 'mitarbeiter_id'"
+        );
+        if (empty($mitbringen_mitarbeiter_exists)) {
+            $this->wpdb->query(
+                "ALTER TABLE {$this->prefix}mitbringen_items
+                 ADD COLUMN mitarbeiter_id mediumint(9) DEFAULT NULL AFTER verein_id"
+            );
+            $this->wpdb->query(
+                "ALTER TABLE {$this->prefix}mitbringen_items
+                 ADD KEY mitarbeiter_id (mitarbeiter_id)"
+            );
+        }
+
+        $mitbringen_admin_only_exists = $this->wpdb->get_results(
+            "SHOW COLUMNS FROM {$this->prefix}mitbringen_items LIKE 'admin_only'"
+        );
+        if (empty($mitbringen_admin_only_exists)) {
+            $this->wpdb->query(
+                "ALTER TABLE {$this->prefix}mitbringen_items
+                 ADD COLUMN admin_only tinyint(1) DEFAULT 0 AFTER mitarbeiter_id"
+            );
+            $this->wpdb->query(
+                "ALTER TABLE {$this->prefix}mitbringen_items
+                 ADD KEY admin_only (admin_only)"
+            );
+        }
+
+        $mitbringen_besetzung_info_exists = $this->wpdb->get_results(
+            "SHOW COLUMNS FROM {$this->prefix}mitbringen_items LIKE 'besetzung_info'"
+        );
+        if (empty($mitbringen_besetzung_info_exists)) {
+            $this->wpdb->query(
+                "ALTER TABLE {$this->prefix}mitbringen_items
+                 ADD COLUMN besetzung_info text AFTER hinweis"
+            );
+        }
+
         // Einmalige Migration bestehender Mitbringen-Dienste in eigene Tabelle.
         $this->wpdb->query(
             "INSERT IGNORE INTO {$this->prefix}mitbringen_items
-                (legacy_dienst_id, veranstaltung_id, tag_id, verein_id, bereich_id, taetigkeit_id, bezeichnung, menge, einheit, hinweis, status)
+                (legacy_dienst_id, veranstaltung_id, tag_id, verein_id, admin_only, bereich_id, taetigkeit_id, bezeichnung, menge, einheit, hinweis, status)
              SELECT
                 d.id,
                 d.veranstaltung_id,
                 d.tag_id,
                 d.verein_id,
+                COALESCE(d.admin_only, 0),
                 d.bereich_id,
                 d.taetigkeit_id,
                 COALESCE(NULLIF(TRIM(CONCAT(
@@ -508,6 +661,20 @@ class Dienstplan_Database {
              LEFT JOIN {$this->prefix}taetigkeiten t ON d.taetigkeit_id = t.id
              LEFT JOIN {$this->prefix}bereiche b ON d.bereich_id = b.id
              WHERE d.dienst_typ = 'mitbringen'"
+        );
+
+        // Migriere bestehende Mitarbeiter-Zuordnungen aus alten Mitbringen-Diensten.
+        $this->wpdb->query(
+            "UPDATE {$this->prefix}mitbringen_items m
+             INNER JOIN (
+                SELECT ds.dienst_id, MIN(ds.mitarbeiter_id) AS mitarbeiter_id
+                FROM {$this->prefix}dienst_slots ds
+                WHERE ds.mitarbeiter_id IS NOT NULL
+                GROUP BY ds.dienst_id
+             ) migrated_slots ON migrated_slots.dienst_id = m.legacy_dienst_id
+             SET m.mitarbeiter_id = migrated_slots.mitarbeiter_id,
+                 m.status = CASE WHEN migrated_slots.mitarbeiter_id IS NOT NULL THEN 'vergeben' ELSE m.status END
+             WHERE (m.mitarbeiter_id IS NULL OR m.mitarbeiter_id = 0)"
         );
         
         // Dienst-Slots-Tabelle (für Split-Dienste)
@@ -1812,6 +1979,11 @@ class Dienstplan_Database {
     }
 
     public function get_mitbringen_items($veranstaltung_id = null, $verein_id = null, $status = '', $allowed_verein_ids = array()) {
+        $this->ensure_mitbringen_bereich_name();
+        $this->ensure_mitbringen_mitarbeiter_id();
+        $this->ensure_mitbringen_admin_only();
+        $this->ensure_mitbringen_besetzung_info();
+
         $where = array();
         $params = array();
 
@@ -1842,10 +2014,14 @@ class Dienstplan_Database {
         $where_sql = !empty($where) ? "WHERE " . implode(" AND ", $where) : "";
 
         $sql = "SELECT m.*, v.name as verein_name, vt.tag_nummer, vt.tag_datum,
-                       b.name as bereich_name, t.name as taetigkeit_name
+               ma.vorname as mitarbeiter_vorname, ma.nachname as mitarbeiter_nachname,
+               TRIM(CONCAT(COALESCE(ma.vorname, ''), ' ', COALESCE(ma.nachname, ''))) as mitarbeiter_name,
+                   COALESCE(NULLIF(m.bereich_name, ''), b.name, '') as mitbringen_bereich_name,
+                   b.name as legacy_bereich_name, t.name as taetigkeit_name
                 FROM {$this->prefix}mitbringen_items m
                 LEFT JOIN {$this->prefix}vereine v ON m.verein_id = v.id
                 LEFT JOIN {$this->prefix}veranstaltung_tage vt ON m.tag_id = vt.id
+            LEFT JOIN {$this->prefix}mitarbeiter ma ON m.mitarbeiter_id = ma.id
                 LEFT JOIN {$this->prefix}bereiche b ON m.bereich_id = b.id
                 LEFT JOIN {$this->prefix}taetigkeiten t ON m.taetigkeit_id = t.id
                 {$where_sql}
@@ -1856,6 +2032,179 @@ class Dienstplan_Database {
         }
 
         return $this->wpdb->get_results($sql);
+    }
+
+    public function get_mitbringen_bereich_liste($veranstaltung_id = null, $verein_id = null, $allowed_verein_ids = array()) {
+        $this->ensure_mitbringen_bereich_name();
+        $this->ensure_mitbringen_mitarbeiter_id();
+        $this->ensure_mitbringen_admin_only();
+        $this->ensure_mitbringen_besetzung_info();
+
+        $where = array();
+        $params = array();
+
+        if ($veranstaltung_id) {
+            $where[] = "m.veranstaltung_id = %d";
+            $params[] = intval($veranstaltung_id);
+        }
+
+        if ($verein_id) {
+            $where[] = "m.verein_id = %d";
+            $params[] = intval($verein_id);
+        }
+
+        if (!empty($allowed_verein_ids) && is_array($allowed_verein_ids)) {
+            $allowed_verein_ids = array_values(array_filter(array_map('intval', $allowed_verein_ids)));
+            if (!empty($allowed_verein_ids)) {
+                $placeholders = implode(', ', array_fill(0, count($allowed_verein_ids), '%d'));
+                $where[] = "m.verein_id IN ({$placeholders})";
+                $params = array_merge($params, $allowed_verein_ids);
+            }
+        }
+
+        $where_sql = !empty($where) ? ("WHERE " . implode(" AND ", $where)) : '';
+
+        $sql = "SELECT DISTINCT COALESCE(NULLIF(TRIM(m.bereich_name), ''), NULLIF(TRIM(b.name), '')) AS bereich_name
+                FROM {$this->prefix}mitbringen_items m
+                LEFT JOIN {$this->prefix}bereiche b ON m.bereich_id = b.id
+                {$where_sql}
+                HAVING bereich_name IS NOT NULL
+                ORDER BY bereich_name ASC";
+
+        if (!empty($params)) {
+            $sql = $this->wpdb->prepare($sql, $params);
+        }
+
+        $rows = $this->wpdb->get_col($sql);
+        if (empty($rows)) {
+            return array();
+        }
+
+        return array_values(array_filter(array_map('strval', $rows)));
+    }
+
+    public function add_mitbringen_item($data) {
+        $this->ensure_mitbringen_bereich_name();
+        $this->ensure_mitbringen_mitarbeiter_id();
+        $this->ensure_mitbringen_admin_only();
+        $this->ensure_mitbringen_besetzung_info();
+
+        $insert_data = array(
+            'veranstaltung_id' => isset($data['veranstaltung_id']) ? intval($data['veranstaltung_id']) : 0,
+            'tag_id' => !empty($data['tag_id']) ? intval($data['tag_id']) : null,
+            'verein_id' => isset($data['verein_id']) ? intval($data['verein_id']) : 0,
+            'mitarbeiter_id' => !empty($data['mitarbeiter_id']) ? intval($data['mitarbeiter_id']) : null,
+            'admin_only' => !empty($data['admin_only']) ? 1 : 0,
+            'bereich_name' => isset($data['bereich_name']) ? sanitize_text_field((string) $data['bereich_name']) : '',
+            'bezeichnung' => isset($data['bezeichnung']) ? sanitize_text_field((string) $data['bezeichnung']) : '',
+            'menge' => 1,
+            'einheit' => '',
+            'hinweis' => isset($data['hinweis']) ? sanitize_textarea_field((string) $data['hinweis']) : '',
+            'besetzung_info' => isset($data['besetzung_info']) ? sanitize_textarea_field((string) $data['besetzung_info']) : '',
+            'status' => (isset($data['status']) && in_array($data['status'], array('offen', 'vergeben'), true)) ? $data['status'] : 'offen',
+            'bereich_id' => null,
+            'taetigkeit_id' => null,
+        );
+
+        if (!empty($insert_data['mitarbeiter_id'])) {
+            $insert_data['status'] = 'vergeben';
+        }
+
+        if ($insert_data['veranstaltung_id'] <= 0 || $insert_data['verein_id'] <= 0 || $insert_data['bezeichnung'] === '') {
+            return false;
+        }
+
+        $result = $this->wpdb->insert($this->prefix . 'mitbringen_items', $insert_data);
+        if (!$result) {
+            return false;
+        }
+
+        return intval($this->wpdb->insert_id);
+    }
+
+    public function get_mitbringen_item($id) {
+        $this->ensure_mitbringen_bereich_name();
+        $this->ensure_mitbringen_mitarbeiter_id();
+        $this->ensure_mitbringen_admin_only();
+        $this->ensure_mitbringen_besetzung_info();
+
+        $item_id = intval($id);
+        if ($item_id <= 0) {
+            return null;
+        }
+
+        $sql = "SELECT m.*, COALESCE(NULLIF(m.bereich_name, ''), b.name, '') as mitbringen_bereich_name,
+                   ma.vorname as mitarbeiter_vorname, ma.nachname as mitarbeiter_nachname,
+                   TRIM(CONCAT(COALESCE(ma.vorname, ''), ' ', COALESCE(ma.nachname, ''))) as mitarbeiter_name
+                FROM {$this->prefix}mitbringen_items m
+                LEFT JOIN {$this->prefix}bereiche b ON m.bereich_id = b.id
+            LEFT JOIN {$this->prefix}mitarbeiter ma ON m.mitarbeiter_id = ma.id
+                WHERE m.id = %d
+                LIMIT 1";
+
+        return $this->wpdb->get_row($this->wpdb->prepare($sql, $item_id));
+    }
+
+    public function update_mitbringen_item($id, $data) {
+        $this->ensure_mitbringen_bereich_name();
+        $this->ensure_mitbringen_mitarbeiter_id();
+        $this->ensure_mitbringen_admin_only();
+        $this->ensure_mitbringen_besetzung_info();
+
+        $item_id = intval($id);
+        if ($item_id <= 0) {
+            return false;
+        }
+
+        $update_data = array(
+            'veranstaltung_id' => isset($data['veranstaltung_id']) ? intval($data['veranstaltung_id']) : 0,
+            'tag_id' => !empty($data['tag_id']) ? intval($data['tag_id']) : null,
+            'verein_id' => isset($data['verein_id']) ? intval($data['verein_id']) : 0,
+            'mitarbeiter_id' => !empty($data['mitarbeiter_id']) ? intval($data['mitarbeiter_id']) : null,
+            'admin_only' => !empty($data['admin_only']) ? 1 : 0,
+            'bereich_name' => isset($data['bereich_name']) ? sanitize_text_field((string) $data['bereich_name']) : '',
+            'bezeichnung' => isset($data['bezeichnung']) ? sanitize_text_field((string) $data['bezeichnung']) : '',
+            'menge' => 1,
+            'einheit' => '',
+            'hinweis' => isset($data['hinweis']) ? sanitize_textarea_field((string) $data['hinweis']) : '',
+            'besetzung_info' => isset($data['besetzung_info']) ? sanitize_textarea_field((string) $data['besetzung_info']) : '',
+            'status' => (isset($data['status']) && in_array($data['status'], array('offen', 'vergeben'), true)) ? $data['status'] : 'offen',
+            'bereich_id' => null,
+            'taetigkeit_id' => null,
+        );
+
+        if (!empty($update_data['mitarbeiter_id'])) {
+            $update_data['status'] = 'vergeben';
+        }
+
+        if ($update_data['veranstaltung_id'] <= 0 || $update_data['verein_id'] <= 0 || $update_data['bezeichnung'] === '') {
+            return false;
+        }
+
+        $result = $this->wpdb->update(
+            $this->prefix . 'mitbringen_items',
+            $update_data,
+            array('id' => $item_id),
+            null,
+            array('%d')
+        );
+
+        return $result !== false;
+    }
+
+    public function delete_mitbringen_item($id) {
+        $item_id = intval($id);
+        if ($item_id <= 0) {
+            return false;
+        }
+
+        $result = $this->wpdb->delete(
+            $this->prefix . 'mitbringen_items',
+            array('id' => $item_id),
+            array('%d')
+        );
+
+        return $result !== false;
     }
     
     public function get_recent_dienste($limit = 10) {
@@ -2280,6 +2629,15 @@ class Dienstplan_Database {
             array('%d', '%s'),
             array('%d')
         );
+
+        // Entferne Mitarbeiter auch aus Mitbringen-Zuordnungen.
+        $this->wpdb->update(
+            $this->prefix . 'mitbringen_items',
+            array('mitarbeiter_id' => null, 'status' => 'offen', 'besetzung_info' => ''),
+            array('mitarbeiter_id' => intval($id)),
+            array('%d', '%s', '%s'),
+            array('%d')
+        );
         
         // Entferne veraltete Zuweisungen (falls noch vorhanden)
         $this->wpdb->delete(
@@ -2492,6 +2850,8 @@ class Dienstplan_Database {
     }
 
     public function sync_mitarbeiter_vereine($mitarbeiter_id, $manual_verein_ids = array()) {
+        $this->ensure_mitarbeiter_vereine_source();
+
         $mitarbeiter_id = intval($mitarbeiter_id);
         if ($mitarbeiter_id <= 0) {
             return false;

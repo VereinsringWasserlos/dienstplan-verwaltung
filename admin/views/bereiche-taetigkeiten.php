@@ -80,6 +80,14 @@ $nav_items = [
             <span class="dashicons dashicons-plus-alt" style="margin-top:3px;"></span>
             <?php _e('Neuer Bereich', 'dienstplan-verwaltung'); ?>
         </button>
+        <button type="button" class="button button-primary dp-open-import-popup" data-import-type="bereiche">
+            <span class="dashicons dashicons-upload" style="margin-top:3px;"></span>
+            <?php _e('Bereiche importieren', 'dienstplan-verwaltung'); ?>
+        </button>
+        <button type="button" class="button button-primary dp-open-import-popup" data-import-type="taetigkeiten">
+            <span class="dashicons dashicons-upload" style="margin-top:3px;"></span>
+            <?php _e('Tätigkeiten importieren', 'dienstplan-verwaltung'); ?>
+        </button>
     </div>
     <?php endif; ?>
 
@@ -126,6 +134,22 @@ $nav_items = [
                             <?php _e('Noch keine Tätigkeiten. Klicke "+ Tätigkeit" um eine hinzuzufügen.', 'dienstplan-verwaltung'); ?>
                         </div>
                     <?php else: ?>
+                        <div class="bulk-actions-toolbar" id="bulk-toolbar-<?php echo intval($bereich->id); ?>" style="display:none;background:#f9fafb;padding:0.75rem 1rem;border-bottom:1px solid #e5e7eb;align-items:center;gap:0.75rem;">
+                            <span class="selected-count" style="color:#6b7280;">
+                                <span class="count">0</span> <?php _e('ausgewählt', 'dienstplan-verwaltung'); ?>
+                            </span>
+                            <select class="bulk-action-select" data-bereich="<?php echo intval($bereich->id); ?>" style="min-width:200px;">
+                                <option value=""><?php _e('-- Aktion wählen --', 'dienstplan-verwaltung'); ?></option>
+                                <option value="delete"><?php _e('Löschen', 'dienstplan-verwaltung'); ?></option>
+                                <option value="change_status"><?php _e('Status ändern', 'dienstplan-verwaltung'); ?></option>
+                            </select>
+                            <button type="button" class="button bulk-action-apply apply-bulk-action" data-bereich="<?php echo intval($bereich->id); ?>">
+                                <?php _e('Anwenden', 'dienstplan-verwaltung'); ?>
+                            </button>
+                            <button type="button" class="button bulk-action-cancel cancel-bulk-selection" data-bereich="<?php echo intval($bereich->id); ?>">
+                                <?php _e('Abbrechen', 'dienstplan-verwaltung'); ?>
+                            </button>
+                        </div>
                         <table class="wp-list-table widefat fixed striped" style="border:none;margin:0;">
                             <thead>
                                 <tr>

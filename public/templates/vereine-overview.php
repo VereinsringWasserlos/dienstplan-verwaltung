@@ -5,6 +5,10 @@ if (!defined('ABSPATH')) {
 
 $show_only_active = ($atts['show_aktiv'] ?? 'true') === 'true';
 $verein_id = isset($_GET['verein_id']) ? intval($_GET['verein_id']) : intval($atts['verein_id'] ?? 0);
+$requested_view = isset($_GET['view']) ? sanitize_key($_GET['view']) : 'kachel';
+if (!in_array($requested_view, array('kachel', 'kompakt', 'timeline'), true)) {
+    $requested_view = 'kachel';
+}
 
 $vereine = $db->get_vereine($show_only_active);
 $selected_verein = null;
@@ -256,6 +260,15 @@ if ($selected_verein) {
 
                             $existing_page_id = !empty($existing_page_ids) ? intval($existing_page_ids[0]) : 0;
                             $public_page_url = $existing_page_id > 0 ? get_permalink($existing_page_id) : '';
+                            $public_page_kachel_url = $public_page_url;
+                            $public_page_kompakt_url = $public_page_url;
+                            $public_page_timeline_url = $public_page_url;
+
+                            if (!empty($public_page_url)) {
+                                $public_page_kachel_url = add_query_arg(array('view' => 'kachel'), $public_page_url);
+                                $public_page_kompakt_url = add_query_arg(array('view' => 'kompakt'), $public_page_url);
+                                $public_page_timeline_url = add_query_arg(array('view' => 'timeline'), $public_page_url);
+                            }
                         ?>
                             <div class="dp-event-row">
                                 <div class="dp-event-main">
@@ -275,7 +288,14 @@ if ($selected_verein) {
 
                                 <span class="dp-event-open">
                                     <?php if ($existing_page_id > 0): ?>
-                                        <a href="<?php echo esc_url($public_page_url); ?>">Diensteseite öffnen →</a>
+                                        <a href="<?php echo esc_url(add_query_arg(array('view' => $requested_view), $public_page_url)); ?>">Diensteseite öffnen →</a>
+                                        <span class="dp-event-open-views">
+                                            <a href="<?php echo esc_url($public_page_kachel_url); ?>">Kachel</a>
+                                            <span>·</span>
+                                            <a href="<?php echo esc_url($public_page_kompakt_url); ?>">Kompakt</a>
+                                            <span>·</span>
+                                            <a href="<?php echo esc_url($public_page_timeline_url); ?>">Timeline</a>
+                                        </span>
                                     <?php else: ?>
                                         <span class="dp-event-open-missing">Keine Diensteseite</span>
                                     <?php endif; ?>

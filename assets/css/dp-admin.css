@@ -268,11 +268,12 @@ body {
 }
 
 /* Moderne Buttons mit Animationen */
-.button-primary {
-    background: var(--dp-gradient-primary) !important;
+.button.button-primary,
+a.button.button-primary {
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%) !important;
     border: none !important;
     color: white !important;
-    border-radius: var(--dp-radius) !important;
+    border-radius: 10px !important;
     padding: 0.625rem 1.25rem !important;
     font-weight: 600 !important;
     font-size: 0.875rem !important;
@@ -281,11 +282,17 @@ body {
     position: relative !important;
     overflow: hidden !important;
     text-transform: none !important;
+    min-height: 38px !important;
     height: auto !important;
     line-height: 1.5 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 0.4rem !important;
 }
 
-.button-primary::before {
+.button.button-primary::before,
+a.button.button-primary::before {
     content: '';
     position: absolute;
     top: 50%;
@@ -298,24 +305,76 @@ body {
     transition: width 0.6s, height 0.6s;
 }
 
-.button-primary:hover::before {
+.button.button-primary:hover::before,
+a.button.button-primary:hover::before {
     width: 300px;
     height: 300px;
 }
 
-.button-primary:hover {
+.button.button-primary:hover,
+a.button.button-primary:hover {
     box-shadow: var(--dp-shadow-xl) !important;
     transform: translateY(-2px) scale(1.05) !important;
 }
 
-.button-primary:active {
+.button.button-primary:active,
+a.button.button-primary:active {
     transform: translateY(0) scale(0.98) !important;
 }
 
-.button-primary .dashicons {
+.button.button-primary .dashicons,
+a.button.button-primary .dashicons {
     font-size: 16px;
-    margin-right: 0.5rem;
+    margin-right: 0 !important;
+    width: 16px;
+    height: 16px;
     vertical-align: middle;
+}
+
+.dp-filter-bar .button {
+    min-height: 38px;
+    border-radius: 10px !important;
+}
+
+.dp-filter-action-group {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+.dp-filter-action-group .button {
+    white-space: nowrap;
+}
+
+.dp-filter-action-btn {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 0.35rem !important;
+}
+
+.dp-filter-action-btn .dashicons {
+    font-size: 16px !important;
+    width: 16px !important;
+    height: 16px !important;
+}
+
+.dp-header-ghost-button {
+    background: rgba(255,255,255,0.92) !important;
+    color: #1d4ed8 !important;
+    border: 1px solid rgba(255,255,255,0.85) !important;
+    border-radius: 10px !important;
+    padding: 0.5rem 0.9rem !important;
+    font-weight: 600 !important;
+    min-height: 36px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 0.4rem !important;
+}
+
+.dp-header-ghost-button:hover {
+    background: #ffffff !important;
+    color: #1e40af !important;
 }
 
 /* Moderne Tabellen */
@@ -1144,6 +1203,11 @@ body {
     box-shadow: 0 8px 32px rgba(0,0,0,0.15);
 }
 
+/* Erzwinge dieselbe Headerfarbe fuer alle Seiten */
+.dienstplan-page-header[class*="header-"] {
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%) !important;
+}
+
 /* Gradient Overlay Effect */
 .dienstplan-page-header::before {
     content: '';
@@ -1168,29 +1232,18 @@ body {
     z-index: 1;
 }
 
-/* Spezifische Header-Farben pro Seite */
-.dienstplan-page-header.header-dashboard {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-}
-
-.dienstplan-page-header.header-vereine {
+/* Header-Farbe auf allen Seiten vereinheitlichen */
+.dienstplan-page-header.header-dashboard,
+.dienstplan-page-header.header-vereine,
+.dienstplan-page-header.header-veranstaltungen,
+.dienstplan-page-header.header-dienste,
+.dienstplan-page-header.header-bereiche,
+.dienstplan-page-header.header-mitarbeiter {
     background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
 }
 
-.dienstplan-page-header.header-veranstaltungen {
-    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-}
-
-.dienstplan-page-header.header-dienste {
-    background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
-}
-
-.dienstplan-page-header.header-bereiche {
-    background: linear-gradient(135deg, #ec4899 0%, #db2777 100%);
-}
-
-.dienstplan-page-header.header-mitarbeiter {
-    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+.dienstplan-page-header.header-unified {
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
 }
 
 /* Seiten-Titel-Sektion */

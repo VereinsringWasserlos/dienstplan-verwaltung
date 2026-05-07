@@ -153,9 +153,7 @@ if ($selected_veranstaltung > 0) {
         
         // Erstelle Zeit-String
         $zeit_display = 'Keine Zeiten';
-        if (($dienst->dienst_typ ?? 'dienst') === 'mitbringen') {
-            $zeit_display = 'Mitbringen';
-        } elseif (!empty($dienst->von_zeit) && !empty($dienst->bis_zeit)) {
+        if (!empty($dienst->von_zeit) && !empty($dienst->bis_zeit)) {
             $zeit_display = $dp_format_time($dienst->von_zeit) . ' - ' . $dp_format_time($dienst->bis_zeit);
             if ($dienst->bis_datum) {
                 $zeit_display .= ' (+1)';
@@ -198,7 +196,7 @@ $bereiche = $db->get_bereiche();
 ?>
 
 <div class="wrap dienstplan-wrap">
-    <div style="display: flex; align-items: center; gap: 1rem; margin: 1rem 0 1.5rem 0; background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%); padding: 1rem 1.5rem; border-radius: 8px; color: white;">
+    <div style="display: flex; align-items: center; gap: 1rem; margin: 1rem 0 1.5rem 0; background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); padding: 1rem 1.5rem; border-radius: 8px; color: white;">
         <div style="display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; flex-shrink: 0;">
             <span class="dashicons dashicons-grid-view" style="font-size: 24px; color: white;"></span>
         </div>
@@ -207,8 +205,8 @@ $bereiche = $db->get_bereiche();
                 <?php _e('Dienst-Übersicht', 'dienstplan-verwaltung'); ?>
             </h1>
         </div>
-        <a href="<?php echo admin_url('admin.php?page=dienstplan'); ?>" class="button" style="background: rgba(255,255,255,0.2); color: white; border: none; padding: 0.5rem 1rem; border-radius: 3px; display: flex; align-items: center; gap: 0.5rem; text-decoration: none; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.3)'" onmouseout="this.style.background='rgba(255,255,255,0.2)'">
-            <span class="dashicons dashicons-arrow-left-alt2" style="font-size: 18px;"></span>
+        <a href="<?php echo admin_url('admin.php?page=dienstplan'); ?>" class="button dp-header-ghost-button" style="text-decoration: none;">
+            <span class="dashicons dashicons-arrow-left-alt2"></span>
             <?php _e('Dashboard', 'dienstplan-verwaltung'); ?>
         </a>
     </div>
@@ -217,10 +215,22 @@ $bereiche = $db->get_bereiche();
     
     <!-- Filter-Bereich -->
     <div class="dp-filter-bar" style="background: #fff; padding: 1.5rem; border: 1px solid #c3c4c7; border-radius: 4px; margin: 1.5rem 0;">
-        <h3 style="margin-top: 0;">
-            <span class="dashicons dashicons-filter"></span>
-            <?php _e('Filter', 'dienstplan-verwaltung'); ?>
-        </h3>
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 0.75rem;">
+            <h3 style="margin: 0;">
+                <span class="dashicons dashicons-filter"></span>
+                <?php _e('Filter', 'dienstplan-verwaltung'); ?>
+            </h3>
+            <div class="dp-filter-action-group">
+                <button type="button" class="button button-primary dp-filter-action-btn" onclick="openDienstModal(); return false;">
+                    <span class="dashicons dashicons-plus-alt"></span>
+                    <?php _e('Neuer Dienst', 'dienstplan-verwaltung'); ?>
+                </button>
+                <button type="button" class="button button-primary dp-open-import-popup dp-filter-action-btn" data-import-type="dienste">
+                    <span class="dashicons dashicons-upload"></span>
+                    <?php _e('Dienste importieren', 'dienstplan-verwaltung'); ?>
+                </button>
+            </div>
+        </div>
         
         <form method="get" action="" style="display: flex; gap: 1rem; flex-wrap: wrap; align-items: flex-end;">
             <input type="hidden" name="page" value="dienstplan-overview">
@@ -362,15 +372,15 @@ $bereiche = $db->get_bereiche();
                                     if (empty($tag_dienste)) continue; // Überspringe Tage ohne Dienste
                                 ?>
                                     <!-- Tag-Header -->
-                                    <tr style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
-                                        <td colspan="5" style="position: sticky; left: 0; z-index: 10; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 12px; color: #fff; font-weight: 700; font-size: 13px; border-right: 3px solid #666;">
+                                    <tr style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);">
+                                        <td colspan="5" style="position: sticky; left: 0; z-index: 10; background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); padding: 12px; color: #fff; font-weight: 700; font-size: 13px; border-right: 3px solid #666;">
                                             <span class="dashicons dashicons-calendar-alt" style="font-size: 16px; vertical-align: middle;"></span>
                                             Tag <?php echo $tag->tag_nummer; ?>: <?php echo date_i18n('l, d.m.Y', strtotime($tag->tag_datum)); ?>
                                             <span style="background: rgba(255,255,255,0.2); padding: 2px 8px; border-radius: 12px; margin-left: 8px; font-size: 11px;">
                                                 <?php echo count($tag_dienste); ?> Dienst<?php echo count($tag_dienste) != 1 ? 'e' : ''; ?>
                                             </span>
                                         </td>
-                                        <td colspan="999" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 12px;"></td>
+                                        <td colspan="999" style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); padding: 12px;"></td>
                                     </tr>
                                     
                                     <?php 

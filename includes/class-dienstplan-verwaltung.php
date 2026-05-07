@@ -54,6 +54,13 @@ class Dienstplan_Verwaltung {
     protected $db_prefix;
 
     /**
+     * Aktivierte/Deaktivierte optionale Features.
+     *
+     * @var array<string,bool>
+     */
+    protected $feature_flags = array();
+
+    /**
      * Initialisierung
      *
      * @since    1.0.0
@@ -62,6 +69,7 @@ class Dienstplan_Verwaltung {
         $this->plugin_name = 'dienstplan-verwaltung';
         $this->version = DIENSTPLAN_VERSION;
         $this->db_prefix = DIENSTPLAN_DB_PREFIX;
+        $this->feature_flags = $this->resolve_feature_flags();
 
         $this->load_dependencies();
         $this->set_locale();
@@ -102,6 +110,42 @@ class Dienstplan_Verwaltung {
     }
 
     /**
+     * Ermittelt Feature-Flags und erlaubt Overrides via Filter.
+     *
+     * @return array<string,bool>
+     */
+    private function resolve_feature_flags() {
+        $flags = array(
+            'updater' => (bool) DIENSTPLAN_FEATURE_UPDATER,
+            'mail' => (bool) DIENSTPLAN_FEATURE_MAIL,
+            'notifications' => (bool) DIENSTPLAN_FEATURE_NOTIFICATIONS,
+        );
+
+        $filtered = apply_filters('dienstplan_feature_flags', $flags);
+        if (!is_array($filtered)) {
+            return $flags;
+        }
+
+        foreach ($flags as $key => $default_value) {
+            if (isset($filtered[$key])) {
+                $flags[$key] = (bool) $filtered[$key];
+            }
+        }
+
+        return $flags;
+    }
+
+    /**
+     * Prüft, ob ein optionales Feature aktiv ist.
+     *
+     * @param string $feature
+     * @return bool
+     */
+    private function is_feature_enabled($feature) {
+        return !empty($this->feature_flags[$feature]);
+    }
+
+    /**
      * Locale setzen
      *
      * @since    1.0.0
@@ -112,6 +156,7 @@ class Dienstplan_Verwaltung {
 
         $this->loader->add_action('init', $plugin_i18n, 'load_plugin_textdomain');
         $this->loader->add_action('init', 'Dienstplan_Roles', 'run_pending_role_migration', 20);
+        $this->loader->add_action('init', 'Dienstplan_Roles', 'install_roles_if_needed', 25);
     }
 
     /**
@@ -121,6 +166,10 @@ class Dienstplan_Verwaltung {
      * @access   private
      */
     private function setup_mail_filters() {
+        if (!$this->is_feature_enabled('mail')) {
+            return;
+        }
+
         $from_name  = get_option('dp_mail_from_name', '');
         $from_email = get_option('dp_mail_from_email', '');
         $reply_to   = get_option('dp_mail_reply_to', '');
@@ -184,6 +233,10 @@ class Dienstplan_Verwaltung {
      * Mail-Queue: Cron-Intervall und Queue-Job registrieren.
      */
     private function setup_mail_queue() {
+        if (!$this->is_feature_enabled('mail')) {
+            return;
+        }
+
         add_filter('cron_schedules', array('Dienstplan_Mail_Queue', 'register_cron_schedule'));
         add_action('init', array('Dienstplan_Mail_Queue', 'ensure_scheduled'));
         add_action(Dienstplan_Mail_Queue::CRON_HOOK, array('Dienstplan_Mail_Queue', 'process_queue'));
@@ -217,7 +270,9 @@ class Dienstplan_Verwaltung {
         );
 
         // Updater mit Verzögerung initialisieren (nach init-Hook und Translations)
-        $this->loader->add_action('admin_init', $this, 'initialize_updater');
+        if ($this->is_feature_enabled('updater')) {
+            $this->loader->add_action('admin_init', $this, 'initialize_updater');
+        }
 
         // Admin-Menü
         $this->loader->add_action('admin_menu', $plugin_admin, 'add_menu');
@@ -270,6 +325,14 @@ class Dienstplan_Verwaltung {
         $this->loader->add_action('wp_ajax_dp_create_taetigkeit', $plugin_admin, 'ajax_create_taetigkeit');
         $this->loader->add_action('wp_ajax_dp_create_verein', $plugin_admin, 'ajax_create_verein');
         $this->loader->add_action('wp_ajax_dp_get_taetigkeiten_by_bereich', $plugin_admin, 'ajax_get_taetigkeiten_by_bereich');
+        $this->loader->add_action('wp_ajax_dp_save_mitbringen_item', $plugin_admin, 'ajax_save_mitbringen_item');
+        $this->loader->add_action('wp_ajax_dp_assign_mitbringen_person', $plugin_admin, 'ajax_assign_mitbringen_person');
+        $this->loader->add_action('wp_ajax_dp_copy_mitbringen_item', $plugin_admin, 'ajax_copy_mitbringen_item');
+        $this->loader->add_action('wp_ajax_dp_split_mitbringen_item', $plugin_admin, 'ajax_split_mitbringen_item');
+        $this->loader->add_action('wp_ajax_dp_toggle_mitbringen_status', $plugin_admin, 'ajax_toggle_mitbringen_status');
+        $this->loader->add_action('wp_ajax_dp_delete_mitbringen_item', $plugin_admin, 'ajax_delete_mitbringen_item');
+        $this->loader->add_action('wp_ajax_dp_bulk_delete_mitbringen', $plugin_admin, 'ajax_bulk_delete_mitbringen');
+        $this->loader->add_action('wp_ajax_dp_bulk_update_mitbringen', $plugin_admin, 'ajax_bulk_update_mitbringen');
         $this->loader->add_action('wp_ajax_dp_check_dienst_status', $plugin_admin, 'ajax_check_dienst_status');
         $this->loader->add_action('wp_ajax_dp_clear_booking_mail_logs', $plugin_admin, 'ajax_clear_booking_mail_logs');
         
@@ -359,6 +422,7 @@ class Dienstplan_Verwaltung {
         $this->loader->add_action('wp_ajax_nopriv_dp_assign_slot', $plugin_public, 'ajax_assign_slot');
         $this->loader->add_action('wp_ajax_dp_remove_assignment', $plugin_public, 'ajax_remove_assignment');
         $this->loader->add_action('wp_ajax_nopriv_dp_remove_assignment', $plugin_public, 'ajax_remove_assignment');
+        $this->loader->add_action('wp_ajax_dp_take_mitbringen_item', $plugin_public, 'ajax_take_mitbringen_item');
         $this->loader->add_action('wp_ajax_dp_frontend_admin_remove_slot', $plugin_public, 'ajax_frontend_admin_remove_slot');
         $this->loader->add_action('wp_ajax_dp_frontend_admin_split_dienst', $plugin_public, 'ajax_frontend_admin_split_dienst');
         
@@ -392,8 +456,10 @@ class Dienstplan_Verwaltung {
             $database->install();
             
             // Benachrichtigungssystem installieren
-            $notifications = new Dienstplan_Notifications($this->db_prefix);
-            $notifications->install();
+            if ($this->is_feature_enabled('notifications')) {
+                $notifications = new Dienstplan_Notifications($this->db_prefix);
+                $notifications->install();
+            }
             
             update_option('dienstplan_db_version', $this->version);
             
@@ -422,12 +488,8 @@ class Dienstplan_Verwaltung {
             set_transient('dienstplan_last_status_repair', time(), 21600);
         }
         
-        // Rollen installieren/aktualisieren bei jedem Laden
-        $roles_version = get_option('dienstplan_roles_version', '0');
-        if (version_compare($roles_version, $this->version, '<')) {
-            Dienstplan_Roles::install_roles();
-            update_option('dienstplan_roles_version', $this->version);
-        }
+        // Rollen-Installation erfolgt auf init (siehe set_locale),
+        // damit Übersetzungen nicht vorzeitig geladen werden.
     }
     
     /**
@@ -572,6 +634,10 @@ class Dienstplan_Verwaltung {
      * @since    0.9.5.61
      */
     public function initialize_updater() {
+        if (!$this->is_feature_enabled('updater')) {
+            return;
+        }
+
         new Dienstplan_Updater();
     }
 

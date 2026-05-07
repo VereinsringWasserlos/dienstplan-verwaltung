@@ -11,6 +11,12 @@ if (!defined('ABSPATH')) exit;
 $can_manage_clubs  = Dienstplan_Roles::can_manage_clubs()  || current_user_can('manage_options');
 $can_manage_events = Dienstplan_Roles::can_manage_events() || current_user_can('manage_options');
 
+$allowed_import_types = array('dienstplan', 'bereiche', 'taetigkeiten', 'vereine', 'veranstaltungen', 'dienste');
+$preselected_import_type = isset($_GET['import_type']) ? sanitize_key((string) $_GET['import_type']) : '';
+if (!in_array($preselected_import_type, $allowed_import_types, true)) {
+    $preselected_import_type = '';
+}
+
 if (!$can_manage_clubs && !$can_manage_events) {
     wp_die(__('Sie haben keine Berechtigung für den Import.', 'dienstplan-verwaltung'));
 }
@@ -29,7 +35,7 @@ if (isset($stats['veranstaltungen'])) {
     }
 }
 ?>
-<div class="wrap dp-import-wrap">
+<div class="wrap dp-import-wrap" data-preselect-type="<?php echo esc_attr($preselected_import_type); ?>">
     <h1 class="wp-heading-inline">
         <span class="dashicons dashicons-upload" style="font-size:1.4em;vertical-align:middle;margin-right:6px;"></span>
         <?php _e('Daten importieren', 'dienstplan-verwaltung'); ?>
@@ -128,7 +134,7 @@ if (isset($stats['veranstaltungen'])) {
             </div>
 
             <!-- Verstecktes Input für ausgewählten Typ -->
-            <input type="hidden" id="dp_import_type" value="">
+            <input type="hidden" id="dp_import_type" value="<?php echo esc_attr($preselected_import_type); ?>">
 
             <!-- Datei-Upload (erscheint nach Typ-Wahl) -->
             <div id="dp-file-section" style="display:none; margin-top:1.5rem;">

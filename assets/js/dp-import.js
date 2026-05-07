@@ -149,7 +149,22 @@
         bindTypeCards();
         bindFileHandlers();
         bindWizardNav();
+        applyPreselectedImportType();
     });
+
+    function applyPreselectedImportType() {
+        const containerType = String($('.dp-import-wrap').data('preselect-type') || '').trim();
+        const queryType = new URLSearchParams(window.location.search).get('import_type');
+        const wantedType = (containerType || queryType || '').trim();
+        if (!wantedType || !Object.prototype.hasOwnProperty.call(fieldDefs, wantedType)) {
+            return;
+        }
+
+        const $targetCard = $('.dp-type-card[data-type="' + wantedType + '"]');
+        if ($targetCard.length) {
+            $targetCard.trigger('click');
+        }
+    }
 
     /* ------------------------------------------------------------------ */
     /* Typ-Karten                                                           */
@@ -456,10 +471,19 @@
                 const $opt = $('<option>').val(f.key).text(f.label + (f.required ? ' *' : ''));
                 if (f.required) $opt.css('color', '#dc2626');
 
-                // Auto-Match: Spaltenname enthält Feldname oder umgekehrt
-                const h = header.toLowerCase().replace(/[\s_-]/g, '');
-                const k = f.key.toLowerCase().replace(/[\s_-]/g, '');
-                if (!autoMatched && (h.includes(k) || k.includes(h))) {
+                // Auto-Match nur bei klarer Gleichheit (plus verein_-Präfix) statt unscharfem contains.
+                // Verhindert Fehlzuordnungen wie "kontakt_name" -> "name".
+                const hNorm = normalizeHeader(header);
+                const kNorm = normalizeHeader(f.key);
+                const hNoVereinPrefix = hNorm.replace(/^verein_/, '');
+                const kNoVereinPrefix = kNorm.replace(/^verein_/, '');
+                const isAutoMatch = (
+                    hNorm === kNorm ||
+                    hNoVereinPrefix === kNorm ||
+                    hNorm === kNoVereinPrefix
+                );
+
+                if (!autoMatched && isAutoMatch) {
                     $opt.prop('selected', true);
                     autoMatched = true;
                     $tr.addClass('dp-auto-matched');

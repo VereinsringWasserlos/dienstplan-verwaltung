@@ -14,6 +14,14 @@ class Dienstplan_Notifications {
     
     private $wpdb;
     private $prefix;
+
+    private function is_enabled() {
+        if (defined('DIENSTPLAN_FEATURE_NOTIFICATIONS') && !DIENSTPLAN_FEATURE_NOTIFICATIONS) {
+            return false;
+        }
+
+        return (bool) apply_filters('dienstplan_feature_notifications_enabled', true);
+    }
     
     public function __construct($db_prefix = 'dp_') {
         global $wpdb;
@@ -113,6 +121,10 @@ class Dienstplan_Notifications {
      * Sende Benachrichtigung bei Veranstaltungs-Erstellung
      */
     public function notify_event_created($veranstaltung_id, $veranstaltung_data) {
+        if (!$this->is_enabled()) {
+            return;
+        }
+
         $users = Dienstplan_Roles::get_event_admins();
         $current_user = wp_get_current_user();
         
@@ -147,6 +159,10 @@ class Dienstplan_Notifications {
      * Sende Benachrichtigung bei Veranstaltungs-Aktualisierung
      */
     public function notify_event_updated($veranstaltung_id, $veranstaltung_data) {
+        if (!$this->is_enabled()) {
+            return;
+        }
+
         $users = Dienstplan_Roles::get_event_admins();
         $current_user = wp_get_current_user();
         
@@ -179,6 +195,10 @@ class Dienstplan_Notifications {
      * Sende Benachrichtigung bei Veranstaltungs-Löschung
      */
     public function notify_event_deleted($veranstaltung_name) {
+        if (!$this->is_enabled()) {
+            return;
+        }
+
         $users = Dienstplan_Roles::get_event_admins();
         $current_user = wp_get_current_user();
         
@@ -209,6 +229,10 @@ class Dienstplan_Notifications {
      * Sende Benachrichtigung bei Vereins-Erstellung
      */
     public function notify_club_created($verein_id, $verein_data) {
+        if (!$this->is_enabled()) {
+            return;
+        }
+
         $users = Dienstplan_Roles::get_club_admins();
         $current_user = wp_get_current_user();
         
@@ -241,6 +265,10 @@ class Dienstplan_Notifications {
      * Sende Benachrichtigung bei Vereins-Aktualisierung
      */
     public function notify_club_updated($verein_id, $verein_data) {
+        if (!$this->is_enabled()) {
+            return;
+        }
+
         $users = Dienstplan_Roles::get_club_admins();
         $current_user = wp_get_current_user();
         
@@ -272,6 +300,10 @@ class Dienstplan_Notifications {
      * Sende Benachrichtigung bei Vereins-Löschung
      */
     public function notify_club_deleted($verein_name) {
+        if (!$this->is_enabled()) {
+            return;
+        }
+
         $users = Dienstplan_Roles::get_club_admins();
         $current_user = wp_get_current_user();
         

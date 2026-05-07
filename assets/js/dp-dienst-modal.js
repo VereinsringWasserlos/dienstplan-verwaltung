@@ -147,11 +147,6 @@
         // Zeit-Änderungen validieren
         $('#d_von_zeit, #d_bis_zeit, #d_bis_folgetag').on('change', validateDienstzeit);
 
-        // Typ-abhängige Felder umschalten
-        $('#d_dienst_typ').on('change', function() {
-            updateDienstTypUi();
-        });
-
         updateDienstTypUi();
     });
 
@@ -170,7 +165,6 @@
         $('#dienst-modal-title').text('Neuer Dienst');
         $('#tag-zeitfenster-info').hide();
         $('#dienst-zeit-warnung').hide();
-        $('#d_dienst_typ').val('dienst');
         $('#d_admin_only').prop('checked', false);
         updateDienstTypUi();
         
@@ -211,16 +205,14 @@
         console.log('saveDienst');
         
         // Validierung
-        const dienstTyp = getDienstTyp();
-
         if (!$('#d_veranstaltung_id').val() || !$('#d_tag_id').val() || 
             !$('#d_verein_id').val() || !$('#d_bereich_id').val() || 
-            !$('#d_taetigkeit_id').val() || !$('#d_anzahl_personen').val()) {
+            !$('#d_taetigkeit_id').val()) {
             alert('Bitte füllen Sie alle Pflichtfelder aus!');
             return;
         }
 
-        if (dienstTyp !== 'mitbringen' && (!$('#d_von_zeit').val() || !$('#d_bis_zeit').val())) {
+        if (!$('#d_von_zeit').val() || !$('#d_bis_zeit').val()) {
             alert('Bitte füllen Sie alle Pflichtfelder aus!');
             return;
         }
@@ -240,7 +232,7 @@
             verein_id: $('#d_verein_id').val(),
             bereich_id: $('#d_bereich_id').val(),
             taetigkeit_id: $('#d_taetigkeit_id').val(),
-            dienst_typ: dienstTyp,
+            dienst_typ: 'dienst',
             von_zeit: $('#d_von_zeit').val(),
             bis_zeit: $('#d_bis_zeit').val(),
             bis_folgetag: $('#d_bis_folgetag').is(':checked') ? 1 : 0,
@@ -334,11 +326,10 @@
                     $('#btn_neue_taetigkeit').prop('disabled', false);
                     
                     // Setze restliche Felder
-                    $('#d_dienst_typ').val(d.dienst_typ || 'dienst');
                     $('#d_von_zeit').val(d.von_zeit ? d.von_zeit.substring(0, 5) : '');
                     $('#d_bis_zeit').val(d.bis_zeit ? d.bis_zeit.substring(0, 5) : '');
                     $('#d_bis_folgetag').prop('checked', d.bis_datum ? true : false);
-                    $('#d_anzahl_personen').val(d.anzahl_personen || 1);
+                    $('#d_anzahl_personen').val(1);
                     $('#d_splittbar').prop('checked', d.splittbar == 1);
                     $('#d_admin_only').prop('checked', d.admin_only == 1);
                     $('#d_besonderheiten').val(d.besonderheiten || '');
@@ -347,12 +338,8 @@
                     $('#dienst-modal-title').text('Dienst bearbeiten');
                     
                     // Zeige/verstecke Split-Buttons basierend auf Dienst-Status
-                    const isMitbringen = (d.dienst_typ || 'dienst') === 'mitbringen';
                     const isSplit = d.splittbar == 1;
-                    if (isMitbringen) {
-                        $('#btn-unsplit-dienst').hide();
-                        $('#btn-split-dienst').hide();
-                    } else if (isSplit) {
+                    if (isSplit) {
                         $('#btn-unsplit-dienst').show();
                         $('#btn-split-dienst').hide();
                     } else {
@@ -683,11 +670,6 @@
      * Validiert Dienstzeiten gegen Zeitfenster des Tags
      */
     function validateDienstzeit() {
-        if (getDienstTyp() === 'mitbringen') {
-            $('#dienst-zeit-warnung').hide();
-            return true;
-        }
-
         if (!window.currentTagZeitfenster) return true;
         
         const dienstVon = $('#d_von_zeit').val();
@@ -764,32 +746,11 @@
         return true;
     }
 
-    function getDienstTyp() {
-        const value = $('#d_dienst_typ').val();
-        return value === 'mitbringen' ? 'mitbringen' : 'dienst';
-    }
-
     function updateDienstTypUi() {
-        const isMitbringen = getDienstTyp() === 'mitbringen';
-
-        if (isMitbringen) {
-            $('#dienstzeit-row').hide();
-            $('#splittbar-row').hide();
-            $('#btn-unsplit-dienst').hide();
-            $('#btn-split-dienst').hide();
-
-            $('#d_von_zeit').prop('required', false).val('');
-            $('#d_bis_zeit').prop('required', false).val('');
-            $('#d_bis_folgetag').prop('checked', false);
-            $('#d_splittbar').prop('checked', false);
-            $('#dienst-zeit-warnung').hide();
-        } else {
-            $('#dienstzeit-row').show();
-            $('#splittbar-row').show();
-
-            $('#d_von_zeit').prop('required', true);
-            $('#d_bis_zeit').prop('required', true);
-        }
+        $('#dienstzeit-row').show();
+        $('#splittbar-row').show();
+        $('#d_von_zeit').prop('required', true);
+        $('#d_bis_zeit').prop('required', true);
     }
 
 })(jQuery);

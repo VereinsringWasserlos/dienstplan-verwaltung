@@ -61,7 +61,7 @@ uasort($dienste_nach_tagen, function($a, $b) {
     ?>
         <div class="tag-dienste-gruppe" style="margin-bottom: 1.5rem; border: 1px solid #c3c4c7; border-radius: 4px; position: relative;">
             <!-- Einklappbarer Header -->
-            <h3 class="tag-header-collapsible" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 1rem 1.5rem; margin: 0; display: flex; align-items: center; gap: 1rem; transition: all 0.3s;">
+            <h3 class="tag-header-collapsible" style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; padding: 1rem 1.5rem; margin: 0; display: flex; align-items: center; gap: 1rem; transition: all 0.3s;">
                 <span class="dashicons dashicons-arrow-down-alt2 collapse-icon" id="icon-<?php echo $collapse_id; ?>" onclick="toggleTagGroup('<?php echo $collapse_id; ?>')" style="transition: transform 0.3s; font-size: 20px; cursor: pointer;"></span>
                 
                 <span onclick="toggleTagGroup('<?php echo $collapse_id; ?>')" style="flex: 1; display: flex; align-items: center; gap: 1rem; cursor: pointer;">
@@ -71,8 +71,8 @@ uasort($dienste_nach_tagen, function($a, $b) {
                 </span>
                 
                 <?php if (!$is_restricted_club_admin): ?>
-                    <button type="button" class="button button-primary" onclick="event.stopPropagation(); openDienstModal(<?php echo $tag_id; ?>);" style="background: rgba(255,255,255,0.9); color: #667eea; border: none; font-weight: 600; padding: 0.5rem 1rem; border-radius: 3px; display: flex; align-items: center; gap: 0.5rem; transition: all 0.2s;" onmouseover="this.style.background='#fff'" onmouseout="this.style.background='rgba(255,255,255,0.9)'">
-                        <span class="dashicons dashicons-plus-alt" style="font-size: 18px; width: 18px; height: 18px;"></span>
+                    <button type="button" class="button dp-header-ghost-button" onclick="event.stopPropagation(); openDienstModal(<?php echo $tag_id; ?>);">
+                        <span class="dashicons dashicons-plus-alt"></span>
                         <?php _e('Neuer Dienst', 'dienstplan-verwaltung'); ?>
                     </button>
                 <?php endif; ?>
@@ -177,12 +177,7 @@ uasort($dienste_nach_tagen, function($a, $b) {
                                 <?php endif; ?>
                             </td>
                             <td>
-                                <?php if (($dienst->dienst_typ ?? 'dienst') === 'mitbringen'): ?>
-                                    <span style="color: #0f766e; font-weight: 600;">
-                                        <span class="dashicons dashicons-carrot" style="font-size: 0.9rem;"></span>
-                                        Mitbringen
-                                    </span>
-                                <?php elseif (!empty($dienst->von_zeit) && !empty($dienst->bis_zeit)): ?>
+                                <?php if (!empty($dienst->von_zeit) && !empty($dienst->bis_zeit)): ?>
                                     <strong><?php echo esc_html($dp_format_time($dienst->von_zeit)); ?></strong>
                                     -
                                     <strong><?php echo esc_html($dp_format_time($dienst->bis_zeit)); ?></strong>
@@ -325,7 +320,7 @@ uasort($dienste_nach_tagen, function($a, $b) {
     
     <?php if (!empty($dienste_ohne_tag)): ?>
         <div class="tag-dienste-gruppe" style="margin-bottom: 2rem; border: 1px solid #f59e0b; border-radius: 4px; position: relative;">
-            <h3 style="background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%); color: white; padding: 1rem 1.5rem; margin: 0; display: flex; align-items: center; gap: 1rem;">
+                <h3 style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; padding: 1rem 1.5rem; margin: 0; display: flex; align-items: center; gap: 1rem;">
                 <span class="dashicons dashicons-warning" style="font-size: 24px;"></span>
                 <span style="flex: 1;">
                     <?php _e('Dienste ohne Tag-Zuordnung', 'dienstplan-verwaltung'); ?>

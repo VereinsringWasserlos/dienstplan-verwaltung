@@ -16,7 +16,6 @@ $selected_veranstaltung = isset($_GET['veranstaltung']) ? intval($_GET['veransta
 $selected_verein = isset($_GET['verein']) ? intval($_GET['verein']) : 0;
 $filter_status = isset($_GET['status']) ? sanitize_text_field($_GET['status']) : '';
 $filter_mitarbeiter = isset($_GET['mitarbeiter']) ? intval($_GET['mitarbeiter']) : 0;
-$filter_dienst_typ = isset($_GET['dienst_typ']) ? sanitize_text_field($_GET['dienst_typ']) : '';
 $filter_mitarbeiter_name = '';
 $scoped_verein_ids = isset($allowed_verein_ids) && is_array($allowed_verein_ids)
     ? array_values(array_filter(array_map('intval', $allowed_verein_ids)))
@@ -41,7 +40,7 @@ if ($filter_mitarbeiter > 0) {
 // Dienste laden (mit Filtern)
 $dienste = array();
 if ($selected_veranstaltung > 0) {
-    $all_dienste = $db->get_dienste($selected_veranstaltung, $selected_verein, null, $scoped_verein_ids, $filter_dienst_typ ?: null);
+    $all_dienste = $db->get_dienste($selected_veranstaltung, $selected_verein, null, $scoped_verein_ids, 'dienst');
 
     if ($filter_mitarbeiter > 0) {
         $all_dienste = array_filter($all_dienste, function ($d) use ($db, $filter_mitarbeiter) {
@@ -120,12 +119,18 @@ $nav_items = [
                 <span class="dashicons dashicons-filter"></span>
                 <?php _e('Filter', 'dienstplan-verwaltung'); ?>
             </h3>
-            <?php if (!$is_restricted_club_admin): ?>
-                <button type="button" class="button button-primary" onclick="openDienstModal(); return false;" style="display: inline-flex; align-items: center; gap: 0.35rem;">
-                    <span class="dashicons dashicons-plus-alt" style="font-size: 16px; width: 16px; height: 16px;"></span>
-                    <?php _e('Neuer Dienst', 'dienstplan-verwaltung'); ?>
+            <div class="dp-filter-action-group">
+                <?php if (!$is_restricted_club_admin): ?>
+                    <button type="button" class="button button-primary dp-filter-action-btn" onclick="openDienstModal(); return false;">
+                        <span class="dashicons dashicons-plus-alt"></span>
+                        <?php _e('Neuer Dienst', 'dienstplan-verwaltung'); ?>
+                    </button>
+                <?php endif; ?>
+                <button type="button" class="button button-primary dp-open-import-popup dp-filter-action-btn" data-import-type="dienste">
+                    <span class="dashicons dashicons-upload"></span>
+                    <?php _e('Dienste importieren', 'dienstplan-verwaltung'); ?>
                 </button>
-            <?php endif; ?>
+            </div>
         </div>
 
         <?php if ($filter_mitarbeiter > 0): ?>
@@ -147,7 +152,6 @@ $nav_items = [
                                     'veranstaltung' => $selected_veranstaltung,
                                     'verein' => $selected_verein,
                                     'status' => $filter_status,
-                                    'dienst_typ' => $filter_dienst_typ,
                                 ), admin_url('admin.php'))); ?>" class="button button-small" style="margin-left: auto;">
                         <?php _e('Mitarbeiter-Filter entfernen', 'dienstplan-verwaltung'); ?>
                     </a>
@@ -198,21 +202,6 @@ $nav_items = [
                     <option value=""><?php _e('-- Alle --', 'dienstplan-verwaltung'); ?></option>
                     <option value="unvollstaendig" <?php selected($filter_status, 'unvollstaendig'); ?>>
                         ⚠️ <?php _e('Nur Unvollständige', 'dienstplan-verwaltung'); ?>
-                    </option>
-                </select>
-            </div>
-
-            <div style="flex: 0 0 180px;">
-                <label for="filter-dienst-typ" style="display: block; margin-bottom: 0.5rem; font-weight: 600;">
-                    <?php _e('Dienst-Typ', 'dienstplan-verwaltung'); ?>
-                </label>
-                <select id="filter-dienst-typ" name="dienst_typ" class="regular-text" style="width: 100%;">
-                    <option value=""><?php _e('-- Alle --', 'dienstplan-verwaltung'); ?></option>
-                    <option value="dienst" <?php selected($filter_dienst_typ, 'dienst'); ?>>
-                        <?php _e('Dienste (mit Uhrzeit)', 'dienstplan-verwaltung'); ?>
-                    </option>
-                    <option value="mitbringen" <?php selected($filter_dienst_typ, 'mitbringen'); ?>>
-                        📦 <?php _e('Mitbringen (ohne Uhrzeit)', 'dienstplan-verwaltung'); ?>
                     </option>
                 </select>
             </div>

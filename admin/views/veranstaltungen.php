@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Veranstaltungen-Verwaltung Template
  *
@@ -7,6 +8,31 @@
  */
 
 if (!defined('ABSPATH')) exit;
+
+$search = isset($_GET['search']) ? sanitize_text_field($_GET['search']) : '';
+$filter_status = isset($_GET['status']) ? sanitize_text_field($_GET['status']) : '';
+$filter_typ = isset($_GET['typ']) ? sanitize_text_field($_GET['typ']) : '';
+
+if (!empty($veranstaltungen) && ($search !== '' || $filter_status !== '' || $filter_typ !== '')) {
+    $veranstaltungen = array_values(array_filter($veranstaltungen, function ($veranstaltung) use ($search, $filter_status, $filter_typ) {
+        if ($filter_status !== '' && (string) ($veranstaltung->status ?? '') !== $filter_status) {
+            return false;
+        }
+
+        if ($filter_typ !== '' && (string) ($veranstaltung->typ ?? '') !== $filter_typ) {
+            return false;
+        }
+
+        if ($search !== '') {
+            $haystack = strtolower(trim((string) ($veranstaltung->name ?? '') . ' ' . (string) ($veranstaltung->beschreibung ?? '')));
+            if (strpos($haystack, strtolower($search)) === false) {
+                return false;
+            }
+        }
+
+        return true;
+    }));
+}
 
 // Setup für Page-Header Partial
 $page_title = __('Veranstaltungen', 'dienstplan-verwaltung');
@@ -43,19 +69,83 @@ $nav_items = [
 
 <div class="wrap dienstplan-wrap">
     <?php include DIENSTPLAN_PLUGIN_PATH . 'admin/views/partials/page-header.php'; ?>
-    
+
     <hr class="wp-header-end">
-    
+
+    <div class="dp-filter-bar" style="background: #fff; padding: 1.5rem; border: 1px solid #c3c4c7; border-radius: 4px; margin: 1.5rem 0;">
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 0.75rem;">
+            <h3 style="margin: 0;">
+                <span class="dashicons dashicons-filter"></span>
+                <?php _e('Filter', 'dienstplan-verwaltung'); ?>
+            </h3>
+            <div class="dp-filter-action-group">
+                <button type="button" class="button button-primary dp-filter-action-btn" onclick="openVeranstaltungModal(); return false;">
+                    <span class="dashicons dashicons-plus-alt"></span>
+                    <?php _e('Neue Veranstaltung', 'dienstplan-verwaltung'); ?>
+                </button>
+                <button type="button" class="button button-primary dp-open-import-popup dp-filter-action-btn" data-import-type="veranstaltungen">
+                    <span class="dashicons dashicons-upload"></span>
+                    <?php _e('Veranstaltungen importieren', 'dienstplan-verwaltung'); ?>
+                </button>
+            </div>
+        </div>
+
+        <form method="get" action="" style="display: flex; gap: 1rem; flex-wrap: wrap; align-items: flex-end;">
+            <input type="hidden" name="page" value="dienstplan-veranstaltungen">
+
+            <div style="flex: 1; min-width: 260px;">
+                <label for="filter-search" style="display: block; margin-bottom: 0.5rem; font-weight: 600;">
+                    <?php _e('Suche', 'dienstplan-verwaltung'); ?>
+                </label>
+                <input type="search" id="filter-search" name="search" value="<?php echo esc_attr($search); ?>" class="regular-text" style="width: 100%;" placeholder="<?php esc_attr_e('Name oder Beschreibung', 'dienstplan-verwaltung'); ?>">
+            </div>
+
+            <div style="flex: 0 0 200px;">
+                <label for="filter-status" style="display: block; margin-bottom: 0.5rem; font-weight: 600;">
+                    <?php _e('Status', 'dienstplan-verwaltung'); ?>
+                </label>
+                <select id="filter-status" name="status" class="regular-text" style="width: 100%;">
+                    <option value=""><?php _e('-- Alle --', 'dienstplan-verwaltung'); ?></option>
+                    <option value="in_planung" <?php selected($filter_status, 'in_planung'); ?>><?php _e('In Planung', 'dienstplan-verwaltung'); ?></option>
+                    <option value="geplant" <?php selected($filter_status, 'geplant'); ?>><?php _e('Geplant', 'dienstplan-verwaltung'); ?></option>
+                    <option value="aktiv" <?php selected($filter_status, 'aktiv'); ?>><?php _e('Aktiv', 'dienstplan-verwaltung'); ?></option>
+                    <option value="abgeschlossen" <?php selected($filter_status, 'abgeschlossen'); ?>><?php _e('Abgeschlossen', 'dienstplan-verwaltung'); ?></option>
+                </select>
+            </div>
+
+            <div style="flex: 0 0 200px;">
+                <label for="filter-typ" style="display: block; margin-bottom: 0.5rem; font-weight: 600;">
+                    <?php _e('Typ', 'dienstplan-verwaltung'); ?>
+                </label>
+                <select id="filter-typ" name="typ" class="regular-text" style="width: 100%;">
+                    <option value=""><?php _e('-- Alle --', 'dienstplan-verwaltung'); ?></option>
+                    <option value="eintaegig" <?php selected($filter_typ, 'eintaegig'); ?>><?php _e('Eintägig', 'dienstplan-verwaltung'); ?></option>
+                    <option value="mehrtaegig" <?php selected($filter_typ, 'mehrtaegig'); ?>><?php _e('Mehrtägig', 'dienstplan-verwaltung'); ?></option>
+                </select>
+            </div>
+
+            <div>
+                <button type="submit" class="button button-primary">
+                    <span class="dashicons dashicons-search"></span>
+                    <?php _e('Filtern', 'dienstplan-verwaltung'); ?>
+                </button>
+                <?php if ($search !== '' || $filter_status !== '' || $filter_typ !== ''): ?>
+                    <a href="?page=dienstplan-veranstaltungen" class="button"><?php _e('Zurücksetzen', 'dienstplan-verwaltung'); ?></a>
+                <?php endif; ?>
+            </div>
+        </form>
+    </div>
+
     <?php include DIENSTPLAN_PLUGIN_PATH . 'admin/views/partials/veranstaltungen-header.php'; ?>
-    
+
     <?php if (!empty($veranstaltungen)): ?>
         <?php include DIENSTPLAN_PLUGIN_PATH . 'admin/views/partials/veranstaltungen-table.php'; ?>
     <?php else: ?>
         <?php include DIENSTPLAN_PLUGIN_PATH . 'admin/views/partials/veranstaltungen-empty.php'; ?>
     <?php endif; ?>
-    
+
     <?php include DIENSTPLAN_PLUGIN_PATH . 'admin/views/partials/veranstaltungen-modal.php'; ?>
-    
+
     <!-- Neuer Kontakt Modal (für Verantwortliche) -->
     <div id="new-contact-modal" class="dp-modal" style="display: none;">
         <div class="dp-modal-content" style="max-width: 500px;">

@@ -41,6 +41,21 @@ class Dienstplan_Roles {
     const LEGACY_CAP_MANAGE_CLUBS = 'dp_manage_clubs';
     const LEGACY_CAP_VIEW_REPORTS = 'dp_view_reports';
     const LEGACY_CAP_SEND_NOTIFICATIONS = 'dp_send_notifications';
+
+    /**
+     * Liefert i18n-Text erst ab init, davor den Fallback-Originaltext.
+     * Verhindert _load_textdomain_just_in_time-Warnungen im fruehen Bootstrap.
+     *
+     * @param string $text
+     * @return string
+     */
+    private static function i18n_label($text) {
+        if (function_exists('did_action') && did_action('init')) {
+            return __($text, 'dienstplan-verwaltung');
+        }
+
+        return $text;
+    }
     
     /**
      * Rollen installieren
@@ -59,7 +74,7 @@ class Dienstplan_Roles {
         // Haupt-Admin - Vollzugriff auf alles
         add_role(
             self::ROLE_GENERAL_ADMIN,
-            __('Dienstplan - Haupt-Admin', 'dienstplan-verwaltung'),
+            self::i18n_label('Dienstplan - Haupt-Admin'),
             array(
                 'read' => true,
                 self::CAP_MANAGE_SETTINGS => true,
@@ -74,7 +89,7 @@ class Dienstplan_Roles {
         // Veranstaltungs-Admin - Nur Veranstaltungen
         add_role(
             self::ROLE_EVENT_ADMIN,
-            __('Dienstplan - Veranstaltungs-Admin', 'dienstplan-verwaltung'),
+            self::i18n_label('Dienstplan - Veranstaltungs-Admin'),
             array(
                 'read' => true,
                 self::CAP_MANAGE_EVENTS => true,
@@ -85,7 +100,7 @@ class Dienstplan_Roles {
         // Vereins-Admin - Nur Vereine
         add_role(
             self::ROLE_CLUB_ADMIN,
-            __('Dienstplan - Vereins-Admin', 'dienstplan-verwaltung'),
+            self::i18n_label('Dienstplan - Vereins-Admin'),
             array(
                 'read' => true,
                 self::CAP_MANAGE_CLUBS => true,
@@ -97,7 +112,7 @@ class Dienstplan_Roles {
         // Crew-Mitglied - Nur Frontend-Portal-Zugriff (kein Backend)
         add_role(
             self::ROLE_CREW,
-            __('Dienstplan - Crew-Mitglied', 'dienstplan-verwaltung'),
+            self::i18n_label('Dienstplan - Crew-Mitglied'),
             array(
                 'read' => true, // Nur lesender Zugriff auf Frontend
             )
@@ -152,6 +167,19 @@ class Dienstplan_Roles {
         $crew_role = get_role(self::ROLE_CREW);
         if ($crew_role) {
             $crew_role->add_cap('read');
+        }
+    }
+
+    /**
+     * Installiert/aktualisiert Rollen erst nach init (i18n-sicher).
+     */
+    public static function install_roles_if_needed() {
+        $target_version = defined('DIENSTPLAN_VERSION') ? DIENSTPLAN_VERSION : '0';
+        $roles_version = get_option('dienstplan_roles_version', '0');
+
+        if (version_compare($roles_version, $target_version, '<')) {
+            self::install_roles();
+            update_option('dienstplan_roles_version', $target_version);
         }
     }
     

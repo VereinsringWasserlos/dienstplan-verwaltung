@@ -77,18 +77,6 @@ if (!defined('ABSPATH')) exit;
                         </td>
                     </tr>
                     
-                    <!-- Diensttyp -->
-                    <tr>
-                        <th><label for="d_dienst_typ"><?php _e('Typ', 'dienstplan-verwaltung'); ?> *</label></th>
-                        <td>
-                            <select id="d_dienst_typ" name="dienst_typ" class="regular-text" style="width: 100%; max-width: 320px;">
-                                <option value="dienst"><?php _e('Dienst (mit Uhrzeit)', 'dienstplan-verwaltung'); ?></option>
-                                <option value="mitbringen"><?php _e('Mitbringen (ohne Uhrzeit)', 'dienstplan-verwaltung'); ?></option>
-                            </select>
-                            <p class="description"><?php _e('Mitbringen-Posten sind tagbezogen und haben keine festen Uhrzeiten.', 'dienstplan-verwaltung'); ?></p>
-                        </td>
-                    </tr>
-
                     <!-- Bereich -->
                     <tr>
                         <th><label for="d_bereich_id"><?php _e('Bereich', 'dienstplan-verwaltung'); ?> *</label></th>
@@ -169,16 +157,15 @@ if (!defined('ABSPATH')) exit;
                         </td>
                     </tr>
                     
-                    <!-- Anzahl Personen -->
-                    <tr>
-                        <th><label for="d_anzahl_personen"><?php _e('Anzahl Personen', 'dienstplan-verwaltung'); ?> *</label></th>
+                    <!-- Anzahl Personen (Lite: immer 1) -->
+                    <tr style="display:none;">
+                        <th><label for="d_anzahl_personen"><?php _e('Anzahl Personen', 'dienstplan-verwaltung'); ?></label></th>
                         <td>
-                            <input type="number" id="d_anzahl_personen" name="anzahl_personen" class="regular-text" min="1" max="99" value="1" required style="width: 100px;">
-                            <p class="description"><?php _e('Wie viele Personen werden für diesen Dienst benötigt?', 'dienstplan-verwaltung'); ?></p>
+                            <input type="number" id="d_anzahl_personen" name="anzahl_personen" value="1" min="1" max="1" style="width: 100px;">
                         </td>
                     </tr>
                     
-                    <!-- Splittbar -->
+                    <!-- Splittbar (max. 2 Slots) -->
                     <tr id="splittbar-row">
                         <th><label for="d_splittbar"><?php _e('Splittbar', 'dienstplan-verwaltung'); ?></label></th>
                         <td>
@@ -186,7 +173,7 @@ if (!defined('ABSPATH')) exit;
                                 <input type="checkbox" id="d_splittbar" name="splittbar" value="1">
                                 <?php _e('Dienst kann in halbe Dienste aufgeteilt werden', 'dienstplan-verwaltung'); ?>
                             </label>
-                            <p class="description"><?php _e('Wenn aktiviert, können sich Personen für halbe Dienste eintragen.', 'dienstplan-verwaltung'); ?></p>
+                            <p class="description"><?php _e('Bei aktivem Split werden genau 2 Slots erstellt.', 'dienstplan-verwaltung'); ?></p>
                         </td>
                     </tr>
 

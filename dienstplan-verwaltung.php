@@ -4,7 +4,7 @@
  * Plugin Name: Dienstplan Verwaltung
  * Plugin URI: https://vereinsring-wasserlos.de
  * Description: Moderne Dienstplan-Verwaltung für Vereine und Veranstaltungen
- * Version:           0.9.5.66
+ * Version:           0.9.6.1
  * Author: Kai Naumann
  * Author URI: https://vereinsring-wasserlos.de
  * License: GPL v2 or later
@@ -21,14 +21,43 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
+// WP 6.7+: Verhindert Header-Probleme, falls die Textdomain in seltenen
+// Bootstrap-Pfaden vor init beruehrt wird.
+add_filter('doing_it_wrong_trigger_error', function ($trigger, $function_name, $message) {
+    if ($function_name === '_load_textdomain_just_in_time' && is_string($message) && strpos($message, 'dienstplan-verwaltung') !== false) {
+        return false;
+    }
+
+    return $trigger;
+}, 10, 3);
+
+// WP/PHP 8.1+: Sicherstellen, dass Admin-Titel nie null ist (verhindert strip_tags(null)-Deprecation).
+add_filter('admin_title', function ($admin_title, $title) {
+    return (string) ($admin_title ?? $title ?? '');
+}, PHP_INT_MAX, 2);
+
 /**
  * Plugin-Konstanten
  */
-define('DIENSTPLAN_VERSION', '0.9.5.66');
+define('DIENSTPLAN_VERSION', '0.9.6.1');
 define('DIENSTPLAN_PLUGIN_FILE', __FILE__);
 define('DIENSTPLAN_PLUGIN_PATH', plugin_dir_path(__FILE__));
 define('DIENSTPLAN_PLUGIN_URL', plugin_dir_url(__FILE__));
 define('DIENSTPLAN_DB_PREFIX', 'dp_');
+
+// Paket A: optionale Module standardmäßig deaktivieren.
+if (!defined('DIENSTPLAN_FEATURE_UPDATER')) {
+    define('DIENSTPLAN_FEATURE_UPDATER', false);
+}
+if (!defined('DIENSTPLAN_FEATURE_MAIL')) {
+    define('DIENSTPLAN_FEATURE_MAIL', true);
+}
+if (!defined('DIENSTPLAN_FEATURE_NOTIFICATIONS')) {
+    define('DIENSTPLAN_FEATURE_NOTIFICATIONS', false);
+}
+if (!defined('DIENSTPLAN_SLIM_MODE')) {
+    define('DIENSTPLAN_SLIM_MODE', true);
+}
 
 /**
  * Plugin-Aktivierung

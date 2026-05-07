@@ -1,8 +1,8 @@
 # Dokumentation - Dienstplan-Verwaltung
 
-**Version:** 0.9.5.61  
-**Stand:** 10. April 2026  
-**Status:** Mail-Queue mit robuster Buchungsversand-Rueckmeldung und erweitertem Queue-Log
+**Version:** 0.9.6.0  
+**Stand:** 06. Mai 2026  
+**Status:** Slim-Mode-Basis mit aufgeraeumtem Dashboard und Admin-only Mail-Zustellung
 
 ---
 

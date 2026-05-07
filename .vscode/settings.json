@@ -1,5 +1,3 @@
 {
-  "phpcs.enable": true,
-  "phpcs.executablePath": "tools/phpcs-docker.cmd",
-  "phpcs.standard": "WordPress"
+  "phpcs.enable": false
 }

@@ -2,6 +2,12 @@
     'use strict';
     
     $(document).ready(function() {
+        // Dieses Skript darf nur auf Mitarbeiter-Seiten aktiv sein.
+        // Sonst kollidieren die generischen Bulk-Selektoren mit anderen Admin-Views.
+        const hasMitarbeiterBulkUI = $('.mitarbeiter-checkbox, .select-all-header, .cancel-bulk-selection').length > 0;
+        if (!hasMitarbeiterBulkUI) {
+            return;
+        }
         
         // Select All / Deselect All
         $(document).on('change', '.select-all-header', function() {
@@ -41,6 +47,12 @@
             const $select = $toolbar.find('.bulk-action-select');
             const action = $select.val();
             const verein = $select.data('verein');
+
+            // Fremde Bulk-Toolbars (z.B. Mitbringen) ignorieren.
+            if (typeof verein === 'undefined') {
+                return;
+            }
+
             const $checked = $('.mitarbeiter-checkbox[data-verein="' + verein + '"]:checked');
             
             if (!action) {

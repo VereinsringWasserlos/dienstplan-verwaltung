@@ -20,13 +20,9 @@ if (!defined('ABSPATH')) exit;
                 <?php echo count($vereine); ?> <?php echo count($vereine) != 1 ? 'Vereine' : 'Verein'; ?>
             </span>
             <div style="flex: 1;"></div>
-            <button type="button" onclick="event.stopPropagation(); createAllVereinOverviewPages(this);" class="button" style="background: rgba(255,255,255,0.9); color: #2563eb; border: none; padding: 0.5rem 1rem; font-weight: 600;">
-                <span class="dashicons dashicons-admin-page" style="font-size: 16px;"></span>
+            <button type="button" onclick="event.stopPropagation(); createAllVereinOverviewPages(this);" class="button dp-header-ghost-button">
+                <span class="dashicons dashicons-admin-page"></span>
                 <?php _e('Alle Seiten erstellen', 'dienstplan-verwaltung'); ?>
-            </button>
-            <button type="button" onclick="event.stopPropagation(); openVereinModal();" class="button button-primary" style="background: rgba(255,255,255,0.9); color: #3b82f6; border: none; padding: 0.5rem 1rem; font-weight: 600;">
-                <span class="dashicons dashicons-plus-alt" style="font-size: 16px;"></span>
-                <?php _e('Neuer Verein', 'dienstplan-verwaltung'); ?>
             </button>
         </h3>
         

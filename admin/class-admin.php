@@ -40,6 +40,16 @@ class Dienstplan_Admin
     }
 
     /**
+     * Light/Slim-Modus aktiv?
+     *
+     * @return bool
+     */
+    private function is_slim_mode()
+    {
+        return defined('DIENSTPLAN_SLIM_MODE') && DIENSTPLAN_SLIM_MODE;
+    }
+
+    /**
      * Prüft, ob der aktuelle Benutzer uneingeschränkten Vereinszugriff hat.
      */
     private function has_unrestricted_club_access()
@@ -206,6 +216,15 @@ class Dienstplan_Admin
     private function get_scoped_veranstaltungen($db, $filter = array())
     {
         $veranstaltungen = $db->get_veranstaltungen($filter);
+
+        $active_only = isset($filter['active_only']) ? (bool) $filter['active_only'] : false;
+        if ($active_only) {
+            $inactive_statuses = array('abgeschlossen', 'archiviert', 'inaktiv');
+            $veranstaltungen = array_values(array_filter($veranstaltungen, function ($veranstaltung) use ($inactive_statuses) {
+                $status = isset($veranstaltung->status) ? strtolower((string) $veranstaltung->status) : '';
+                return !in_array($status, $inactive_statuses, true);
+            }));
+        }
 
         if (!$this->is_restricted_club_admin()) {
             return $veranstaltungen;
@@ -538,7 +557,7 @@ class Dienstplan_Admin
         }
 
         // Bereiche & Tätigkeiten (nicht für eingeschränkte Vereins-Admins)
-        if ((Dienstplan_Roles::can_manage_events() || current_user_can('manage_options')) && !$this->is_restricted_club_admin()) {
+        if ((Dienstplan_Roles::can_manage_events() || current_user_can('manage_options')) && !$this->is_restricted_club_admin() && !$this->is_slim_mode()) {
             add_submenu_page(
                 '',
                 __('Bereiche & Tätigkeiten', 'dienstplan-verwaltung'),
@@ -992,8 +1011,8 @@ class Dienstplan_Admin
 
         $stats = $db->get_stats();
 
-        // Lade aktuelle Veranstaltungen für Dashboard
-        $aktuelle_veranstaltungen = $db->get_veranstaltungen();
+        // Dashboard zeigt standardmäßig nur nicht abgeschlossene Veranstaltungen.
+        $aktuelle_veranstaltungen = $this->get_scoped_veranstaltungen($db, array('active_only' => true));
 
         // Lade letzte Dienste
         $letzte_dienste = $db->get_recent_dienste(5);
@@ -1030,7 +1049,7 @@ class Dienstplan_Admin
         require_once DIENSTPLAN_PLUGIN_PATH . 'includes/class-database.php';
         $db = new Dienstplan_Database($this->db_prefix);
 
-        $veranstaltungen = $this->get_scoped_veranstaltungen($db);
+        $veranstaltungen = $this->get_scoped_veranstaltungen($db, array('active_only' => true));
         $selected_veranstaltung_id = isset($_GET['veranstaltung_id']) ? intval($_GET['veranstaltung_id']) : 0;
 
         $allowed_veranstaltung_ids = array_map(function ($veranstaltung) {
@@ -1067,8 +1086,8 @@ class Dienstplan_Admin
         }
 
         $allowed_verein_ids = $this->is_restricted_club_admin() ? $this->get_current_user_verein_ids($db) : array();
-        $veranstaltungen = $this->get_scoped_veranstaltungen($db);
-        $vereine = $this->get_scoped_vereine($db);
+        $veranstaltungen = $this->get_scoped_veranstaltungen($db, array('active_only' => true));
+        $vereine = $this->get_scoped_vereine($db, true);
 
         $allowed_veranstaltung_ids = array_map(function ($veranstaltung) {
             return intval($veranstaltung->id);
@@ -1097,8 +1116,8 @@ class Dienstplan_Admin
         $db = new Dienstplan_Database($this->db_prefix);
 
         $allowed_verein_ids = $this->is_restricted_club_admin() ? $this->get_current_user_verein_ids($db) : array();
-        $veranstaltungen = $this->get_scoped_veranstaltungen($db);
-        $vereine = $this->get_scoped_vereine($db);
+        $veranstaltungen = $this->get_scoped_veranstaltungen($db, array('active_only' => true));
+        $vereine = $this->get_scoped_vereine($db, true);
 
         $allowed_veranstaltung_ids = array_map(function ($veranstaltung) {
             return intval($veranstaltung->id);
@@ -1124,7 +1143,7 @@ class Dienstplan_Admin
         $db = new Dienstplan_Database($this->db_prefix);
 
         $allowed_verein_ids = $this->is_restricted_club_admin() ? $this->get_current_user_verein_ids($db) : array();
-        $veranstaltungen = $this->get_scoped_veranstaltungen($db);
+        $veranstaltungen = $this->get_scoped_veranstaltungen($db, array('active_only' => true));
         $allowed_veranstaltung_ids = array_map(function ($veranstaltung) {
             return intval($veranstaltung->id);
         }, $veranstaltungen);
@@ -1141,7 +1160,7 @@ class Dienstplan_Admin
 
     public function display_bereiche_taetigkeiten()
     {
-        if ($this->is_restricted_club_admin()) {
+        if ($this->is_restricted_club_admin() || $this->is_slim_mode()) {
             wp_die(__('Keine Berechtigung.', 'dienstplan-verwaltung'));
         }
         require_once DIENSTPLAN_PLUGIN_PATH . 'includes/class-database.php';
@@ -1155,7 +1174,7 @@ class Dienstplan_Admin
         $db = new Dienstplan_Database($this->db_prefix);
 
         $allowed_verein_ids = $this->is_restricted_club_admin() ? $this->get_current_user_verein_ids($db) : array();
-        $veranstaltungen = $this->get_scoped_veranstaltungen($db);
+        $veranstaltungen = $this->get_scoped_veranstaltungen($db, array('active_only' => true));
         $vereine = $this->get_scoped_vereine($db, true);
 
         $allowed_veranstaltung_ids = array_map(function ($veranstaltung) {
@@ -1196,6 +1215,11 @@ class Dienstplan_Admin
 
     public function display_import_export()
     {
+        $is_embedded = isset($_GET['dp_embedded']) && sanitize_text_field((string) $_GET['dp_embedded']) === '1';
+        if (!$is_embedded) {
+            wp_die(__('Die klassische Import/Export-Seite ist derzeit deaktiviert. Bitte den neuen Import über das Popup verwenden.', 'dienstplan-verwaltung'));
+        }
+
         require_once DIENSTPLAN_PLUGIN_PATH . 'includes/class-database.php';
         $db = new Dienstplan_Database($this->db_prefix);
 
@@ -1212,6 +1236,11 @@ class Dienstplan_Admin
 
     public function display_import()
     {
+        $is_embedded = isset($_GET['dp_embedded']) && sanitize_text_field((string) $_GET['dp_embedded']) === '1';
+        if (!$is_embedded) {
+            wp_die(__('Die klassische Import-Seite ist derzeit deaktiviert. Bitte den neuen Import über das Popup verwenden.', 'dienstplan-verwaltung'));
+        }
+
         require_once DIENSTPLAN_PLUGIN_PATH . 'includes/class-database.php';
         $db = new Dienstplan_Database($this->db_prefix);
 
@@ -1228,6 +1257,8 @@ class Dienstplan_Admin
 
     public function display_export()
     {
+        wp_die(__('Die klassische Export-Seite ist derzeit deaktiviert.', 'dienstplan-verwaltung'));
+
         require_once DIENSTPLAN_PLUGIN_PATH . 'includes/class-database.php';
         $db = new Dienstplan_Database($this->db_prefix);
 
@@ -1555,7 +1586,16 @@ class Dienstplan_Admin
         }
 
         $tage = $db->get_veranstaltung_tage($veranstaltung_id);
-        wp_send_json_success($tage);
+        $result = array();
+        foreach ((array) $tage as $tag) {
+            $result[] = array(
+                'id' => intval($tag->id ?? 0),
+                'tag_nummer' => intval($tag->tag_nummer ?? 0),
+                'tag_datum' => !empty($tag->tag_datum) ? (string) $tag->tag_datum : '',
+            );
+        }
+
+        wp_send_json_success($result);
     }
 
     public function ajax_save_dienst()
@@ -1579,7 +1619,7 @@ class Dienstplan_Admin
                 $dienst_typ = 'dienst';
             }
 
-            $required = array('veranstaltung_id', 'tag_id', 'verein_id', 'bereich_id', 'taetigkeit_id', 'anzahl_personen');
+            $required = array('veranstaltung_id', 'tag_id', 'verein_id', 'bereich_id', 'taetigkeit_id');
             if ($dienst_typ !== 'mitbringen') {
                 $required[] = 'von_zeit';
                 $required[] = 'bis_zeit';
@@ -1609,7 +1649,7 @@ class Dienstplan_Admin
                 'von_zeit' => $von_zeit,
                 'bis_zeit' => $bis_zeit,
                 'bis_datum' => ($dienst_typ !== 'mitbringen' && !empty($_POST['bis_folgetag'])) ? '1' : null,
-                'anzahl_personen' => !empty($_POST['anzahl_personen']) ? intval($_POST['anzahl_personen']) : 0,
+                'anzahl_personen' => 1,
                 'splittbar' => ($dienst_typ !== 'mitbringen' && !empty($_POST['splittbar'])) ? 1 : 0,
                 'admin_only' => !empty($_POST['admin_only']) ? 1 : 0,
                 'besonderheiten' => sanitize_textarea_field($_POST['besonderheiten'] ?? ''),
@@ -1617,7 +1657,6 @@ class Dienstplan_Admin
             );
 
             $dienst_id = !empty($_POST['dienst_id']) ? intval($_POST['dienst_id']) : 0;
-
             if (!$this->current_user_can_access_veranstaltung($db, $data['veranstaltung_id']) || !$this->current_user_can_access_verein($db, $data['verein_id'])) {
                 wp_send_json_error(array('message' => 'Keine Berechtigung für Veranstaltung oder Verein'));
                 return;
@@ -1749,6 +1788,604 @@ class Dienstplan_Admin
         } catch (Exception $e) {
             wp_send_json_error(array('message' => 'Fehler: ' . $e->getMessage()));
         }
+    }
+
+    public function ajax_save_mitbringen_item()
+    {
+        check_ajax_referer('dp_ajax_nonce', 'nonce');
+
+        if (!Dienstplan_Roles::can_manage_events()) {
+            wp_send_json_error(array('message' => 'Keine Berechtigung zum Verwalten von Mitbringen.'));
+            return;
+        }
+
+        if ($this->is_restricted_club_admin()) {
+            wp_send_json_error(array('message' => 'Club-Admins dürfen Mitbringen nicht bearbeiten.'));
+            return;
+        }
+
+        require_once DIENSTPLAN_PLUGIN_PATH . 'includes/class-database.php';
+        $db = new Dienstplan_Database($this->db_prefix);
+
+        $mitbringen_id = isset($_POST['mitbringen_id']) ? intval($_POST['mitbringen_id']) : 0;
+        $existing_item = null;
+
+        if ($mitbringen_id > 0) {
+            $existing_item = $db->get_mitbringen_item($mitbringen_id);
+            if (!$existing_item) {
+                wp_send_json_error(array('message' => 'Mitbringen-Eintrag nicht gefunden.'));
+                return;
+            }
+
+            if (!$this->current_user_can_access_veranstaltung($db, intval($existing_item->veranstaltung_id)) || !$this->current_user_can_access_verein($db, intval($existing_item->verein_id))) {
+                wp_send_json_error(array('message' => 'Keine Berechtigung für diesen Mitbringen-Eintrag.'));
+                return;
+            }
+        }
+
+        $veranstaltung_id = isset($_POST['veranstaltung_id']) ? intval($_POST['veranstaltung_id']) : 0;
+        $verein_id = isset($_POST['verein_id']) ? intval($_POST['verein_id']) : 0;
+
+        if ($veranstaltung_id <= 0 || $verein_id <= 0) {
+            wp_send_json_error(array('message' => 'Veranstaltung und Verein sind erforderlich.'));
+            return;
+        }
+
+        if (!$this->current_user_can_access_veranstaltung($db, $veranstaltung_id) || !$this->current_user_can_access_verein($db, $verein_id)) {
+            wp_send_json_error(array('message' => 'Keine Berechtigung für Veranstaltung oder Verein.'));
+            return;
+        }
+
+        $bereich_name = sanitize_text_field($_POST['bereich_name'] ?? '');
+        if ($bereich_name === '' && $existing_item && isset($existing_item->mitbringen_bereich_name)) {
+            $bereich_name = sanitize_text_field((string) $existing_item->mitbringen_bereich_name);
+        }
+
+        $item_data = array(
+            'veranstaltung_id' => $veranstaltung_id,
+            'tag_id' => isset($_POST['tag_id']) ? intval($_POST['tag_id']) : 0,
+            'verein_id' => $verein_id,
+            'mitarbeiter_id' => isset($_POST['mitarbeiter_id']) ? intval($_POST['mitarbeiter_id']) : 0,
+            'admin_only' => array_key_exists('admin_only', $_POST) ? (intval($_POST['admin_only']) > 0 ? 1 : 0) : intval($existing_item->admin_only ?? 0),
+            'bereich_name' => $bereich_name,
+            'bezeichnung' => sanitize_text_field($_POST['bezeichnung'] ?? ''),
+            'menge' => 1,
+            'einheit' => '',
+            'hinweis' => sanitize_textarea_field($_POST['hinweis'] ?? ''),
+            'besetzung_info' => isset($_POST['besetzung_info']) ? sanitize_textarea_field($_POST['besetzung_info']) : (string) ($existing_item->besetzung_info ?? ''),
+            'status' => isset($_POST['status']) ? sanitize_key($_POST['status']) : 'offen',
+        );
+
+        if (empty($item_data['tag_id']) || empty($item_data['bezeichnung'])) {
+            wp_send_json_error(array('message' => 'Tag und Bezeichnung sind erforderlich.'));
+            return;
+        }
+
+        if (!in_array($item_data['status'], array('offen', 'vergeben'), true)) {
+            $item_data['status'] = 'offen';
+        }
+
+        if ($mitbringen_id > 0) {
+            $updated = $db->update_mitbringen_item($mitbringen_id, $item_data);
+            if (!$updated) {
+                wp_send_json_error(array('message' => 'Mitbringen konnte nicht aktualisiert werden.'));
+                return;
+            }
+
+            wp_send_json_success(array(
+                'message' => 'Mitbringen aktualisiert.',
+                'mitbringen_id' => intval($mitbringen_id),
+            ));
+            return;
+        }
+
+        $item_id = $db->add_mitbringen_item($item_data);
+        if (!$item_id) {
+            wp_send_json_error(array('message' => 'Mitbringen konnte nicht gespeichert werden.'));
+            return;
+        }
+
+        wp_send_json_success(array(
+            'message' => 'Mitbringen gespeichert.',
+            'mitbringen_id' => intval($item_id),
+        ));
+    }
+
+    public function ajax_assign_mitbringen_person()
+    {
+        check_ajax_referer('dp_ajax_nonce', 'nonce');
+
+        if (!Dienstplan_Roles::can_manage_events()) {
+            wp_send_json_error(array('message' => 'Keine Berechtigung zum Zuweisen von Mitbringen.'));
+            return;
+        }
+
+        require_once DIENSTPLAN_PLUGIN_PATH . 'includes/class-database.php';
+        $db = new Dienstplan_Database($this->db_prefix);
+
+        $mitbringen_id = isset($_POST['mitbringen_id']) ? intval($_POST['mitbringen_id']) : 0;
+        $mitarbeiter_id = isset($_POST['mitarbeiter_id']) ? intval($_POST['mitarbeiter_id']) : 0;
+
+        if ($mitbringen_id <= 0) {
+            wp_send_json_error(array('message' => 'Keine Mitbringen-ID angegeben.'));
+            return;
+        }
+
+        $existing_item = $db->get_mitbringen_item($mitbringen_id);
+        if (!$existing_item) {
+            wp_send_json_error(array('message' => 'Mitbringen-Eintrag nicht gefunden.'));
+            return;
+        }
+
+        if (!$this->current_user_can_access_veranstaltung($db, intval($existing_item->veranstaltung_id)) || !$this->current_user_can_access_verein($db, intval($existing_item->verein_id))) {
+            wp_send_json_error(array('message' => 'Keine Berechtigung für diesen Mitbringen-Eintrag.'));
+            return;
+        }
+
+        $admin_only = array_key_exists('admin_only', $_POST)
+            ? (intval($_POST['admin_only']) > 0 ? 1 : 0)
+            : intval($existing_item->admin_only ?? 0);
+        $besetzung_info = isset($_POST['besetzung_info'])
+            ? sanitize_textarea_field($_POST['besetzung_info'])
+            : (string) ($existing_item->besetzung_info ?? '');
+
+        if ($mitarbeiter_id > 0) {
+            $mitarbeiter = $db->get_mitarbeiter($mitarbeiter_id);
+            if (!$mitarbeiter) {
+                wp_send_json_error(array('message' => 'Mitarbeiter nicht gefunden.'));
+                return;
+            }
+
+            if ($this->is_restricted_club_admin() && !$this->current_user_can_access_mitarbeiter($db, $mitarbeiter_id)) {
+                wp_send_json_error(array('message' => 'Keine Berechtigung für diesen Mitarbeiter.'));
+                return;
+            }
+        }
+
+        $item_data = array(
+            'veranstaltung_id' => intval($existing_item->veranstaltung_id),
+            'tag_id' => intval($existing_item->tag_id),
+            'verein_id' => intval($existing_item->verein_id),
+            'mitarbeiter_id' => $mitarbeiter_id,
+            'admin_only' => $admin_only,
+            'bereich_name' => (string) ($existing_item->mitbringen_bereich_name ?? ''),
+            'bezeichnung' => (string) ($existing_item->bezeichnung ?? ''),
+            'menge' => 1,
+            'einheit' => '',
+            'hinweis' => (string) ($existing_item->hinweis ?? ''),
+            'besetzung_info' => $mitarbeiter_id > 0 ? $besetzung_info : '',
+            'status' => $mitarbeiter_id > 0 ? 'vergeben' : 'offen',
+        );
+
+        $updated = $db->update_mitbringen_item($mitbringen_id, $item_data);
+        if ($updated === false) {
+            wp_send_json_error(array('message' => 'Zuweisung konnte nicht gespeichert werden.'));
+            return;
+        }
+
+        wp_send_json_success(array(
+            'message' => $mitarbeiter_id > 0 ? 'Person wurde zugeteilt.' : 'Zuteilung wurde entfernt.',
+            'mitbringen_id' => $mitbringen_id,
+            'mitarbeiter_id' => $mitarbeiter_id,
+        ));
+    }
+
+    public function ajax_delete_mitbringen_item()
+    {
+        check_ajax_referer('dp_ajax_nonce', 'nonce');
+
+        if (!Dienstplan_Roles::can_manage_events()) {
+            wp_send_json_error(array('message' => 'Keine Berechtigung zum Löschen von Mitbringen.'));
+            return;
+        }
+
+        if ($this->is_restricted_club_admin()) {
+            wp_send_json_error(array('message' => 'Club-Admins dürfen Mitbringen nicht löschen.'));
+            return;
+        }
+
+        $mitbringen_id = isset($_POST['mitbringen_id']) ? intval($_POST['mitbringen_id']) : 0;
+        if ($mitbringen_id <= 0) {
+            wp_send_json_error(array('message' => 'Keine Mitbringen-ID angegeben.'));
+            return;
+        }
+
+        require_once DIENSTPLAN_PLUGIN_PATH . 'includes/class-database.php';
+        $db = new Dienstplan_Database($this->db_prefix);
+
+        $existing_item = $db->get_mitbringen_item($mitbringen_id);
+        if (!$existing_item) {
+            wp_send_json_error(array('message' => 'Mitbringen-Eintrag nicht gefunden.'));
+            return;
+        }
+
+        if (!$this->current_user_can_access_veranstaltung($db, intval($existing_item->veranstaltung_id)) || !$this->current_user_can_access_verein($db, intval($existing_item->verein_id))) {
+            wp_send_json_error(array('message' => 'Keine Berechtigung für diesen Mitbringen-Eintrag.'));
+            return;
+        }
+
+        $deleted = $db->delete_mitbringen_item($mitbringen_id);
+        if (!$deleted) {
+            wp_send_json_error(array('message' => 'Mitbringen konnte nicht gelöscht werden.'));
+            return;
+        }
+
+        wp_send_json_success(array('message' => 'Mitbringen gelöscht.'));
+    }
+
+    public function ajax_copy_mitbringen_item()
+    {
+        check_ajax_referer('dp_ajax_nonce', 'nonce');
+
+        if (!Dienstplan_Roles::can_manage_events()) {
+            wp_send_json_error(array('message' => 'Keine Berechtigung zum Kopieren von Mitbringen.'));
+            return;
+        }
+
+        if ($this->is_restricted_club_admin()) {
+            wp_send_json_error(array('message' => 'Club-Admins dürfen Mitbringen nicht kopieren.'));
+            return;
+        }
+
+        $mitbringen_id = isset($_POST['mitbringen_id']) ? intval($_POST['mitbringen_id']) : 0;
+        if ($mitbringen_id <= 0) {
+            wp_send_json_error(array('message' => 'Keine Mitbringen-ID angegeben.'));
+            return;
+        }
+
+        require_once DIENSTPLAN_PLUGIN_PATH . 'includes/class-database.php';
+        $db = new Dienstplan_Database($this->db_prefix);
+
+        $existing_item = $db->get_mitbringen_item($mitbringen_id);
+        if (!$existing_item) {
+            wp_send_json_error(array('message' => 'Mitbringen-Eintrag nicht gefunden.'));
+            return;
+        }
+
+        if (!$this->current_user_can_access_veranstaltung($db, intval($existing_item->veranstaltung_id)) || !$this->current_user_can_access_verein($db, intval($existing_item->verein_id))) {
+            wp_send_json_error(array('message' => 'Keine Berechtigung für diesen Mitbringen-Eintrag.'));
+            return;
+        }
+
+        $copy_data = array(
+            'veranstaltung_id' => intval($existing_item->veranstaltung_id),
+            'tag_id' => intval($existing_item->tag_id),
+            'verein_id' => intval($existing_item->verein_id),
+            'mitarbeiter_id' => intval($existing_item->mitarbeiter_id),
+            'admin_only' => intval($existing_item->admin_only ?? 0),
+            'bereich_name' => (string) ($existing_item->mitbringen_bereich_name ?? ''),
+            'bezeichnung' => (string) ($existing_item->bezeichnung ?? ''),
+            'menge' => 1,
+            'einheit' => '',
+            'hinweis' => (string) ($existing_item->hinweis ?? ''),
+            'besetzung_info' => (string) ($existing_item->besetzung_info ?? ''),
+            'status' => (string) ($existing_item->status ?? 'offen'),
+        );
+
+        $new_id = $db->add_mitbringen_item($copy_data);
+        if (!$new_id) {
+            wp_send_json_error(array('message' => 'Mitbringen konnte nicht kopiert werden.'));
+            return;
+        }
+
+        wp_send_json_success(array(
+            'message' => 'Mitbringen wurde kopiert.',
+            'mitbringen_id' => intval($new_id),
+        ));
+    }
+
+    public function ajax_split_mitbringen_item()
+    {
+        check_ajax_referer('dp_ajax_nonce', 'nonce');
+
+        if (!Dienstplan_Roles::can_manage_events()) {
+            wp_send_json_error(array('message' => 'Keine Berechtigung zum Splitten von Mitbringen.'));
+            return;
+        }
+
+        if ($this->is_restricted_club_admin()) {
+            wp_send_json_error(array('message' => 'Club-Admins dürfen Mitbringen nicht splitten.'));
+            return;
+        }
+
+        $mitbringen_id = isset($_POST['mitbringen_id']) ? intval($_POST['mitbringen_id']) : 0;
+        $split_count = isset($_POST['split_count']) ? intval($_POST['split_count']) : 0;
+
+        if ($mitbringen_id <= 0) {
+            wp_send_json_error(array('message' => 'Keine Mitbringen-ID angegeben.'));
+            return;
+        }
+
+        if ($split_count <= 0) {
+            wp_send_json_error(array('message' => 'Bitte eine gültige Anzahl angeben.'));
+            return;
+        }
+
+        require_once DIENSTPLAN_PLUGIN_PATH . 'includes/class-database.php';
+        $db = new Dienstplan_Database($this->db_prefix);
+
+        $existing_item = $db->get_mitbringen_item($mitbringen_id);
+        if (!$existing_item) {
+            wp_send_json_error(array('message' => 'Mitbringen-Eintrag nicht gefunden.'));
+            return;
+        }
+
+        if (!$this->current_user_can_access_veranstaltung($db, intval($existing_item->veranstaltung_id)) || !$this->current_user_can_access_verein($db, intval($existing_item->verein_id))) {
+            wp_send_json_error(array('message' => 'Keine Berechtigung für diesen Mitbringen-Eintrag.'));
+            return;
+        }
+
+        $created = 0;
+        for ($i = 0; $i < $split_count; $i++) {
+            $copy_data = array(
+                'veranstaltung_id' => intval($existing_item->veranstaltung_id),
+                'tag_id' => intval($existing_item->tag_id),
+                'verein_id' => intval($existing_item->verein_id),
+                'mitarbeiter_id' => null,
+                'admin_only' => intval($existing_item->admin_only ?? 0),
+                'bereich_name' => (string) ($existing_item->mitbringen_bereich_name ?? ''),
+                'bezeichnung' => (string) ($existing_item->bezeichnung ?? ''),
+                'menge' => 1,
+                'einheit' => '',
+                'hinweis' => (string) ($existing_item->hinweis ?? ''),
+                'besetzung_info' => '',
+                'status' => 'offen',
+            );
+
+            $new_id = $db->add_mitbringen_item($copy_data);
+            if ($new_id) {
+                $created++;
+            }
+        }
+
+        if ($created <= 0) {
+            wp_send_json_error(array('message' => 'Mitbringen konnte nicht gesplittet werden.'));
+            return;
+        }
+
+        wp_send_json_success(array(
+            'message' => sprintf('%d Mitbringen-Eintrag(e) wurden erstellt.', $created),
+            'created' => $created,
+        ));
+    }
+
+    public function ajax_toggle_mitbringen_status()
+    {
+        check_ajax_referer('dp_ajax_nonce', 'nonce');
+
+        if (!Dienstplan_Roles::can_manage_events()) {
+            wp_send_json_error(array('message' => 'Keine Berechtigung zum Ändern des Mitbringen-Status.'));
+            return;
+        }
+
+        $mitbringen_id = isset($_POST['mitbringen_id']) ? intval($_POST['mitbringen_id']) : 0;
+        $target_status = isset($_POST['status']) ? sanitize_text_field($_POST['status']) : '';
+
+        if ($mitbringen_id <= 0 || !in_array($target_status, array('offen', 'vergeben'), true)) {
+            wp_send_json_error(array('message' => 'Ungültige Daten für Statuswechsel.'));
+            return;
+        }
+
+        require_once DIENSTPLAN_PLUGIN_PATH . 'includes/class-database.php';
+        $db = new Dienstplan_Database($this->db_prefix);
+
+        $existing_item = $db->get_mitbringen_item($mitbringen_id);
+        if (!$existing_item) {
+            wp_send_json_error(array('message' => 'Mitbringen-Eintrag nicht gefunden.'));
+            return;
+        }
+
+        if (!$this->current_user_can_access_veranstaltung($db, intval($existing_item->veranstaltung_id)) || !$this->current_user_can_access_verein($db, intval($existing_item->verein_id))) {
+            wp_send_json_error(array('message' => 'Keine Berechtigung für diesen Mitbringen-Eintrag.'));
+            return;
+        }
+
+        $item_data = array(
+            'veranstaltung_id' => intval($existing_item->veranstaltung_id),
+            'tag_id' => intval($existing_item->tag_id),
+            'verein_id' => intval($existing_item->verein_id),
+            'mitarbeiter_id' => intval($existing_item->mitarbeiter_id),
+            'admin_only' => intval($existing_item->admin_only ?? 0),
+            'bereich_name' => (string) ($existing_item->mitbringen_bereich_name ?? ''),
+            'bezeichnung' => (string) ($existing_item->bezeichnung ?? ''),
+            'menge' => 1,
+            'einheit' => '',
+            'hinweis' => (string) ($existing_item->hinweis ?? ''),
+            'besetzung_info' => (string) ($existing_item->besetzung_info ?? ''),
+            'status' => $target_status,
+        );
+
+        if ($target_status === 'offen') {
+            $item_data['mitarbeiter_id'] = 0;
+                $item_data['besetzung_info'] = '';
+        }
+
+        $updated = $db->update_mitbringen_item($mitbringen_id, $item_data);
+        if ($updated === false) {
+            wp_send_json_error(array('message' => 'Status konnte nicht aktualisiert werden.'));
+            return;
+        }
+
+        wp_send_json_success(array(
+            'message' => 'Status aktualisiert.',
+            'status' => $target_status,
+            'mitbringen_id' => $mitbringen_id,
+        ));
+    }
+
+    public function ajax_bulk_delete_mitbringen()
+    {
+        check_ajax_referer('dp_ajax_nonce', 'nonce');
+
+        if (!Dienstplan_Roles::can_manage_events()) {
+            wp_send_json_error(array('message' => 'Keine Berechtigung zum Löschen von Mitbringen.'));
+            return;
+        }
+
+        if ($this->is_restricted_club_admin()) {
+            wp_send_json_error(array('message' => 'Club-Admins dürfen Mitbringen nicht gesammelt löschen.'));
+            return;
+        }
+
+        $mitbringen_ids = isset($_POST['mitbringen_ids']) ? array_map('intval', (array) $_POST['mitbringen_ids']) : array();
+        $mitbringen_ids = array_values(array_filter($mitbringen_ids));
+
+        if (empty($mitbringen_ids)) {
+            wp_send_json_error(array('message' => 'Keine Mitbringen-Einträge ausgewählt.'));
+            return;
+        }
+
+        require_once DIENSTPLAN_PLUGIN_PATH . 'includes/class-database.php';
+        $db = new Dienstplan_Database($this->db_prefix);
+
+        $deleted = 0;
+        foreach ($mitbringen_ids as $mitbringen_id) {
+            $existing_item = $db->get_mitbringen_item($mitbringen_id);
+            if (!$existing_item) {
+                continue;
+            }
+
+            if (!$this->current_user_can_access_veranstaltung($db, intval($existing_item->veranstaltung_id)) || !$this->current_user_can_access_verein($db, intval($existing_item->verein_id))) {
+                continue;
+            }
+
+            if ($db->delete_mitbringen_item($mitbringen_id)) {
+                $deleted++;
+            }
+        }
+
+        wp_send_json_success(array(
+            'message' => sprintf('%d Mitbringen-Eintrag/Einträge gelöscht.', $deleted),
+            'deleted' => $deleted,
+        ));
+    }
+
+    public function ajax_bulk_update_mitbringen()
+    {
+        check_ajax_referer('dp_ajax_nonce', 'nonce');
+
+        if (!Dienstplan_Roles::can_manage_events()) {
+            wp_send_json_error(array('message' => 'Keine Berechtigung zum Bearbeiten von Mitbringen.'));
+            return;
+        }
+
+        $mitbringen_ids = isset($_POST['mitbringen_ids']) ? array_map('intval', (array) $_POST['mitbringen_ids']) : array();
+        $mitbringen_ids = array_values(array_filter($mitbringen_ids));
+        $update_data = isset($_POST['update_data']) && is_array($_POST['update_data']) ? $_POST['update_data'] : array();
+
+        if (empty($mitbringen_ids)) {
+            wp_send_json_error(array('message' => 'Keine Mitbringen-Einträge ausgewählt.'));
+            return;
+        }
+
+        require_once DIENSTPLAN_PLUGIN_PATH . 'includes/class-database.php';
+        $db = new Dienstplan_Database($this->db_prefix);
+
+        $normalized_update = array();
+
+        if (array_key_exists('status', $update_data)) {
+            $status = sanitize_text_field($update_data['status']);
+            if (!in_array($status, array('offen', 'vergeben'), true)) {
+                wp_send_json_error(array('message' => 'Ungültiger Status.'));
+                return;
+            }
+            $normalized_update['status'] = $status;
+        }
+
+        if (array_key_exists('tag_id', $update_data)) {
+            $tag_id = intval($update_data['tag_id']);
+            if ($tag_id <= 0) {
+                wp_send_json_error(array('message' => 'Ungültiger Tag.'));
+                return;
+            }
+            $normalized_update['tag_id'] = $tag_id;
+        }
+
+        if (array_key_exists('verein_id', $update_data)) {
+            $verein_id = intval($update_data['verein_id']);
+            if ($verein_id <= 0) {
+                wp_send_json_error(array('message' => 'Ungültiger Verein.'));
+                return;
+            }
+            $normalized_update['verein_id'] = $verein_id;
+        }
+
+        if (array_key_exists('bereich_name', $update_data)) {
+            $normalized_update['bereich_name'] = sanitize_text_field((string) $update_data['bereich_name']);
+        }
+
+        if (array_key_exists('mitarbeiter_id', $update_data)) {
+            $mitarbeiter_id = intval($update_data['mitarbeiter_id']);
+            if ($mitarbeiter_id < 0) {
+                wp_send_json_error(array('message' => 'Ungültige Person.'));
+                return;
+            }
+
+            if ($mitarbeiter_id > 0 && $this->is_restricted_club_admin() && !$this->current_user_can_access_mitarbeiter($db, $mitarbeiter_id)) {
+                wp_send_json_error(array('message' => 'Keine Berechtigung für diese Person.'));
+                return;
+            }
+
+            $normalized_update['mitarbeiter_id'] = $mitarbeiter_id;
+        }
+
+        if (empty($normalized_update)) {
+            wp_send_json_error(array('message' => 'Keine gültigen Änderungen angegeben.'));
+            return;
+        }
+
+        $updated = 0;
+        foreach ($mitbringen_ids as $mitbringen_id) {
+            $existing_item = $db->get_mitbringen_item($mitbringen_id);
+            if (!$existing_item) {
+                continue;
+            }
+
+            if (!$this->current_user_can_access_veranstaltung($db, intval($existing_item->veranstaltung_id)) || !$this->current_user_can_access_verein($db, intval($existing_item->verein_id))) {
+                continue;
+            }
+
+            $item_data = array(
+                'veranstaltung_id' => intval($existing_item->veranstaltung_id),
+                'tag_id' => intval($existing_item->tag_id),
+                'verein_id' => intval($existing_item->verein_id),
+                'mitarbeiter_id' => intval($existing_item->mitarbeiter_id),
+                'admin_only' => intval($existing_item->admin_only ?? 0),
+                'bereich_name' => (string) ($existing_item->mitbringen_bereich_name ?? ''),
+                'bezeichnung' => (string) ($existing_item->bezeichnung ?? ''),
+                'menge' => 1,
+                'einheit' => '',
+                'hinweis' => (string) ($existing_item->hinweis ?? ''),
+                'besetzung_info' => (string) ($existing_item->besetzung_info ?? ''),
+                'status' => (string) ($existing_item->status ?? 'offen'),
+            );
+
+            foreach ($normalized_update as $key => $value) {
+                $item_data[$key] = $value;
+            }
+
+            if (array_key_exists('mitarbeiter_id', $normalized_update)) {
+                if (intval($normalized_update['mitarbeiter_id']) > 0) {
+                    $item_data['status'] = 'vergeben';
+                } elseif (!array_key_exists('status', $normalized_update)) {
+                    $item_data['status'] = 'offen';
+                }
+            }
+
+            if (($item_data['status'] ?? 'offen') === 'offen') {
+                $item_data['mitarbeiter_id'] = 0;
+                $item_data['besetzung_info'] = '';
+            }
+
+            if ($db->update_mitbringen_item($mitbringen_id, $item_data) !== false) {
+                $updated++;
+            }
+        }
+
+        wp_send_json_success(array(
+            'message' => sprintf('%d Mitbringen-Eintrag/Einträge aktualisiert.', $updated),
+            'updated' => $updated,
+        ));
     }
 
     public function ajax_get_dienst()
@@ -1952,11 +2589,6 @@ class Dienstplan_Admin
         $dienst = $db->get_dienst($dienst_id);
         if (!$dienst) {
             wp_send_json_error(array('message' => 'Dienst nicht gefunden'));
-            return;
-        }
-
-        if (($dienst->dienst_typ ?? 'dienst') === 'mitbringen') {
-            wp_send_json_error(array('message' => 'Mitbringen-Einträge können nicht gesplittet werden'));
             return;
         }
 
@@ -3759,11 +4391,11 @@ class Dienstplan_Admin
                         ob_end_clean();
                         return '';
                     }
-                    fputcsv($out, array('name', 'start_datum', 'end_datum', 'beschreibung'), ';');
+                    fputcsv($out, array('id', 'name', 'start_datum', 'end_datum', 'status', 'beschreibung', 'dienst_von_zeit', 'dienst_bis_zeit'), ';');
                     $rows = $db->get_veranstaltungen();
                     if ($rows) {
                         foreach ($rows as $r) {
-                            fputcsv($out, array($r->name ?? '', $r->start_datum ?? '', $r->end_datum ?? '', $r->beschreibung ?? ''), ';');
+                            fputcsv($out, array($r->id ?? '', $r->name ?? '', $r->start_datum ?? '', $r->end_datum ?? '', $r->status ?? '', $r->beschreibung ?? '', $r->dienst_von_zeit ?? '', $r->dienst_bis_zeit ?? ''), ';');
                         }
                     }
                     break;
@@ -3774,18 +4406,38 @@ class Dienstplan_Admin
                         ob_end_clean();
                         return '';
                     }
-                    fputcsv($out, array('veranstaltung_id', 'veranstaltung_name', 'tag_nummer', 'verein_id', 'verein_name', 'dienst_typ', 'bereich_id', 'bereich_name', 'taetigkeit_id', 'taetigkeit_name', 'von_zeit', 'bis_zeit', 'bis_datum', 'anzahl_personen', 'splittbar', 'admin_only', 'status'), ';');
+                    fputcsv($out, array('veranstaltung_id', 'veranstaltung_name', 'datum', 'tag_nummer', 'verein_id', 'verein_kuerzel', 'verein_name', 'dienst_typ', 'bereich_id', 'bereich_name', 'taetigkeit_id', 'taetigkeit_name', 'von_zeit', 'bis_zeit', 'bis_datum', 'anzahl_personen', 'splittbar', 'admin_only', 'status', 'besonderheiten'), ';');
                     $rows = $db->get_dienste();
                     if ($rows) {
+                        $veranstaltung_names = array();
+                        $tag_details = array();
                         foreach ($rows as $r) {
+                            $veranstaltung_id = !empty($r->veranstaltung_id) ? intval($r->veranstaltung_id) : 0;
+                            $veranstaltung_name = '';
+                            if ($veranstaltung_id > 0) {
+                                if (!array_key_exists($veranstaltung_id, $veranstaltung_names)) {
+                                    $veranstaltung = $db->get_veranstaltung($veranstaltung_id);
+                                    $veranstaltung_names[$veranstaltung_id] = $veranstaltung && !empty($veranstaltung->name)
+                                        ? $veranstaltung->name
+                                        : '';
+                                }
+                                $veranstaltung_name = $veranstaltung_names[$veranstaltung_id];
+                            }
+
+                            $tag_datum = '';
                             $tag_nummer = '';
                             if (!empty($r->tag_id)) {
-                                $tag = $db->get_veranstaltung_tag($r->tag_id);
+                                $tag_id = intval($r->tag_id);
+                                if (!array_key_exists($tag_id, $tag_details)) {
+                                    $tag_details[$tag_id] = $db->get_veranstaltung_tag($tag_id);
+                                }
+                                $tag = $tag_details[$tag_id];
                                 if ($tag) {
+                                    $tag_datum = $tag->tag_datum;
                                     $tag_nummer = $tag->tag_nummer;
                                 }
                             }
-                            fputcsv($out, array($r->veranstaltung_id ?? '', '', $tag_nummer, $r->verein_id ?? '', $r->verein_name ?? '', $r->dienst_typ ?? 'dienst', $r->bereich_id ?? '', $r->bereich_name ?? '', $r->taetigkeit_id ?? '', $r->taetigkeit_name ?? '', $r->von_zeit ?? '', $r->bis_zeit ?? '', $r->bis_datum ?? '', $r->anzahl_personen ?? '', $r->splittbar ? '1' : '0', !empty($r->admin_only) ? '1' : '0', $r->status ?? 'geplant'), ';');
+                            fputcsv($out, array($r->veranstaltung_id ?? '', $veranstaltung_name, $tag_datum, $tag_nummer, $r->verein_id ?? '', $r->verein_kuerzel ?? '', $r->verein_name ?? '', $r->dienst_typ ?? 'dienst', $r->bereich_id ?? '', $r->bereich_name ?? '', $r->taetigkeit_id ?? '', $r->taetigkeit_name ?? '', $r->von_zeit ?? '', $r->bis_zeit ?? '', $r->bis_datum ?? '', $r->anzahl_personen ?? '', $r->splittbar ? '1' : '0', !empty($r->admin_only) ? '1' : '0', $r->status ?? 'geplant', $r->besonderheiten ?? ''), ';');
                         }
                     }
                     break;
@@ -3891,39 +4543,64 @@ class Dienstplan_Admin
                 break;
 
             case 'veranstaltungen':
-                fputcsv($output, array('name', 'start_datum', 'end_datum', 'beschreibung'), ';');
+                fputcsv($output, array('id', 'name', 'start_datum', 'end_datum', 'status', 'beschreibung', 'dienst_von_zeit', 'dienst_bis_zeit'), ';');
                 $data = $db->get_veranstaltungen();
                 if ($data) {
                     foreach ($data as $row) {
                         fputcsv($output, array(
+                            $row->id ?? '',
                             $row->name ?? '',
                             $row->start_datum ?? '',
                             $row->end_datum ?? '',
-                            $row->beschreibung ?? ''
+                            $row->status ?? '',
+                            $row->beschreibung ?? '',
+                            $row->dienst_von_zeit ?? '',
+                            $row->dienst_bis_zeit ?? ''
                         ), ';');
                     }
                 }
                 break;
 
             case 'dienste':
-                fputcsv($output, array('veranstaltung_id', 'veranstaltung_name', 'tag_nummer', 'verein_id', 'verein_name', 'dienst_typ', 'bereich_id', 'bereich_name', 'taetigkeit_id', 'taetigkeit_name', 'von_zeit', 'bis_zeit', 'bis_datum', 'anzahl_personen', 'splittbar', 'admin_only', 'status'), ';');
+                fputcsv($output, array('veranstaltung_id', 'veranstaltung_name', 'datum', 'tag_nummer', 'verein_id', 'verein_kuerzel', 'verein_name', 'dienst_typ', 'bereich_id', 'bereich_name', 'taetigkeit_id', 'taetigkeit_name', 'von_zeit', 'bis_zeit', 'bis_datum', 'anzahl_personen', 'splittbar', 'admin_only', 'status', 'besonderheiten'), ';');
                 $data = $db->get_dienste();
                 if ($data) {
+                    $veranstaltung_names = array();
+                    $tag_details = array();
                     foreach ($data as $row) {
-                        // Hole Tag-Nummer
+                        $veranstaltung_id = !empty($row->veranstaltung_id) ? intval($row->veranstaltung_id) : 0;
+                        $veranstaltung_name = '';
+                        if ($veranstaltung_id > 0) {
+                            if (!array_key_exists($veranstaltung_id, $veranstaltung_names)) {
+                                $veranstaltung = $db->get_veranstaltung($veranstaltung_id);
+                                $veranstaltung_names[$veranstaltung_id] = $veranstaltung && !empty($veranstaltung->name)
+                                    ? $veranstaltung->name
+                                    : '';
+                            }
+                            $veranstaltung_name = $veranstaltung_names[$veranstaltung_id];
+                        }
+
+                        $tag_datum = '';
                         $tag_nummer = '';
                         if (!empty($row->tag_id)) {
-                            $tag = $db->get_veranstaltung_tag($row->tag_id);
+                            $tag_id = intval($row->tag_id);
+                            if (!array_key_exists($tag_id, $tag_details)) {
+                                $tag_details[$tag_id] = $db->get_veranstaltung_tag($tag_id);
+                            }
+                            $tag = $tag_details[$tag_id];
                             if ($tag) {
+                                $tag_datum = $tag->tag_datum;
                                 $tag_nummer = $tag->tag_nummer;
                             }
                         }
 
                         fputcsv($output, array(
                             $row->veranstaltung_id ?? '',
-                            '', // veranstaltung_name (nicht in get_dienste)
+                            $veranstaltung_name,
+                            $tag_datum,
                             $tag_nummer,
                             $row->verein_id ?? '',
+                            $row->verein_kuerzel ?? '',
                             $row->verein_name ?? '',
                             $row->dienst_typ ?? 'dienst',
                             $row->bereich_id ?? '',
@@ -3936,7 +4613,8 @@ class Dienstplan_Admin
                             $row->anzahl_personen ?? '',
                             $row->splittbar ? '1' : '0',
                             !empty($row->admin_only) ? '1' : '0',
-                            $row->status ?? 'geplant'
+                            $row->status ?? 'geplant',
+                            $row->besonderheiten ?? ''
                         ), ';');
                     }
                 }
@@ -4129,6 +4807,162 @@ class Dienstplan_Admin
             return (int) $default;
         };
 
+        $weekday_to_iso = function ($weekday_label) {
+            $key = strtolower(trim((string) $weekday_label));
+            $key = remove_accents($key);
+            $key = preg_replace('/\s+/', '', $key);
+
+            $map = array(
+                'mo' => 1,
+                'mon' => 1,
+                'monday' => 1,
+                'montag' => 1,
+                'di' => 2,
+                'die' => 2,
+                'tue' => 2,
+                'tues' => 2,
+                'tuesday' => 2,
+                'dienstag' => 2,
+                'mi' => 3,
+                'wed' => 3,
+                'wednesday' => 3,
+                'mittwoch' => 3,
+                'do' => 4,
+                'thu' => 4,
+                'thur' => 4,
+                'thurs' => 4,
+                'thursday' => 4,
+                'donnerstag' => 4,
+                'fr' => 5,
+                'fri' => 5,
+                'friday' => 5,
+                'freitag' => 5,
+                'sa' => 6,
+                'sat' => 6,
+                'saturday' => 6,
+                'samstag' => 6,
+                'so' => 7,
+                'sun' => 7,
+                'sunday' => 7,
+                'sonntag' => 7,
+            );
+
+            if (isset($map[$key])) {
+                return $map[$key];
+            }
+
+            if (is_numeric($key)) {
+                $n = intval($key);
+                if ($n >= 1 && $n <= 7) {
+                    return $n;
+                }
+            }
+
+            return 0;
+        };
+
+        $resolve_event_tag = function ($data, $tage_by_date, $tage_by_id, $tage_by_nummer, $tage_by_weekday, $row_number, $veranstaltung_start = '', $veranstaltung_ende = '') use ($parse_date, $weekday_to_iso, &$errors, &$error_details) {
+            $datum_input = isset($data['datum']) ? trim((string) $data['datum']) : '';
+            $tag_id_input = isset($data['tag_id']) ? trim((string) $data['tag_id']) : '';
+            $tag_nummer_input = isset($data['tag_nummer']) ? trim((string) $data['tag_nummer']) : '';
+            $wochentag_input = isset($data['wochentag']) ? trim((string) $data['wochentag']) : '';
+
+            if ($datum_input !== '') {
+                $dienst_timestamp = $parse_date($datum_input);
+                if ($dienst_timestamp === false) {
+                    $errors++;
+                    $error_details[] = "Zeile {$row_number}: Ungültiges Datum '{$datum_input}' - unterstützte Formate: YYYY-MM-DD, DD.MM.YYYY, DD/MM/YYYY, MM/DD/YYYY";
+                    return false;
+                }
+
+                if ($veranstaltung_start !== '' && $veranstaltung_ende !== '') {
+                    $start_ts = strtotime($veranstaltung_start);
+                    $end_ts = strtotime($veranstaltung_ende . ' 23:59:59');
+                    if ($start_ts !== false && $end_ts !== false && ($dienst_timestamp < $start_ts || $dienst_timestamp > $end_ts)) {
+                        $errors++;
+                        $error_details[] = "Zeile {$row_number}: Datum '{$datum_input}' liegt außerhalb der Veranstaltung ({$veranstaltung_start} - {$veranstaltung_ende})";
+                        return false;
+                    }
+                }
+
+                $dienst_datum = date('Y-m-d', $dienst_timestamp);
+                if (!isset($tage_by_date[$dienst_datum])) {
+                    $errors++;
+                    $error_details[] = "Zeile {$row_number}: Datum '{$datum_input}' nicht in Veranstaltung gefunden";
+                    return false;
+                }
+
+                return array(
+                    'tag' => $tage_by_date[$dienst_datum],
+                    'timestamp' => $dienst_timestamp,
+                );
+            }
+
+            if ($tag_id_input !== '') {
+                $tag_id = intval($tag_id_input);
+                if ($tag_id > 0 && isset($tage_by_id[$tag_id])) {
+                    return array(
+                        'tag' => $tage_by_id[$tag_id],
+                        'timestamp' => strtotime($tage_by_id[$tag_id]->tag_datum),
+                    );
+                }
+
+                $errors++;
+                $error_details[] = "Zeile {$row_number}: Tag-ID '{$tag_id_input}' wurde in der Veranstaltung nicht gefunden";
+                return false;
+            }
+
+            if ($tag_nummer_input !== '') {
+                $tag_nummer = intval($tag_nummer_input);
+                if ($tag_nummer > 0 && isset($tage_by_nummer[$tag_nummer])) {
+                    return array(
+                        'tag' => $tage_by_nummer[$tag_nummer],
+                        'timestamp' => strtotime($tage_by_nummer[$tag_nummer]->tag_datum),
+                    );
+                }
+
+                $errors++;
+                $error_details[] = "Zeile {$row_number}: Tag-Nummer '{$tag_nummer_input}' wurde in der Veranstaltung nicht gefunden";
+                return false;
+            }
+
+            if ($wochentag_input !== '') {
+                // Bei mehrtaegigen Veranstaltungen ist ein reiner Wochentag nicht eindeutig genug.
+                if (count($tage_by_date) > 1) {
+                    $errors++;
+                    $error_details[] = "Zeile {$row_number}: Wochentag allein ist bei mehrtägigen Veranstaltungen nicht erlaubt. Bitte Datum, Tag-ID oder Tag-Nummer verwenden";
+                    return false;
+                }
+
+                $weekday_iso = $weekday_to_iso($wochentag_input);
+                if ($weekday_iso <= 0) {
+                    $errors++;
+                    $error_details[] = "Zeile {$row_number}: Wochentag '{$wochentag_input}' konnte nicht erkannt werden";
+                    return false;
+                }
+
+                if (!empty($tage_by_weekday[$weekday_iso])) {
+                    if (count($tage_by_weekday[$weekday_iso]) > 1) {
+                        $error_details[] = "Zeile {$row_number}: Info - Wochentag '{$wochentag_input}' mehrfach vorhanden, erster passender Tag wird verwendet";
+                    }
+
+                    $tag = $tage_by_weekday[$weekday_iso][0];
+                    return array(
+                        'tag' => $tag,
+                        'timestamp' => strtotime($tag->tag_datum),
+                    );
+                }
+
+                $errors++;
+                $error_details[] = "Zeile {$row_number}: Für Wochentag '{$wochentag_input}' wurde in der Veranstaltung kein Tag gefunden";
+                return false;
+            }
+
+            $errors++;
+            $error_details[] = "Zeile {$row_number}: Es fehlt ein Tages-Mapping (Datum, Tag-ID, Tag-Nummer oder Wochentag)";
+            return false;
+        };
+
         $make_verein_kuerzel = function ($verein_name, $vereine_by_kuerzel) {
             $verein_name = trim((string) $verein_name);
             if ($verein_name === '') {
@@ -4234,6 +5068,60 @@ class Dienstplan_Admin
                 break;
 
             case 'veranstaltungen':
+                $veranstaltungen_columns = array_map('strtolower', (array) $db->get_wpdb()->get_col(
+                    "SHOW COLUMNS FROM {$db->get_prefix()}veranstaltungen",
+                    0
+                ));
+                $has_dienst_von_zeit_column = in_array('dienst_von_zeit', $veranstaltungen_columns, true);
+                $has_dienst_bis_zeit_column = in_array('dienst_bis_zeit', $veranstaltungen_columns, true);
+                $ensure_veranstaltung_tage = function ($veranstaltung_id, $start_date, $end_date, $row_number_for_error) use ($db, &$errors, &$error_details) {
+                    $veranstaltung_id = intval($veranstaltung_id);
+                    if ($veranstaltung_id <= 0) {
+                        return;
+                    }
+
+                    $existing_tage = $db->get_veranstaltung_tage($veranstaltung_id);
+                    if (!empty($existing_tage)) {
+                        return;
+                    }
+
+                    $start_ts = strtotime($start_date);
+                    $end_ts = strtotime($end_date);
+                    if ($start_ts === false || $end_ts === false || $end_ts < $start_ts) {
+                        return;
+                    }
+
+                    $tag_nummer = 1;
+                    $current_ts = $start_ts;
+                    $max_days = 400;
+                    $created_days = 0;
+
+                    while ($current_ts <= $end_ts && $created_days < $max_days) {
+                        $tag_data = array(
+                            'veranstaltung_id' => $veranstaltung_id,
+                            'tag_nummer' => $tag_nummer,
+                            'tag_datum' => date('Y-m-d', $current_ts),
+                            'von_zeit' => '08:00:00',
+                            'bis_zeit' => '22:00:00',
+                            'dienst_von_zeit' => '08:00:00',
+                            'dienst_bis_zeit' => '22:00:00',
+                            'nur_dienst' => 0,
+                            'notizen' => ''
+                        );
+
+                        $result = $db->add_veranstaltung_tag($tag_data);
+                        if ($result === false) {
+                            $errors++;
+                            $error_details[] = "Zeile {$row_number_for_error}: Veranstaltungstage konnten nicht automatisch angelegt werden";
+                            return;
+                        }
+
+                        $created_days++;
+                        $tag_nummer++;
+                        $current_ts = strtotime('+1 day', $current_ts);
+                    }
+                };
+
                 $row_number = 1;
                 foreach ($csv_data as $row) {
                     $row_number++;
@@ -4281,6 +5169,14 @@ class Dienstplan_Admin
                         $data['dienst_bis_zeit'] = '22:00';
                     }
 
+                    // Abwaertskompatibilitaet: Manche Installationen haben die Zeitfenster-Spalten noch nicht.
+                    if (!$has_dienst_von_zeit_column) {
+                        unset($data['dienst_von_zeit']);
+                    }
+                    if (!$has_dienst_bis_zeit_column) {
+                        unset($data['dienst_bis_zeit']);
+                    }
+
                     // Check ob existiert
                     $existing = $db->get_veranstaltung_by_name($data['name']);
 
@@ -4288,6 +5184,7 @@ class Dienstplan_Admin
                         $result = $db->update_veranstaltung($existing['id'], $data);
                         if ($result !== false) {
                             $updated++;
+                            $ensure_veranstaltung_tage($existing['id'], $data['start_datum'], $data['end_datum'], $row_number);
                         } else {
                             $errors++;
                             $error_details[] = "Zeile {$row_number}: Fehler beim Aktualisieren von Veranstaltung '{$data['name']}'";
@@ -4296,6 +5193,7 @@ class Dienstplan_Admin
                         $result = $db->add_veranstaltung($data);
                         if ($result !== false) {
                             $created++;
+                            $ensure_veranstaltung_tage($result, $data['start_datum'], $data['end_datum'], $row_number);
                         } else {
                             $errors++;
                             $error_details[] = "Zeile {$row_number}: Fehler beim Erstellen von Veranstaltung '{$data['name']}'";
@@ -4453,7 +5351,7 @@ class Dienstplan_Admin
 
                     if (!$bereich_id) {
                         $errors++;
-                        $error_details[] = "Zeile {$row_number}: Pflichtfeld fehlt oder ungültig (bereich_name oder bereich_id)";
+                        $error_details[] = "Zeile {$row_number}: Pflichtfeld fehlt oder ungültig (bereich_name). Alte CSVs mit bereich_id werden noch unterstützt.";
                         continue;
                     }
 
@@ -4530,8 +5428,20 @@ class Dienstplan_Admin
 
                 $veranstaltung_tage = $db->get_veranstaltung_tage($veranstaltung_id);
                 $tage_by_date = array();
+                $tage_by_id = array();
+                $tage_by_nummer = array();
+                $tage_by_weekday = array();
                 foreach ($veranstaltung_tage as $tag) {
-                    $tage_by_date[date('Y-m-d', strtotime($tag->tag_datum))] = $tag;
+                    $tag_date = date('Y-m-d', strtotime($tag->tag_datum));
+                    $tage_by_date[$tag_date] = $tag;
+                    $tage_by_id[intval($tag->id)] = $tag;
+                    $tage_by_nummer[intval($tag->tag_nummer)] = $tag;
+
+                    $weekday_iso = intval(date('N', strtotime($tag->tag_datum)));
+                    if (!isset($tage_by_weekday[$weekday_iso])) {
+                        $tage_by_weekday[$weekday_iso] = array();
+                    }
+                    $tage_by_weekday[$weekday_iso][] = $tag;
                 }
 
                 $existing_bereiche = $db->get_bereiche(false);
@@ -4568,41 +5478,35 @@ class Dienstplan_Admin
                 $row_number = 1;
                 foreach ($csv_data as $row) {
                     $row_number++;
+                    $current_unresolved_key_hash = '';
+                    $current_unresolved_payload = null;
 
                     $data = array();
                     foreach ($mapping as $field => $csvIndex) {
                         $data[$field] = isset($row[$csvIndex]) ? trim($row[$csvIndex]) : '';
                     }
 
-                    if (empty($data['datum'])) {
-                        $errors++;
-                        $error_details[] = "Zeile {$row_number}: Pflichtfeld 'Datum' fehlt";
+                    $resolved_tag = $resolve_event_tag(
+                        $data,
+                        $tage_by_date,
+                        $tage_by_id,
+                        $tage_by_nummer,
+                        $tage_by_weekday,
+                        $row_number,
+                        $veranstaltung_start,
+                        $veranstaltung_ende
+                    );
+                    if ($resolved_tag === false) {
                         continue;
                     }
 
-                    $dienst_timestamp = $parse_date($data['datum']);
-                    if ($dienst_timestamp === false) {
-                        $errors++;
-                        $error_details[] = "Zeile {$row_number}: Ungültiges Datum '{$data['datum']}'";
-                        continue;
-                    }
-
-                    if ($dienst_timestamp < $start_timestamp || $dienst_timestamp > $ende_timestamp) {
-                        $errors++;
-                        $error_details[] = "Zeile {$row_number}: Datum '{$data['datum']}' liegt außerhalb der Veranstaltung ({$veranstaltung_start} - {$veranstaltung_ende})";
-                        continue;
-                    }
-
+                    $dienst_timestamp = $resolved_tag['timestamp'];
                     $dienst_datum = date('Y-m-d', $dienst_timestamp);
-                    if (!isset($tage_by_date[$dienst_datum])) {
-                        $errors++;
-                        $error_details[] = "Zeile {$row_number}: Datum '{$data['datum']}' nicht in Veranstaltung gefunden";
-                        continue;
-                    }
+                    $resolved_tag_obj = $resolved_tag['tag'];
 
                     $dienst_data = array(
                         'veranstaltung_id' => $veranstaltung_id,
-                        'tag_id' => $tage_by_date[$dienst_datum]->id,
+                        'tag_id' => $resolved_tag_obj->id,
                         'status' => 'geplant',
                         'anzahl_personen' => isset($data['anzahl_personen']) && $data['anzahl_personen'] !== '' ? max(1, intval($data['anzahl_personen'])) : 1,
                         // Beim Import werden Dienste standardmäßig nicht automatisch gesplittet.
@@ -4628,7 +5532,7 @@ class Dienstplan_Admin
                             $von_hour = intval(substr($dienst_data['von_zeit'], 0, 2));
                             $bis_hour = intval(substr($bis_zeit, 0, 2));
                             if ($bis_hour < $von_hour) {
-                                $dienst_data['bis_datum'] = date('Y-m-d', strtotime($tage_by_date[$dienst_datum]->tag_datum . ' +1 day'));
+                                $dienst_data['bis_datum'] = date('Y-m-d', strtotime($resolved_tag_obj->tag_datum . ' +1 day'));
                             }
                         }
                     }
@@ -4867,6 +5771,24 @@ class Dienstplan_Admin
                 $start_timestamp = strtotime($veranstaltung_start);
                 $ende_timestamp = strtotime($veranstaltung_ende);
 
+                $veranstaltung_tage = $db->get_veranstaltung_tage($veranstaltung_id);
+                $tage_by_date = array();
+                $tage_by_id = array();
+                $tage_by_nummer = array();
+                $tage_by_weekday = array();
+                foreach ($veranstaltung_tage as $tag) {
+                    $tag_date = date('Y-m-d', strtotime($tag->tag_datum));
+                    $tage_by_date[$tag_date] = $tag;
+                    $tage_by_id[intval($tag->id)] = $tag;
+                    $tage_by_nummer[intval($tag->tag_nummer)] = $tag;
+
+                    $weekday_iso = intval(date('N', strtotime($tag->tag_datum)));
+                    if (!isset($tage_by_weekday[$weekday_iso])) {
+                        $tage_by_weekday[$weekday_iso] = array();
+                    }
+                    $tage_by_weekday[$weekday_iso][] = $tag;
+                }
+
                 $row_number = 1; // Zeilennummer für Fehlermeldungen
                 foreach ($csv_data as $row) {
                     $row_number++;
@@ -4879,57 +5801,23 @@ class Dienstplan_Admin
                         $data[$field] = isset($row[$csvIndex]) ? trim($row[$csvIndex]) : '';
                     }
 
-                    // Prüfe Pflichtfelder (nur Datum ist Pflicht)
-                    if (empty($data['datum'])) {
-                        $errors++;
-                        $error_details[] = "Zeile {$row_number}: Pflichtfeld 'Datum' fehlt";
+                    $resolved_tag = $resolve_event_tag(
+                        $data,
+                        $tage_by_date,
+                        $tage_by_id,
+                        $tage_by_nummer,
+                        $tage_by_weekday,
+                        $row_number,
+                        $veranstaltung_start,
+                        $veranstaltung_ende
+                    );
+                    if ($resolved_tag === false) {
                         continue;
                     }
 
-                    // Berechne Tag-Nummer aus Datum - mit intelligenter Datumserkennung
-                    $dienst_timestamp = $parse_date($data['datum']);
-                    if ($dienst_timestamp === false) {
-                        $errors++;
-                        $error_details[] = "Zeile {$row_number}: Ungültiges Datum '{$data['datum']}' - unterstützte Formate: YYYY-MM-DD, DD.MM.YYYY, DD/MM/YYYY, MM/DD/YYYY";
-                        continue;
-                    }
-
-                    // Inklusiver Vergleich: Start <= Dienst <= Ende
-                    if ($dienst_timestamp < $start_timestamp || $dienst_timestamp > strtotime($veranstaltung_ende . ' 23:59:59')) {
-                        $errors++;
-                        $error_details[] = "Zeile {$row_number}: Datum '{$data['datum']}' liegt außerhalb der Veranstaltung ({$veranstaltung_start} - {$veranstaltung_ende})";
-                        continue;
-                    }
-
-                    // Tag-Nummer berechnen (1-basiert)
-                    $tag_nummer = floor(($dienst_timestamp - $start_timestamp) / 86400) + 1;
-
-                    // Finde den Tag-ID aus der Veranstaltung
-                    $veranstaltung_tage = $db->get_veranstaltung_tage($veranstaltung_id);
-                    $tag_id = null;
-
-                    // Normalisiere das Datums-Format für Vergleich (auf YYYY-MM-DD)
-                    $dienst_datum_normalized = date('Y-m-d', $dienst_timestamp);
-
-                    foreach ($veranstaltung_tage as $tag) {
-                        // Vergleiche beide Formate
-                        $tag_datum_normalized = date('Y-m-d', strtotime($tag->tag_datum));
-                        if ($tag_datum_normalized === $dienst_datum_normalized) {
-                            $tag_id = $tag->id;
-                            break;
-                        }
-                    }
-
-                    // Wenn kein Tag gefunden, detaillierten Fehler ausgeben
-                    if (!$tag_id) {
-                        $errors++;
-                        $verfuegbare_tage = array_map(function ($t) {
-                            return date('d.m.Y', strtotime($t->tag_datum));
-                        }, $veranstaltung_tage);
-                        $verfuegbare_str = !empty($verfuegbare_tage) ? implode(', ', $verfuegbare_tage) : 'keine Tage definiert';
-                        $error_details[] = "Zeile {$row_number}: Datum '{$data['datum']}' nicht in Veranstaltung gefunden. Verfügbare Tage: {$verfuegbare_str}";
-                        continue;
-                    }
+                    $dienst_timestamp = $resolved_tag['timestamp'];
+                    $resolved_tag_obj = $resolved_tag['tag'];
+                    $tag_id = intval($resolved_tag_obj->id);
 
                     // Basis-Dienst-Daten
                     $dienst_data = array(
@@ -4971,11 +5859,8 @@ class Dienstplan_Admin
                             // Wenn bis_zeit kleiner als von_zeit, ist es ein Overnight-Dienst
                             if ($bis_hour < $von_hour) {
                                 // Setze bis_datum auf nächsten Tag
-                                $tag = $db->get_veranstaltung_tag($tag_id);
-                                if ($tag) {
-                                    $next_day = date('Y-m-d', strtotime($tag->tag_datum . ' +1 day'));
-                                    $dienst_data['bis_datum'] = $next_day;
-                                }
+                                $next_day = date('Y-m-d', strtotime($resolved_tag_obj->tag_datum . ' +1 day'));
+                                $dienst_data['bis_datum'] = $next_day;
                             }
                         }
                     }

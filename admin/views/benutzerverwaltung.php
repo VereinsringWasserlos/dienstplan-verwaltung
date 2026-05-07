@@ -162,10 +162,22 @@ foreach ($admins_nach_vereinen as $group) {
     <?php include DIENSTPLAN_PLUGIN_PATH . 'admin/views/partials/page-header.php'; ?>
 
     <div class="dp-filter-bar" style="background: #fff; padding: 1.5rem; border: 1px solid #c3c4c7; border-radius: 4px; margin: 1.5rem 0;">
-        <h3 style="margin-top: 0;">
-            <span class="dashicons dashicons-filter"></span>
-            <?php _e('Filter', 'dienstplan-verwaltung'); ?>
-        </h3>
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 0.75rem;">
+            <h3 style="margin: 0;">
+                <span class="dashicons dashicons-filter"></span>
+                <?php _e('Filter', 'dienstplan-verwaltung'); ?>
+            </h3>
+            <div class="dp-filter-action-group">
+                <a class="button button-primary dp-filter-action-btn" href="<?php echo esc_url(admin_url('user-new.php')); ?>">
+                    <span class="dashicons dashicons-plus-alt"></span>
+                    <?php _e('Neuer Benutzer', 'dienstplan-verwaltung'); ?>
+                </a>
+                <button type="button" class="button button-primary dp-open-import-popup dp-filter-action-btn" data-import-type="dienstplan">
+                    <span class="dashicons dashicons-upload"></span>
+                    <?php _e('Import', 'dienstplan-verwaltung'); ?>
+                </button>
+            </div>
+        </div>
 
         <form method="get" action="" style="display: flex; gap: 1rem; flex-wrap: wrap; align-items: flex-end;">
             <input type="hidden" name="page" value="dienstplan-benutzer">
@@ -231,7 +243,7 @@ foreach ($admins_nach_vereinen as $group) {
                 $collapse_id = 'admin-verein-' . intval($verein_id);
             ?>
                 <div class="verein-gruppe" style="margin-bottom: 1.5rem; border: 1px solid #c3c4c7; border-radius: 4px; position: relative;">
-                    <h3 class="verein-header-collapsible" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 1rem 1.5rem; margin: 0; display: flex; align-items: center; gap: 1rem; transition: all 0.3s;">
+                    <h3 class="verein-header-collapsible" style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; padding: 1rem 1.5rem; margin: 0; display: flex; align-items: center; gap: 1rem; transition: all 0.3s;">
                         <span class="dashicons dashicons-arrow-down-alt2 collapse-icon" id="icon-<?php echo esc_attr($collapse_id); ?>" onclick="toggleAdminGroup('<?php echo esc_js($collapse_id); ?>')" style="transition: transform 0.3s; font-size: 20px; cursor: pointer;"></span>
 
                         <span onclick="toggleAdminGroup('<?php echo esc_js($collapse_id); ?>')" style="flex: 1; display: flex; align-items: center; gap: 1rem; cursor: pointer;">

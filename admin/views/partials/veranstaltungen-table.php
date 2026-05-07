@@ -8,18 +8,13 @@ if (!defined('ABSPATH')) exit;
 <div class="veranstaltungen-list" style="margin-top: 2rem; overflow: visible; position: relative;">
     <div class="veranstaltung-gruppe" style="margin-bottom: 1.5rem; border: 1px solid #c3c4c7; border-radius: 4px; position: relative;">
         <!-- Einklappbarer Header -->
-        <h3 class="veranstaltung-header-collapsible" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; padding: 1rem 1.5rem; margin: 0; display: flex; align-items: center; gap: 1rem; transition: all 0.3s; cursor: pointer;" onclick="toggleVeranstaltungGroup('alle-veranstaltungen')">
+        <h3 class="veranstaltung-header-collapsible" style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; padding: 1rem 1.5rem; margin: 0; display: flex; align-items: center; gap: 1rem; transition: all 0.3s; cursor: pointer;" onclick="toggleVeranstaltungGroup('alle-veranstaltungen')">
             <span class="dashicons dashicons-arrow-down-alt2 collapse-icon" id="icon-alle-veranstaltungen" style="transition: transform 0.3s; font-size: 20px;"></span>
             <span class="dashicons dashicons-calendar-alt" style="font-size: 24px;"></span>
             <strong style="font-size: 1.1rem;"><?php _e('Alle Veranstaltungen', 'dienstplan-verwaltung'); ?></strong>
             <span style="background: rgba(255,255,255,0.2); padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.9rem;">
                 <?php echo count($veranstaltungen); ?> <?php echo count($veranstaltungen) != 1 ? 'Veranstaltungen' : 'Veranstaltung'; ?>
             </span>
-            <div style="flex: 1;"></div>
-            <button type="button" onclick="event.stopPropagation(); openVeranstaltungModal();" class="button button-primary" style="background: rgba(255,255,255,0.9); color: #f59e0b; border: none; padding: 0.5rem 1rem; font-weight: 600;">
-                <span class="dashicons dashicons-plus-alt" style="font-size: 16px;"></span>
-                <?php _e('Neue Veranstaltung', 'dienstplan-verwaltung'); ?>
-            </button>
         </h3>
         
         <!-- Einklappbarer Content -->

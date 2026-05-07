@@ -1,6 +1,6 @@
 # Dienstplan Verwaltung
 
-**Version:** 0.9.5.66 (Mitbringen Separation & Export Hotfix Release)  
+**Version:** 0.9.6.0 (Slim Mode Baseline & Dashboard Cleanup)  
 **Requires at least:** WordPress 5.0  
 **Tested up to:** WordPress 6.4  
 **Requires PHP:** 7.2  
@@ -102,7 +102,7 @@ Zeigt eine komplette Einstiegsseite mit:
 
 ## 🎯 Aktueller Stand
 
-- Aktuelle Version: **0.9.5.66**
+- Aktuelle Version: **0.9.6.0**
 - Laufende Änderungen und Releases: siehe `documentation/CHANGELOG.md`
 - Rollenübersicht: siehe `documentation/ROLLEN-UEBERSICHT.md`
 - Schnellstart: siehe `documentation/QUICK_START.md`
@@ -123,7 +123,7 @@ GPLv2 or later
 
 ---
 
-**Version 0.9.5.66** - Mitbringen Separation & Export Hotfix Release  
+**Version 0.9.6.0** - Slim Mode Baseline & Dashboard Cleanup  
 Stand: 06. Mai 2026
 
 Entwickelt für den Vereinsring Wasserlos und die Feuerwehr- und Event-Gemeinschaft.
