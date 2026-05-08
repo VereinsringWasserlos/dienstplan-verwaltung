@@ -1057,6 +1057,7 @@ class Dienstplan_Admin
     {
         require_once DIENSTPLAN_PLUGIN_PATH . 'includes/class-database.php';
         $db = new Dienstplan_Database($this->db_prefix);
+        $db->ensure_veranstaltung_konfiguration_schema();
 
         $stats = $db->get_stats();
 
@@ -1075,6 +1076,7 @@ class Dienstplan_Admin
     {
         require_once DIENSTPLAN_PLUGIN_PATH . 'includes/class-database.php';
         $db = new Dienstplan_Database($this->db_prefix);
+        $db->ensure_veranstaltung_konfiguration_schema();
 
         $vereine = $this->get_scoped_vereine($db);
 
@@ -3366,7 +3368,8 @@ class Dienstplan_Admin
         ob_end_clean();
 
         if ($result === false) {
-            wp_send_json_error(array('message' => 'Konfiguration konnte nicht gespeichert werden'));
+            $db_error = $db->get_wpdb()->last_error;
+            wp_send_json_error(array('message' => !empty($db_error) ? $db_error : 'Konfiguration konnte nicht gespeichert werden'));
             return;
         }
 

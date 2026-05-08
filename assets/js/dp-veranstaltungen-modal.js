@@ -573,12 +573,14 @@
                     console.log('Modal opened successfully');
                 } else {
                     console.error('AJAX response was not successful:', response);
-                    alert('Fehler: Veranstaltung konnte nicht geladen werden.');
+                    const message = (response && response.data && response.data.message) ? response.data.message : 'Veranstaltung konnte nicht geladen werden.';
+                    alert('Fehler: ' + message);
                 }
             },
             error: function(xhr, status, error) {
                 console.error('Configuration AJAX error:', error, status, xhr);
-                alert('Fehler beim Laden der Konfiguration: ' + error);
+                const responseText = (xhr && xhr.responseText) ? ('\n' + xhr.responseText.substring(0, 400)) : '';
+                alert('Fehler beim Laden der Konfiguration: ' + error + responseText);
             }
         });
     };

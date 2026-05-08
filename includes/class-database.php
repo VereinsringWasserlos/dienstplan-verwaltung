@@ -145,6 +145,14 @@ class Dienstplan_Database {
             );
         }
     }
+
+    /**
+     * Stellt sicher, dass alle für das Konfigurations-Modal benötigten
+     * Veranstaltungsspalten vorhanden sind.
+     */
+    public function ensure_veranstaltung_konfiguration_schema() {
+        $this->ensure_veranstaltungen_mitarbeiter_anzeige_modus();
+    }
     
     /**
      * Getter für wpdb (für externe Zugriffe)
