@@ -137,7 +137,7 @@ if (!defined('ABSPATH')) exit;
                                     <a href="#" class="button button-small dp-inline-action-button" onclick="editVeranstaltung(<?php echo $v->id; ?>); return false;" title="<?php esc_attr_e('Bearbeiten', 'dienstplan-verwaltung'); ?>" aria-label="<?php esc_attr_e('Bearbeiten', 'dienstplan-verwaltung'); ?>">
                                         <span class="dp-inline-action-emoji" aria-hidden="true">✏️</span>
                                     </a>
-                                    <a href="#" class="button button-small dp-inline-action-button" onclick="openVeranstaltungKonfigurationModal(<?php echo $v->id; ?>); return false;" title="<?php esc_attr_e('Konfiguration', 'dienstplan-verwaltung'); ?>" aria-label="<?php esc_attr_e('Konfiguration', 'dienstplan-verwaltung'); ?>">
+                                    <a href="#" class="button button-small dp-inline-action-button dp-config-btn" data-veranstaltung-id="<?php echo esc_attr($v->id); ?>" title="<?php esc_attr_e('Konfiguration', 'dienstplan-verwaltung'); ?>" aria-label="<?php esc_attr_e('Konfiguration', 'dienstplan-verwaltung'); ?>">
                                         <span class="dp-inline-action-emoji" aria-hidden="true">⚙️</span>
                                     </a>
                                     <a href="<?php echo esc_url(admin_url('admin.php?page=dienstplan-statistik&veranstaltung_id=' . intval($v->id))); ?>" class="button button-small dp-inline-action-button" title="<?php esc_attr_e('Statistik', 'dienstplan-verwaltung'); ?>" aria-label="<?php esc_attr_e('Statistik', 'dienstplan-verwaltung'); ?>">

@@ -47,6 +47,15 @@
     
     $(document).ready(function() {
         console.log('Veranstaltungen Modal geladen');
+        
+        // Event-Listener für Konfigurationsbutton
+        $(document).on('click', '.dp-config-btn', function(e) {
+            e.preventDefault();
+            const veranstaltungId = $(this).data('veranstaltung-id');
+            if (veranstaltungId) {
+                window.openVeranstaltungKonfigurationModal(veranstaltungId);
+            }
+        });
     });
     
     /**
@@ -525,6 +534,8 @@
     };
     
     window.openVeranstaltungKonfigurationModal = function(veranstaltungId) {
+        console.log('openVeranstaltungKonfigurationModal called with ID:', veranstaltungId);
+        
         $.ajax({
             url: dpAjax.ajaxurl,
             type: 'POST',
@@ -534,6 +545,7 @@
                 veranstaltung_id: veranstaltungId
             },
             success: function(response) {
+                console.log('Configuration AJAX response:', response);
                 if (response.success && response.data) {
                     const v = response.data;
                     $('#vk_veranstaltung_id').val(v.id);
@@ -542,10 +554,12 @@
                     $('#vk_mitarbeiter_anzeige_modus').val(v.mitarbeiter_anzeige_modus || 'verkuerzt');
                     $('#veranstaltung-konfiguration-modal').css('display', 'flex');
                 } else {
+                    console.error('AJAX response was not successful:', response);
                     alert('Fehler: Veranstaltung konnte nicht geladen werden.');
                 }
             },
-            error: function() {
+            error: function(xhr, status, error) {
+                console.error('Configuration AJAX error:', error, status, xhr);
                 alert('Fehler beim Laden der Konfiguration.');
             }
         });
