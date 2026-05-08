@@ -11,6 +11,25 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ---
 
+## [0.9.6.2] - 2026-05-08 🚀 Release: Mitbringen UX, Import/CSV und Release-Pipeline
+
+### ✨ Neu
+
+- **Mitbringen-Übernahme für Gäste stabilisiert**: Öffentlicher AJAX-Hook für `dp_take_mitbringen_item` ergänzt (`nopriv`), damit die Übernahme auch ohne Login zuverlässig funktioniert.
+- **Mitbringen-Modal verbessert**: Sticky Titelzeile, nur eine Datumsanzeige pro Tag und Sortierung mit Status **Offen zuerst**.
+
+### 🧹 Verbesserungen
+
+- **Admin-Metadaten für Mitbringen**: Vereinskürzel in der Tabelle, Wochentag (2 Zeichen) bei Datumsdarstellungen und bessere Aktionsspaltenbreite/Umbruch.
+- **Import-Flow erweitert**: Pflichtvalidierung für Dienstzeiten, Alias-Felder (`veranstaltung_name`, `tag_datum`) und Unterstützung mehrtägiger Tag-Datensätze inkl. Tages-Zeitfenster.
+- **Release-Script robust gemacht**: ZIP-Build verarbeitet relative Output-Pfade jetzt zuverlässig über aufgelöste absolute Zielpfade.
+
+### 📦 Daten
+
+- **Neue Live-CSV-Vorlagen** in `documentation/templates/` für Vereine, Veranstaltungen (einfach/mehrtägig), Bereiche, Tätigkeiten und Dienste.
+
+---
+
 ## [0.9.6.1] - 2026-05-07 🚀 Release: Mitbringen-Modal & Snapshot-Stabilisierung
 
 ### ✨ Neu
