@@ -129,6 +129,22 @@ class Dienstplan_Database {
             );
         }
     }
+
+    /**
+     * Stellt sicher, dass veranstaltungen.mitarbeiter_anzeige_modus existiert.
+     */
+    private function ensure_veranstaltungen_mitarbeiter_anzeige_modus() {
+        static $checked = false;
+        if ($checked) return;
+        $checked = true;
+
+        $col = $this->wpdb->get_results("SHOW COLUMNS FROM {$this->prefix}veranstaltungen LIKE 'mitarbeiter_anzeige_modus'");
+        if (empty($col)) {
+            $this->wpdb->query(
+                "ALTER TABLE {$this->prefix}veranstaltungen ADD COLUMN mitarbeiter_anzeige_modus varchar(20) DEFAULT 'verkuerzt' AFTER seite_id"
+            );
+        }
+    }
     
     /**
      * Getter für wpdb (für externe Zugriffe)
@@ -240,6 +256,7 @@ class Dienstplan_Database {
             start_datum date NOT NULL,
             end_datum date,
             seite_id bigint(20) UNSIGNED DEFAULT NULL,
+            mitarbeiter_anzeige_modus varchar(20) DEFAULT 'verkuerzt',
             erstellt_am datetime DEFAULT CURRENT_TIMESTAMP,
             aktualisiert_am datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             PRIMARY KEY (id),
@@ -1016,6 +1033,14 @@ class Dienstplan_Database {
         ) $charset;";
         require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
         dbDelta($sql);
+        
+        // Stelle sicher, dass neue Spalten in existierenden Tabellen vorhanden sind
+        $this->ensure_veranstaltungen_mitarbeiter_anzeige_modus();
+        $this->ensure_mitbringen_bereich_name();
+        $this->ensure_mitbringen_mitarbeiter_id();
+        $this->ensure_mitbringen_admin_only();
+        $this->ensure_mitbringen_besetzung_info();
+        $this->ensure_mitarbeiter_vereine_source();
     }
 
     /**

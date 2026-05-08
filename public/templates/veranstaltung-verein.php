@@ -103,6 +103,33 @@ if ($veranstaltung->status === 'aktiv') {
     $verantwortliche = $db->get_veranstaltung_verantwortliche($veranstaltung_id);
 }
 
+// Hilfsfunktion für Mitarbeiter-Name-Anzeige nach Veranstaltungs-Einstellung
+$dp_format_mitarbeiter_name = function($mitarbeiter, $modus = null) use ($can_manage_dienste, $veranstaltung) {
+    if (!$mitarbeiter) {
+        return '';
+    }
+    
+    // Fallback auf Veranstaltungs-Einstellung
+    if ($modus === null) {
+        $modus = $veranstaltung->mitarbeiter_anzeige_modus ?? 'verkuerzt';
+    }
+    
+    $vorname = trim((string) ($mitarbeiter->vorname ?? ''));
+    $nachname = trim((string) ($mitarbeiter->nachname ?? ''));
+    
+    if ($modus === 'vollstaendig') {
+        // Zeige vollständigen Namen
+        return $vorname . ' ' . $nachname;
+    } elseif ($modus === 'admin_only' && !$can_manage_dienste) {
+        // Nur Admin sieht Namen, andere sehen "Besetzt"
+        return 'Besetzt';
+    } else {
+        // Verkürzt: Vorname + Nachname-Initial
+        $initial = !empty($nachname) ? substr($nachname, 0, 1) . '.' : '';
+        return trim($vorname . ' ' . $initial);
+    }
+};
+
 // Gruppiere Dienste nach Tag
 $dienste_nach_tagen = [];
 foreach ($services as $service) {
@@ -1211,7 +1238,7 @@ if ($dienst_start_dt !== null && $dienst_end_dt !== null) {
                                 }
                                 $m_obj = $db->get_mitarbeiter($slot_name_row->mitarbeiter_id);
                                 if ($m_obj) {
-                                    $tl_assigned_names[] = trim(($m_obj->vorname ?? '') . ' ' . substr(($m_obj->nachname ?? ''), 0, 1) . '.');
+                                    $tl_assigned_names[] = $dp_format_mitarbeiter_name($m_obj);
                                 }
                             }
                         }
@@ -1312,7 +1339,7 @@ if ($dienst_start_dt !== null && $dienst_end_dt !== null) {
                                         if ($tl_half_is_occupied) {
                                             $tl_half_m_obj = $db->get_mitarbeiter($tl_half_slot->mitarbeiter_id);
                                             if ($tl_half_m_obj && ($can_manage_dienste || $tl_half_is_own)) {
-                                                $tl_half_label = trim(($tl_half_m_obj->vorname ?? '') . ' ' . substr(($tl_half_m_obj->nachname ?? ''), 0, 1) . '.');
+                                                $tl_half_label = $dp_format_mitarbeiter_name($tl_half_m_obj);
                                             } else {
                                                 $tl_half_label = 'Besetzt';
                                             }
@@ -1449,7 +1476,7 @@ if ($dienst_start_dt !== null && $dienst_end_dt !== null) {
                                             if (empty($kp_slot_row->mitarbeiter_id)) continue;
                                             $kp_m_obj = $db->get_mitarbeiter($kp_slot_row->mitarbeiter_id);
                                             if ($kp_m_obj) {
-                                                $kp_assigned_names[] = trim(($kp_m_obj->vorname ?? '') . ' ' . substr(($kp_m_obj->nachname ?? ''), 0, 1) . '.');
+                                                $kp_assigned_names[] = $dp_format_mitarbeiter_name($kp_m_obj);
                                             }
                                         }
                                     }
@@ -1635,7 +1662,7 @@ if ($dienst_start_dt !== null && $dienst_end_dt !== null) {
                                             <div class="dp-slot-item <?php echo $ist_belegt ? 'belegt' : 'frei'; ?>">
                                                 <?php if ($ist_belegt && $mitarbeiter): ?>
                                                     <?php if ($can_manage_dienste || $is_own_slot): ?>
-                                                        <span class="dp-slot-belegt-name"><?php echo esc_html($mitarbeiter->vorname . ' ' . substr($mitarbeiter->nachname, 0, 1) . '.'); ?></span>
+                                                        <span class="dp-slot-belegt-name"><?php echo esc_html($dp_format_mitarbeiter_name($mitarbeiter)); ?></span>
                                                     <?php else: ?>
                                                         <span class="dp-slot-belegt-name">Besetzt</span>
                                                     <?php endif; ?>

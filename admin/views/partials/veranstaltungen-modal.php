@@ -56,6 +56,19 @@ if (!defined('ABSPATH')) exit;
                         </td>
                     </tr>
                     
+                    <!-- Mitarbeiter-Anzeige im Frontend -->
+                    <tr>
+                        <th><label for="v_mitarbeiter_anzeige_modus"><?php _e('Mitarbeiter-Anzeige im Frontend', 'dienstplan-verwaltung'); ?></label></th>
+                        <td>
+                            <select id="v_mitarbeiter_anzeige_modus" name="mitarbeiter_anzeige_modus" class="regular-text" style="max-width: 400px;">
+                                <option value="verkuerzt"><?php _e('Verkürzt (nur Vorname + Nachname-Initial, z.B. "Max M.")', 'dienstplan-verwaltung'); ?></option>
+                                <option value="vollstaendig"><?php _e('Vollständig (alle sehen Namen, z.B. "Max Mustermann")', 'dienstplan-verwaltung'); ?></option>
+                                <option value="admin_only"><?php _e('Admin-only (Admin sieht Namen, andere sehen "Besetzt")', 'dienstplan-verwaltung'); ?></option>
+                            </select>
+                            <p class="description"><?php _e('Wählen Sie, wie Mitarbeiternamen im Frontend angezeigt werden sollen.', 'dienstplan-verwaltung'); ?></p>
+                        </td>
+                    </tr>
+                    
                     <!-- Beteiligte Vereine -->
                     <tr>
                         <th><?php _e('Beteiligte Vereine', 'dienstplan-verwaltung'); ?></th>
