@@ -11,6 +11,19 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ---
 
+## [0.9.6.4] - 2026-05-08 🚀 Release: Kompakt-Default & FE-Übernehmen aufgeräumt
+
+### ✨ Neu
+
+- **Kompakt als Standardansicht**: In der Veranstaltungsansicht ist `kompakt` jetzt der Default-View (inkl. Fallback für ungültige/legacy View-Parameter).
+
+### 🧹 Verbesserungen
+
+- **Frontend-Übernehmen-Modal vereinfacht**: Die Option zur Benutzerkonto-Erstellung wurde aus dem FE-Modal entfernt.
+- **Stabile Formularübergabe im FE**: `create_user_account` und `create_user_datenschutz` werden intern fest auf `0` gesetzt, damit der Übernahme-Flow ohne Zusatzoptionen konsistent bleibt.
+
+---
+
 ## [0.9.6.3] - 2026-05-08 🚀 Release: Mitbringen Admin-only in Modal & Multi-Edit
 
 ### ✨ Neu

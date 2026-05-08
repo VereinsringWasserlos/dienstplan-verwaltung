@@ -239,13 +239,13 @@ $dp_get_verein_abbrev = function($verein_name) {
     return empty($abbrev) ? '?' : $abbrev;
 };
 
-// View-Modus
-$view_mode = isset($_GET['view']) ? sanitize_text_field($_GET['view']) : 'kachel';
+// View-Modus (Standard: kompakt)
+$view_mode = isset($_GET['view']) ? sanitize_text_field($_GET['view']) : 'kompakt';
 if ($view_mode === 'list') {
-    $view_mode = 'kachel';
+    $view_mode = 'kompakt';
 }
 if (!in_array($view_mode, array('kachel', 'kompakt', 'timeline'), true)) {
-    $view_mode = 'kachel';
+    $view_mode = 'kompakt';
 }
 $dp_debug_query = '';
 if (isset($_GET['dpdebug'])) {
@@ -2465,25 +2465,12 @@ function dpToggleFilterPanel() {
 
 document.addEventListener('DOMContentLoaded', function() {
         window.dpToggleCreateUserConsent = function() {
-            var selected = jQuery('input[name="create_user_account"]:checked').val() || '0';
-            var wrap = jQuery('#dp-datenschutz-wrap');
+            // Kontoanlage im Frontend-Übernehmen-Modal deaktiviert.
             var emailInput = jQuery('#dp-email');
             var emailLabel = jQuery('#dp-email-label');
-            if (selected === '1') {
-                if (wrap.length) { wrap.show(); }
-                emailInput.attr('required', true);
-                emailLabel.text('E-Mail *');
-            } else {
-                jQuery('#dp-create-user-datenschutz').prop('checked', false);
-                if (wrap.length) { wrap.hide(); }
-                emailInput.removeAttr('required');
-                emailLabel.text('E-Mail');
-            }
+            emailInput.removeAttr('required');
+            emailLabel.text('E-Mail');
         };
-
-        jQuery(document).on('change', 'input[name="create_user_account"]', function() {
-            window.dpToggleCreateUserConsent();
-        });
 
         window.dpToggleCreateUserConsent();
 
@@ -2615,19 +2602,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 nachname: jQuery('#dp-nachname').val(),
                 email: jQuery.trim(jQuery('#dp-email').val()),
                 besonderheiten: jQuery('#dp-besonderheiten').val(),
-                create_user_account: jQuery('input[name="create_user_account"]:checked').val() || '0',
-                create_user_datenschutz: jQuery('#dp-create-user-datenschutz').is(':checked') ? '1' : '0'
+                create_user_account: '0',
+                create_user_datenschutz: '0'
             };
 
-            if (!formData.vorname || !formData.nachname || (formData.create_user_account === '1' && !formData.email)) {
+            if (!formData.vorname || !formData.nachname) {
                 window.dpTrace('Submit Abbruch: Pflichtfelder fehlen', formData);
                 alert('Bitte alle Pflichtfelder ausfüllen.');
                 dpDebug('Submit Abbruch: Pflichtfelder fehlen');
-                return;
-            }
-
-            if (formData.create_user_account === '1' && formData.create_user_datenschutz !== '1') {
-                alert('Bitte best├ñtige die Datenschutzerkl├ñrung f├╝r die Kontoerstellung.');
                 return;
             }
 
@@ -3060,32 +3042,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     <textarea id="dp-besonderheiten" name="besonderheiten" rows="3"></textarea>
                 </div>
 
-                <?php if (!$can_manage_dienste): ?>
-                    <div class="dp-form-group">
-                        <label>Benutzerkonto für spätere Anmeldungen anlegen?</label>
-                        <div class="dp-radio-row">
-                            <label><input type="radio" name="create_user_account" value="0" checked> Nein</label>
-                            <label><input type="radio" name="create_user_account" value="1"> Ja</label>
-                        </div>
-                    </div>
-
-                    <div class="dp-form-group dp-datenschutz-wrap" id="dp-datenschutz-wrap" style="display:none;">
-                        <label class="dp-checkbox-label">
-                            <input type="checkbox" id="dp-create-user-datenschutz" name="create_user_datenschutz" value="1">
-                            Ich habe die
-                            <?php
-                            $dp_dsgvo_url = get_option('dp_datenschutz_url', '');
-                            if (!empty($dp_dsgvo_url)):
-                            ?><a href="<?php echo esc_url($dp_dsgvo_url); ?>" target="_blank" rel="noopener">Datenschutzerklärung</a><?php
-                            else:
-                            ?>Datenschutzerklärung<?php
-                            endif;
-                            ?> gelesen und stimme der Erstellung eines Benutzerkontos zu.
-                        </label>
-                    </div>
-                <?php else: ?>
-                    <input type="hidden" name="create_user_account" value="0">
-                <?php endif; ?>
+                <input type="hidden" name="create_user_account" value="0">
+                <input type="hidden" name="create_user_datenschutz" value="0">
                 
                 <div class="dp-modal-footer">
                     <button type="button" class="dp-btn-secondary" onclick="closeAnmeldeModal()">Abbrechen</button>
