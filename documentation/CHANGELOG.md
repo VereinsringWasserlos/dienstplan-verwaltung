@@ -11,6 +11,30 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ---
 
+## [0.9.7.1] - 2026-05-08 🚀 Release: Versions-Hotfix
+
+### 🧹 Verbesserungen
+
+- **Versionen synchronisiert**: Plugin-Header, Konstante und Release-Artefakte auf konsistente Version 0.9.7.1 gebracht.
+- **Release-Metadaten aktualisiert**: README und Changelog für den aktuellen Stand ergänzt.
+
+---
+
+## [0.9.7.0] - 2026-05-08 🚀 Release: Mitarbeiter-Anzeige konfigurierbar
+
+### ✨ Neu
+
+- **Veranstaltungs-spezifische Mitarbeiter-Anzeige-Modi**: Admins können pro Veranstaltung auswählen, wie Mitarbeiter im Frontend angezeigt werden.
+- **Modi**:
+  - `verkuerzt` (Standard): Vorname + Nachname-Initial (z.B. "Max M.")
+  - `vollstaendig`: Vollständiger Name für alle
+  - `admin_only`: Nur Admin/Veranstaltungsleiter sehen Namen, andere sehen "Besetzt"
+- **Backend-Integration**: Neue Einstellung im Veranstaltungs-Modal verfügbar.
+- **Frontend-Integration**: Anzeige in Timeline/Kompakt/Slot-Ansichten nutzt den konfigurierten Modus.
+- **Datenbank-Migration**: Neue Spalte `mitarbeiter_anzeige_modus` inklusive Bestandsdaten-Migration.
+
+---
+
 ## [0.9.6.6] - 2026-05-08 🚀 Release: UI-Cleanup
 
 ### 🧹 Verbesserungen

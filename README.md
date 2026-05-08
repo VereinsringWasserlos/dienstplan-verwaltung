@@ -1,6 +1,6 @@
 # Dienstplan Verwaltung
 
-**Version:** 0.9.6.6 (Redundanten Neu-Button entfernt)  
+**Version:** 0.9.7.1 (Mitarbeiter-Anzeige-Modi + Versions-Hotfix)  
 **Requires at least:** WordPress 5.0  
 **Tested up to:** WordPress 6.4  
 **Requires PHP:** 7.2  
@@ -102,7 +102,7 @@ Zeigt eine komplette Einstiegsseite mit:
 
 ## 🎯 Aktueller Stand
 
-- Aktuelle Version: **0.9.6.4**
+- Aktuelle Version: **0.9.7.1**
 - Laufende Änderungen und Releases: siehe `documentation/CHANGELOG.md`
 - Rollenübersicht: siehe `documentation/ROLLEN-UEBERSICHT.md`
 - Schnellstart: siehe `documentation/QUICK_START.md`
