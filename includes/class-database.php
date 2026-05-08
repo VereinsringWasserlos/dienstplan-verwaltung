@@ -827,6 +827,8 @@ class Dienstplan_Database {
             $history = array();
         }
 
+        $ran_any = false;
+
         foreach ($this->get_migration_plan() as $migration) {
             if (empty($migration['id']) || empty($migration['version']) || empty($migration['method'])) {
                 continue;
@@ -856,9 +858,13 @@ class Dienstplan_Database {
                 'method' => $method,
                 'ran_at' => current_time('mysql')
             );
+            $ran_any = true;
         }
 
-        update_option('dienstplan_db_migration_history', $history, false);
+        // update_option nur wenn tatsächlich Migrationen durchgeführt wurden
+        if ($ran_any) {
+            update_option('dienstplan_db_migration_history', $history, false);
+        }
     }
 
     /**

@@ -78,7 +78,10 @@ class Dienstplan_Verwaltung {
         $this->define_public_hooks();
         $this->setup_mail_filters();
         $this->setup_mail_queue();
-        $this->check_database_updates();
+        // DB-Updates nicht bei AJAX-Requests ausführen (Performance)
+        if (!defined('DOING_AJAX') || !DOING_AJAX) {
+            $this->check_database_updates();
+        }
     }
 
     /**
