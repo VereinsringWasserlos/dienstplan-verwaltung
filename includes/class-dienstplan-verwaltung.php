@@ -290,7 +290,9 @@ class Dienstplan_Verwaltung {
         
         // AJAX-Actions für Veranstaltungen
         $this->loader->add_action('wp_ajax_dp_save_veranstaltung', $plugin_admin, 'ajax_save_veranstaltung');
+        $this->loader->add_action('wp_ajax_dp_save_veranstaltung_konfiguration', $plugin_admin, 'ajax_save_veranstaltung_konfiguration');
         $this->loader->add_action('wp_ajax_dp_get_veranstaltung', $plugin_admin, 'ajax_get_veranstaltung');
+        $this->loader->add_action('wp_ajax_dp_get_veranstaltung_konfiguration', $plugin_admin, 'ajax_get_veranstaltung_konfiguration');
         $this->loader->add_action('wp_ajax_dp_delete_veranstaltung', $plugin_admin, 'ajax_delete_veranstaltung');
         $this->loader->add_action('wp_ajax_dp_create_event_page', $plugin_admin, 'ajax_create_event_page');
         $this->loader->add_action('wp_ajax_dp_update_event_page', $plugin_admin, 'ajax_update_event_page');

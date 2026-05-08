@@ -43,31 +43,6 @@ if (!defined('ABSPATH')) exit;
                         </td>
                     </tr>
                     
-                    <!-- Status -->
-                    <tr>
-                        <th><label for="v_status"><?php _e('Status', 'dienstplan-verwaltung'); ?></label></th>
-                        <td>
-                            <select id="v_status" name="status">
-                                <option value="in_planung"><?php _e('In Planung', 'dienstplan-verwaltung'); ?></option>
-                                <option value="geplant"><?php _e('Geplant', 'dienstplan-verwaltung'); ?></option>
-                                <option value="aktiv"><?php _e('Aktiv', 'dienstplan-verwaltung'); ?></option>
-                                <option value="abgeschlossen"><?php _e('Abgeschlossen', 'dienstplan-verwaltung'); ?></option>
-                            </select>
-                        </td>
-                    </tr>
-                    
-                    <!-- Mitarbeiter-Anzeige im Frontend -->
-                    <tr>
-                        <th><label for="v_mitarbeiter_anzeige_modus"><?php _e('Mitarbeiter-Anzeige im Frontend', 'dienstplan-verwaltung'); ?></label></th>
-                        <td>
-                            <select id="v_mitarbeiter_anzeige_modus" name="mitarbeiter_anzeige_modus" class="regular-text" style="max-width: 400px;">
-                                <option value="verkuerzt"><?php _e('Verkürzt (nur Vorname + Nachname-Initial, z.B. "Max M.")', 'dienstplan-verwaltung'); ?></option>
-                                <option value="vollstaendig"><?php _e('Vollständig (alle sehen Namen, z.B. "Max Mustermann")', 'dienstplan-verwaltung'); ?></option>
-                                <option value="admin_only"><?php _e('Admin-only (Admin sieht Namen, andere sehen "Besetzt")', 'dienstplan-verwaltung'); ?></option>
-                            </select>
-                            <p class="description"><?php _e('Wählen Sie, wie Mitarbeiternamen im Frontend angezeigt werden sollen.', 'dienstplan-verwaltung'); ?></p>
-                        </td>
-                    </tr>
                     
                     <!-- Beteiligte Vereine -->
                     <tr>

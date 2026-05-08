@@ -2,6 +2,48 @@
     'use strict';
     
     let tagCounter = 0;
+    let isSavingVeranstaltung = false;
+    let isSavingVeranstaltungKonfiguration = false;
+
+    function setVeranstaltungSaveButtonState(isSaving) {
+        const $saveBtn = $('#veranstaltung-modal .dp-modal-footer .button-primary').first();
+        if (!$saveBtn.length) {
+            return;
+        }
+
+        const originalHtml = $saveBtn.data('original-html') || $saveBtn.html();
+        if (!$saveBtn.data('original-html')) {
+            $saveBtn.data('original-html', originalHtml);
+        }
+
+        if (isSaving) {
+            $saveBtn.prop('disabled', true);
+            $saveBtn.html('<span class="dashicons dashicons-update spin" style="margin-top: 3px;"></span> Speichert...');
+        } else {
+            $saveBtn.prop('disabled', false);
+            $saveBtn.html($saveBtn.data('original-html'));
+        }
+    }
+
+    function setVeranstaltungKonfigurationSaveButtonState(isSaving) {
+        const $saveBtn = $('#veranstaltung-konfiguration-modal .dp-modal-footer .button-primary').first();
+        if (!$saveBtn.length) {
+            return;
+        }
+
+        const originalHtml = $saveBtn.data('original-html') || $saveBtn.html();
+        if (!$saveBtn.data('original-html')) {
+            $saveBtn.data('original-html', originalHtml);
+        }
+
+        if (isSaving) {
+            $saveBtn.prop('disabled', true);
+            $saveBtn.html('<span class="dashicons dashicons-update spin" style="margin-top: 3px;"></span> Speichert...');
+        } else {
+            $saveBtn.prop('disabled', false);
+            $saveBtn.html($saveBtn.data('original-html'));
+        }
+    }
     
     $(document).ready(function() {
         console.log('Veranstaltungen Modal geladen');
@@ -45,10 +87,18 @@
     };
     
     window.closeVeranstaltungModal = function() {
+        isSavingVeranstaltung = false;
+        setVeranstaltungSaveButtonState(false);
         $('#veranstaltung-modal').hide();
         if(typeof dpCheckPendingReload === 'function') {
             dpCheckPendingReload();
         }
+    };
+
+    window.closeVeranstaltungKonfigurationModal = function() {
+        isSavingVeranstaltungKonfiguration = false;
+        setVeranstaltungKonfigurationSaveButtonState(false);
+        $('#veranstaltung-konfiguration-modal').hide();
     };
     
     window.toggleMehrtaegig = function() {
@@ -238,6 +288,10 @@
     
     window.saveVeranstaltung = function() {
         console.log('saveVeranstaltung');
+
+        if (isSavingVeranstaltung) {
+            return;
+        }
         
         // Validierung
         if (!$('#v_name').val()) {
@@ -282,7 +336,6 @@
             titel: $('#v_name').val(),
             beschreibung: $('#v_beschreibung').val(),
             ort: '', // Kann später hinzugefügt werden
-            status: $('#v_status').val(),
             tage: JSON.stringify(tage),
             vereine: JSON.stringify(vereineIds),
             verantwortliche: verantwortlicheIds
@@ -292,6 +345,9 @@
         console.log('Tage:', tage);
         console.log('Vereine:', vereineIds);
         console.log('Verantwortliche:', verantwortlicheIds);
+
+        isSavingVeranstaltung = true;
+        setVeranstaltungSaveButtonState(true);
         
         $.ajax({
             url: dpAjax.ajaxurl,
@@ -316,10 +372,14 @@
                     $('body').append(msg);
                     setTimeout(() => { if(typeof dpSafeReload === "function") { dpSafeReload(); } else { location.reload(); } }, 500);
                 } else {
+                    isSavingVeranstaltung = false;
+                    setVeranstaltungSaveButtonState(false);
                     alert('Fehler: ' + (response.data ? response.data.message : 'Unbekannt'));
                 }
             },
             error: function(xhr, status, error) {
+                isSavingVeranstaltung = false;
+                setVeranstaltungSaveButtonState(false);
                 console.error('AJAX Error Details:');
                 console.error('Status:', status);
                 console.error('Error:', error);
@@ -360,7 +420,6 @@
                     $('#v_name').val(v.name);
                     $('#v_beschreibung').val(v.beschreibung || '');
                     $('#v_typ').val(v.typ || 'mehrtaegig');
-                    $('#v_status').val(v.status || 'geplant');
                     
                     // Modal-Titel ändern
                     $('#veranstaltung-modal-title').text('Veranstaltung bearbeiten');
@@ -465,6 +524,78 @@
         });
     };
     
+    window.openVeranstaltungKonfigurationModal = function(veranstaltungId) {
+        $.ajax({
+            url: dpAjax.ajaxurl,
+            type: 'POST',
+            data: {
+                action: 'dp_get_veranstaltung_konfiguration',
+                nonce: dpAjax.nonce,
+                veranstaltung_id: veranstaltungId
+            },
+            success: function(response) {
+                if (response.success && response.data) {
+                    const v = response.data;
+                    $('#vk_veranstaltung_id').val(v.id);
+                    $('#vk_name').val(v.name || '');
+                    $('#vk_status').val(v.status || 'geplant');
+                    $('#vk_mitarbeiter_anzeige_modus').val(v.mitarbeiter_anzeige_modus || 'verkuerzt');
+                    $('#veranstaltung-konfiguration-modal').css('display', 'flex');
+                } else {
+                    alert('Fehler: Veranstaltung konnte nicht geladen werden.');
+                }
+            },
+            error: function() {
+                alert('Fehler beim Laden der Konfiguration.');
+            }
+        });
+    };
+
+    window.saveVeranstaltungKonfiguration = function() {
+        if (isSavingVeranstaltungKonfiguration) {
+            return;
+        }
+
+        const veranstaltungId = $('#vk_veranstaltung_id').val();
+        if (!veranstaltungId) {
+            alert('Ungültige Veranstaltung.');
+            return;
+        }
+
+        isSavingVeranstaltungKonfiguration = true;
+        setVeranstaltungKonfigurationSaveButtonState(true);
+
+        $.ajax({
+            url: dpAjax.ajaxurl,
+            type: 'POST',
+            data: {
+                action: 'dp_save_veranstaltung_konfiguration',
+                nonce: dpAjax.nonce,
+                veranstaltung_id: veranstaltungId,
+                status: $('#vk_status').val(),
+                mitarbeiter_anzeige_modus: $('#vk_mitarbeiter_anzeige_modus').val()
+            },
+            success: function(response) {
+                if (response.success) {
+                    closeVeranstaltungKonfigurationModal();
+                    setTimeout(() => { if(typeof dpSafeReload === 'function') { dpSafeReload(); } else { location.reload(); } }, 200);
+                } else {
+                    isSavingVeranstaltungKonfiguration = false;
+                    setVeranstaltungKonfigurationSaveButtonState(false);
+                    alert('Fehler: ' + (response.data ? response.data.message : 'Unbekannt'));
+                }
+            },
+            error: function(xhr) {
+                isSavingVeranstaltungKonfiguration = false;
+                setVeranstaltungKonfigurationSaveButtonState(false);
+                alert('Fehler beim Speichern der Konfiguration.');
+                if (window.console && xhr && xhr.responseText) {
+                    console.error(xhr.responseText);
+                }
+            }
+        });
+    };
+
     window.deleteVeranstaltung = function(veranstaltungId) {
         $.ajax({
             url: dpAjax.ajaxurl,

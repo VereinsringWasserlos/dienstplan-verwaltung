@@ -3077,9 +3077,6 @@ class Dienstplan_Admin
     public function ajax_save_veranstaltung()
     {
         try {
-            error_log('=== SAVE VERANSTALTUNG START ===');
-            error_log('POST data: ' . print_r($_POST, true));
-
             check_ajax_referer('dp_ajax_nonce', 'nonce');
 
             if (!Dienstplan_Roles::can_manage_events()) {
@@ -3097,17 +3094,37 @@ class Dienstplan_Admin
                 return;
             }
 
+            $existing_veranstaltung = null;
+            if ($veranstaltung_id > 0) {
+                $existing_veranstaltung = $db->get_veranstaltung($veranstaltung_id);
+            }
+
             // Validierung
             if (empty($_POST['titel'])) {
                 wp_send_json_error(array('message' => 'Titel ist erforderlich'));
             }
 
             // Veranstaltung Daten vorbereiten (Feldnamen an Datenbank angepasst)
+            $status = isset($_POST['status'])
+                ? sanitize_text_field($_POST['status'])
+                : (($existing_veranstaltung->status ?? '') ?: 'geplant');
+            if (!in_array($status, array('in_planung', 'geplant', 'aktiv', 'abgeschlossen'), true)) {
+                $status = 'geplant';
+            }
+
+            $mitarbeiter_anzeige_modus = isset($_POST['mitarbeiter_anzeige_modus'])
+                ? sanitize_text_field($_POST['mitarbeiter_anzeige_modus'])
+                : (($existing_veranstaltung->mitarbeiter_anzeige_modus ?? '') ?: 'verkuerzt');
+            if (!in_array($mitarbeiter_anzeige_modus, array('verkuerzt', 'vollstaendig', 'admin_only'), true)) {
+                $mitarbeiter_anzeige_modus = 'verkuerzt';
+            }
+
             $veranstaltung_data = array(
                 'name' => sanitize_text_field($_POST['titel']), // titel -> name
                 'beschreibung' => sanitize_textarea_field($_POST['beschreibung'] ?? ''),
                 'typ' => 'mehrtaegig', // Standardwert
-                'status' => sanitize_text_field($_POST['status'] ?? 'geplant'),
+                'status' => $status,
+                'mitarbeiter_anzeige_modus' => $mitarbeiter_anzeige_modus,
                 'start_datum' => null, // Wird aus erstem Tag gesetzt
                 'end_datum' => null // Wird aus letztem Tag gesetzt
             );
@@ -3166,7 +3183,6 @@ class Dienstplan_Admin
                 // Existierende Tage laden für Mapping (Erhalt der IDs für Dienste)
                 $existing_tags = $db->get_veranstaltung_tage($veranstaltung_id);
                 $existing_count = count($existing_tags);
-                error_log('Existierende Tags vor Update: ' . $existing_count);
             } else {
                 $veranstaltung_id = $db->add_veranstaltung($veranstaltung_data);
 
@@ -3218,10 +3234,8 @@ class Dienstplan_Admin
                         // Entscheide Update vs Insert
                         if (isset($existing_tags) && $index < $existing_count) {
                             $existing_tag_id = $existing_tags[$index]->id;
-                            error_log('Tag aktualisieren ID ' . $existing_tag_id . ' Daten: ' . print_r($tag_data, true));
                             $db->update_veranstaltung_tag($existing_tag_id, $tag_data);
                         } else {
-                            error_log('Neuen Tag anlegen: ' . print_r($tag_data, true));
                             $db->add_veranstaltung_tag($tag_data);
                         }
                     }
@@ -3229,7 +3243,6 @@ class Dienstplan_Admin
                     if (isset($existing_tags) && $existing_count > count($tage)) {
                         for ($i = count($tage); $i < $existing_count; $i++) {
                             $old_id = $existing_tags[$i]->id;
-                            error_log('Lösche alten Tag ID ' . $old_id . ' (Anzahl reduziert)');
                             $db->get_wpdb()->delete($db->get_prefix() . 'veranstaltung_tage', array('id' => $old_id), array('%d'));
                             // Dienste behalten ihre alte tag_id -> führt zu "ohne Tag". Optional könnten wir hier zu letztem Tag mappen.
                         }
@@ -3239,13 +3252,10 @@ class Dienstplan_Admin
 
             // Vereine speichern
             if ($result && isset($_POST['vereine']) && !empty($_POST['vereine'])) {
-                error_log('Vereine JSON: ' . $_POST['vereine']);
                 $vereine = $selected_vereine;
-                error_log('Vereine decoded: ' . print_r($vereine, true));
 
                 if (is_array($vereine)) {
                     foreach ($vereine as $verein_id) {
-                        error_log('Verein verknüpfen: ' . $verein_id);
                         $db->add_veranstaltung_verein($veranstaltung_id, intval($verein_id));
                     }
                 }
@@ -3301,6 +3311,58 @@ class Dienstplan_Admin
         }
     }
 
+    public function ajax_save_veranstaltung_konfiguration()
+    {
+        check_ajax_referer('dp_ajax_nonce', 'nonce');
+
+        if (!Dienstplan_Roles::can_manage_events()) {
+            wp_send_json_error(array('message' => 'Keine Berechtigung'));
+            return;
+        }
+
+        require_once DIENSTPLAN_PLUGIN_PATH . 'includes/class-database.php';
+        $db = new Dienstplan_Database($this->db_prefix);
+
+        $veranstaltung_id = isset($_POST['veranstaltung_id']) ? intval($_POST['veranstaltung_id']) : 0;
+        if ($veranstaltung_id <= 0) {
+            wp_send_json_error(array('message' => 'Ungültige Veranstaltung'));
+            return;
+        }
+
+        if (!$this->current_user_can_access_veranstaltung($db, $veranstaltung_id)) {
+            wp_send_json_error(array('message' => 'Keine Berechtigung für diese Veranstaltung'));
+            return;
+        }
+
+        $status = sanitize_text_field($_POST['status'] ?? 'geplant');
+        if (!in_array($status, array('in_planung', 'geplant', 'aktiv', 'abgeschlossen'), true)) {
+            $status = 'geplant';
+        }
+
+        $mitarbeiter_anzeige_modus = sanitize_text_field($_POST['mitarbeiter_anzeige_modus'] ?? 'verkuerzt');
+        if (!in_array($mitarbeiter_anzeige_modus, array('verkuerzt', 'vollstaendig', 'admin_only'), true)) {
+            $mitarbeiter_anzeige_modus = 'verkuerzt';
+        }
+
+        $result = $db->get_wpdb()->update(
+            $db->get_prefix() . 'veranstaltungen',
+            array(
+                'status' => $status,
+                'mitarbeiter_anzeige_modus' => $mitarbeiter_anzeige_modus,
+            ),
+            array('id' => $veranstaltung_id),
+            array('%s', '%s'),
+            array('%d')
+        );
+
+        if ($result === false) {
+            wp_send_json_error(array('message' => 'Konfiguration konnte nicht gespeichert werden'));
+            return;
+        }
+
+        wp_send_json_success(array('message' => 'Konfiguration gespeichert'));
+    }
+
     public function ajax_get_veranstaltung()
     {
         check_ajax_referer('dp_ajax_nonce', 'nonce');
@@ -3321,8 +3383,6 @@ class Dienstplan_Admin
         }
         $veranstaltung = $db->get_veranstaltung($veranstaltung_id);
 
-        error_log('AJAX get_veranstaltung - ID: ' . $veranstaltung_id);
-        error_log('AJAX get_veranstaltung - Raw: ' . print_r($veranstaltung, true));
 
         if ($veranstaltung) {
             // In Array konvertieren
@@ -3347,8 +3407,41 @@ class Dienstplan_Admin
                 $veranstaltung_data['verantwortliche'][] = $row->user_id;
             }
 
-            error_log('Sende Veranstaltung: ' . print_r($veranstaltung_data, true));
             wp_send_json_success($veranstaltung_data);
+        } else {
+            wp_send_json_error(array('message' => 'Veranstaltung nicht gefunden'));
+        }
+    }
+
+    public function ajax_get_veranstaltung_konfiguration()
+    {
+        check_ajax_referer('dp_ajax_nonce', 'nonce');
+
+        if (!Dienstplan_Roles::can_manage_events()) {
+            wp_send_json_error(array('message' => 'Keine Berechtigung'));
+            return;
+        }
+
+        require_once DIENSTPLAN_PLUGIN_PATH . 'includes/class-database.php';
+        $db = new Dienstplan_Database($this->db_prefix);
+
+        $veranstaltung_id = intval($_POST['veranstaltung_id']);
+
+        if (!$this->current_user_can_access_veranstaltung($db, $veranstaltung_id)) {
+            wp_send_json_error(array('message' => 'Keine Berechtigung für diese Veranstaltung'));
+            return;
+        }
+
+        $veranstaltung = $db->get_veranstaltung($veranstaltung_id);
+
+        if ($veranstaltung) {
+            // Nur notwendige Felder für Konfiguration zurückgeben - KEIN Laden von Tagen, Vereinen, Verantwortlichen
+            wp_send_json_success(array(
+                'id' => intval($veranstaltung->id),
+                'name' => $veranstaltung->name,
+                'status' => $veranstaltung->status,
+                'mitarbeiter_anzeige_modus' => $veranstaltung->mitarbeiter_anzeige_modus
+            ));
         } else {
             wp_send_json_error(array('message' => 'Veranstaltung nicht gefunden'));
         }

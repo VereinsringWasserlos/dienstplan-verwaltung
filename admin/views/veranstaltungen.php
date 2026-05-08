@@ -145,6 +145,7 @@ $nav_items = [
     <?php endif; ?>
 
     <?php include DIENSTPLAN_PLUGIN_PATH . 'admin/views/partials/veranstaltungen-modal.php'; ?>
+    <?php include DIENSTPLAN_PLUGIN_PATH . 'admin/views/partials/veranstaltung-konfiguration-modal.php'; ?>
 
     <!-- Neuer Kontakt Modal (für Verantwortliche) -->
     <div id="new-contact-modal" class="dp-modal" style="display: none;">
