@@ -1,0 +1,30 @@
+bereich_name;name;beschreibung;aktiv;sortierung;admin_only
+Kinder;Betreuung;;1;0;0
+Aufbau;Aufbau (Zelt);;1;999;0
+Aufbau;Aufbau (Zelt Innenbereich & Aussenbereich);;1;999;0
+Betreuung;Spielstraße;;1;0;0
+Betreuung;Betreuung Aufbau;;1;999;1
+Betreuung;Aufsicht Getränke;;1;999;1
+Betreuung;Aufsicht Küche;;1;999;1
+Betreuung;Betreuung Getränkebereich;;1;999;0
+Betreuung;Betreuung Küche;;1;999;0
+Getränke;Zapfen (Bier);;1;999;0
+Getränke;Ausgabe (Bier);;1;999;0
+Getränke;Getränkeausgabe (Wein & alkoholfrei);;1;999;0
+Getränke;Springer Getränke Bereich;;1;999;0
+Kalte Speisen;Vorbereitung (Salat & Sonder Speisen);;1;999;0
+Kalte Speisen;Ausgabe (Salat & Sonder Speisen);;1;999;0
+Warme Speisen;Zubereitung (Grill);;1;999;0
+Warme Speisen;Zubereitung (Pommes);;1;999;0
+Warme Speisen;Ausgabe (Grill & Pommes);;1;999;0
+Warme Speisen;Springer Küche;;1;999;0
+Warme Speisen;Zubereitung (Kesselfleisch);;1;999;0
+Warme Speisen;Ausgabe (Kesselfleisch);;1;999;0
+Spülen;Spülen (Gläser);;1;999;0
+Spülen;Tellerrückgabe;;1;999;0
+Spülen;Tellerspülen;;1;999;0
+Kasse;Bonkasse;;1;999;0
+Nachtwache;Nachtwache;;1;999;0
+Kuchen;Ausgabe (Kuchen);;1;999;0
+Abbau;Abbau (Zelt Innenbereich & Aussenbereich);;1;999;0
+Abbau;Abbau (Zelt);;1;999;0

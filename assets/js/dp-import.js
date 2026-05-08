@@ -50,14 +50,24 @@
         ],
         veranstaltungen: [
             { key: 'name',           label: 'Name',                        required: true  },
+            { key: 'veranstaltung_name', label: 'Veranstaltung Name (Alias)', required: false },
             { key: 'start_datum',    label: 'Start-Datum (YYYY-MM-DD)',    required: true  },
             { key: 'end_datum',      label: 'End-Datum (YYYY-MM-DD)',      required: true  },
             { key: 'beschreibung',   label: 'Beschreibung',                required: false },
-            { key: 'dienst_von_zeit',label: 'Dienst Von (HH:MM)',          required: false },
-            { key: 'dienst_bis_zeit',label: 'Dienst Bis (HH:MM)',          required: false }
+            { key: 'dienst_von_zeit',label: 'Dienst Von (HH:MM)',          required: true  },
+            { key: 'dienst_bis_zeit',label: 'Dienst Bis (HH:MM)',          required: true  },
+            { key: 'tag_nummer',     label: 'Tag Nummer (optional)',       required: false },
+            { key: 'tag_datum',      label: 'Tag Datum (YYYY-MM-DD, optional)', required: false },
+            { key: 'von_zeit',       label: 'Tag Von Zeit (HH:MM, optional)', required: false },
+            { key: 'bis_zeit',       label: 'Tag Bis Zeit (HH:MM, optional)', required: false },
+            { key: 'bis_datum',      label: 'Tag Bis Datum (YYYY-MM-DD, optional)', required: false },
+            { key: 'dienst_bis_datum', label: 'Dienst Bis Datum (YYYY-MM-DD, optional)', required: false },
+            { key: 'nur_dienst',     label: 'Nur Dienst (1/0, optional)', required: false },
+            { key: 'notizen',        label: 'Notizen (optional)',          required: false }
         ],
         dienste: [
             { key: 'datum',           label: 'Datum',               required: true  },
+            { key: 'tag_datum',       label: 'Tag Datum (Alias für Datum)', required: false },
             { key: 'dienst_typ',      label: 'Dienst-Typ (dienst|mitbringen)', required: false },
             { key: 'bereich_name',    label: 'Bereich Name',        required: false },
             { key: 'taetigkeit_name', label: 'Tätigkeit Name',      required: false },
@@ -76,7 +86,7 @@
         bereiche:      'Importiert Bereiche mit Name, Farbe und Admin-only-Flag. Vorhandene Bereiche werden anhand des Namens erkannt.',
         taetigkeiten:  'Importiert Tätigkeiten. Angabe von bereich_name oder bereich_id erforderlich. Fehlende Bereiche werden angelegt.',
         vereine:       'Importiert Vereine. Erkennung über Kürzel. Vorhandene Vereine werden nur bei Modus "Aktualisieren" überschrieben.',
-        veranstaltungen: 'Importiert Veranstaltungen. Erkennung über Name.',
+        veranstaltungen: 'Importiert Veranstaltungen inkl. mehrtägiger Tag-Datensätze. Erkennung über Name; Dienstzeiten sind Pflicht.',
         dienste:       'Importiert einzelne Dienste für eine ausgewählte Veranstaltung.'
     };
 

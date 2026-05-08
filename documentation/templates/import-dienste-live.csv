@@ -1,0 +1,217 @@
+datum;verein_kuerzel;dienst_typ;bereich_name;taetigkeit_name;von_zeit;bis_zeit;anzahl_personen;splittbar;admin_only;besonderheiten
+2026-07-03;SCJ;dienst;Aufbau;Aufbau (Zelt);14:00:00;18:00:00;1;0;0;Nur Zeltaufbau
+2026-07-03;GVE;dienst;Aufbau;Aufbau (Zelt);14:00:00;18:00:00;1;0;0;Nur Zeltaufbau
+2026-07-03;FFW;dienst;Aufbau;Aufbau (Zelt);14:00:00;18:00:00;1;0;0;Nur Zeltaufbau
+2026-07-03;TVW;dienst;Aufbau;Aufbau (Zelt);14:00:00;18:00:00;1;0;0;Nur Zeltaufbau
+2026-07-03;SCJ;dienst;Aufbau;Aufbau (Zelt);14:00:00;18:00:00;1;0;0;Nur Zeltaufbau
+2026-07-03;GVE;dienst;Aufbau;Aufbau (Zelt);14:00:00;18:00:00;1;0;0;Nur Zeltaufbau
+2026-07-03;FFW;dienst;Aufbau;Aufbau (Zelt);14:00:00;18:00:00;1;0;0;Nur Zeltaufbau
+2026-07-03;TVW;dienst;Aufbau;Aufbau (Zelt);14:00:00;18:00:00;1;0;0;Nur Zeltaufbau
+2026-07-03;SCJ;dienst;Aufbau;Aufbau (Zelt);14:00:00;18:00:00;1;0;0;Nur Zeltaufbau
+2026-07-03;GVE;dienst;Aufbau;Aufbau (Zelt);14:00:00;18:00:00;1;0;0;Nur Zeltaufbau
+2026-07-03;FFW;dienst;Aufbau;Aufbau (Zelt);14:00:00;18:00:00;1;0;0;Nur Zeltaufbau
+2026-07-03;TVW;dienst;Aufbau;Aufbau (Zelt);14:00:00;18:00:00;1;0;0;Nur Zeltaufbau
+2026-07-03;SCJ;dienst;Aufbau;Aufbau (Zelt);14:00:00;18:00:00;1;0;0;Nur Zeltaufbau
+2026-07-03;SCJ;dienst;Aufbau;Aufbau (Zelt);14:00:00;18:00:00;1;0;0;Nur Zeltaufbau
+2026-07-03;TVW;dienst;Aufbau;Aufbau (Zelt);14:00:00;18:00:00;1;0;0;Nur Zeltaufbau
+2026-07-03;GVE;dienst;Aufbau;Aufbau (Zelt);14:00:00;18:00:00;1;0;0;Nur Zeltaufbau
+2026-07-03;TVW;dienst;Aufbau;Aufbau (Zelt);14:00:00;18:00:00;1;0;0;Nur Zeltaufbau
+2026-07-03;GVE;dienst;Aufbau;Aufbau (Zelt);14:00:00;18:00:00;1;0;0;Nur Zeltaufbau
+2026-07-03;FFW;dienst;Aufbau;Aufbau (Zelt);14:00:00;18:00:00;1;0;0;Nur Zeltaufbau
+2026-07-04;VR;dienst;Betreuung;Betreuung Aufbau;09:30:00;17:30:00;1;0;0;Schichtleitung
+2026-07-04;FFW;dienst;Aufbau;Aufbau (Zelt Innenbereich & Aussenbereich);10:00:00;14:00:00;1;0;0;Tische etc.
+2026-07-04;FFW;dienst;Aufbau;Aufbau (Zelt Innenbereich & Aussenbereich);10:00:00;14:00:00;1;0;0;Tische etc.
+2026-07-04;GVE;dienst;Aufbau;Aufbau (Zelt Innenbereich & Aussenbereich);10:00:00;14:00:00;1;0;0;Tische etc.
+2026-07-04;GVE;dienst;Aufbau;Aufbau (Zelt Innenbereich & Aussenbereich);10:00:00;14:00:00;1;0;0;Tische etc.
+2026-07-04;SCJ;dienst;Aufbau;Aufbau (Zelt Innenbereich & Aussenbereich);10:00:00;14:00:00;1;0;0;Tische etc.
+2026-07-04;TVW;dienst;Aufbau;Aufbau (Zelt Innenbereich & Aussenbereich);10:00:00;14:00:00;1;0;0;Tische etc.
+2026-07-04;SCJ;dienst;Aufbau;Aufbau (Zelt Innenbereich & Aussenbereich);10:00:00;14:00:00;1;0;0;Tische etc.
+2026-07-04;TVW;dienst;Aufbau;Aufbau (Zelt Innenbereich & Aussenbereich);10:00:00;14:00:00;1;0;0;Tische etc.
+2026-07-04;FFW;dienst;Aufbau;Aufbau (Zelt Innenbereich & Aussenbereich);14:00:00;18:00:00;1;0;0;Deko, Bestecke etc.
+2026-07-04;GVE;dienst;Aufbau;Aufbau (Zelt Innenbereich & Aussenbereich);14:00:00;18:00:00;1;0;0;Deko, Bestecke etc.
+2026-07-04;SCJ;dienst;Aufbau;Aufbau (Zelt Innenbereich & Aussenbereich);14:00:00;18:00:00;1;0;0;Deko, Bestecke etc.
+2026-07-04;TVW;dienst;Aufbau;Aufbau (Zelt Innenbereich & Aussenbereich);14:00:00;18:00:00;1;0;0;Tische etc.
+2026-07-04;VR;dienst;Betreuung;Aufsicht Küche;15:00:00;23:00:00;1;0;0;Schichtleitung
+2026-07-04;FFW;dienst;Kalte Speisen;Vorbereitung (Salat & Sonder Speisen);15:00:00;19:00:00;1;0;0;Im Anschluss hilfe bei der Ausgabe
+2026-07-04;GVE;dienst;Kalte Speisen;Vorbereitung (Salat & Sonder Speisen);15:00:00;19:00:00;1;0;0;ab 18:00 Grill
+2026-07-04;GVE;dienst;Kalte Speisen;Vorbereitung (Salat & Sonder Speisen);15:00:00;19:00:00;1;0;0;ab 18:00 Grill
+2026-07-04;VR;dienst;Betreuung;Aufsicht Getränke;17:00:00;01:30:00;1;0;0;Schichtleitung
+2026-07-04;FFW;dienst;Warme Speisen;Zubereitung (Grill);17:00:00;21:00:00;1;0;0;Standaufbau und Ausgabe
+2026-07-04;SCJ;dienst;Getränke;Getränkeausgabe (Wein & alkoholfrei);17:00:00;21:00:00;1;0;0;Ausgabe Cola Wein
+2026-07-04;TVW;dienst;Kalte Speisen;Ausgabe (Salat & Sonder Speisen);17:00:00;21:00:00;1;0;0;anschliessend Grill bei Bedarf
+2026-07-04;TVW;dienst;Warme Speisen;Zubereitung (Pommes);17:00:00;21:00:00;1;0;0;
+2026-07-04;FFW;dienst;Getränke;Zapfen (Bier);17:30:00;21:30:00;1;0;0;
+2026-07-04;GVE;dienst;Getränke;Ausgabe (Bier);17:30:00;21:30:00;1;0;0;Ausgabe Bier
+2026-07-04;TVW;dienst;Warme Speisen;Ausgabe (Grill & Pommes);17:30:00;21:30:00;1;0;0;
+2026-07-04;FFW;dienst;Getränke;Ausgabe (Bier);18:00:00;22:00:00;1;0;0;
+2026-07-04;FFW;dienst;Getränke;Getränkeausgabe (Wein & alkoholfrei);18:00:00;22:00:00;1;0;0;
+2026-07-04;FFW;dienst;Kalte Speisen;Ausgabe (Salat & Sonder Speisen);18:00:00;22:00:00;1;0;0;Vorbereitung / Ausgabe /Salat
+2026-07-04;FFW;dienst;Kalte Speisen;Ausgabe (Salat & Sonder Speisen);18:00:00;22:00:00;1;0;0;Vorbereitung / Ausgabe  Salat
+2026-07-04;GVE;dienst;Spülen;Tellerrückgabe;18:00:00;22:00:00;1;0;0;Helfen beim Spülen
+2026-07-04;TVW;dienst;Getränke;Zapfen (Bier);18:00:00;22:00:00;1;0;0;Deko, Bestecke etc.
+2026-07-04;SCJ;dienst;Spülen;Spülen (Gläser);18:00:00;22:00:00;1;0;0;Gläser Spülen
+2026-07-04;SCJ;dienst;Spülen;Tellerrückgabe;18:00:00;22:00:00;1;0;0;Helfen beim Spülen
+2026-07-04;TVW;dienst;Kasse;Bonkasse;18:00:00;22:00:00;1;0;0;Bonkasse
+2026-07-04;GVE;dienst;Warme Speisen;Zubereitung (Grill);18:30:00;22:30:00;1;0;0;Reiningung nach Kassenschliessung
+2026-07-04;FFW;dienst;Warme Speisen;Zubereitung (Pommes);19:00:00;22:00:00;1;0;0;Reiningung nach Kassenschliessung
+2026-07-04;TVW;dienst;Spülen;Tellerrückgabe;19:00:00;23:00:00;1;0;0;Helfen beim Spülen
+2026-07-04;SCJ;dienst;Spülen;Tellerrückgabe;19:00:00;23:00:00;1;0;0;Helfen beim Spülen
+2026-07-04;SCJ;dienst;Warme Speisen;Ausgabe (Grill & Pommes);19:00:00;23:00:00;1;0;0;
+2026-07-04;SCJ;dienst;Warme Speisen;Ausgabe (Grill & Pommes);19:00:00;23:00:00;1;0;0;
+2026-07-04;FFW;dienst;Getränke;Getränkeausgabe (Wein & alkoholfrei);20:00:00;01:00:00;1;0;0;
+2026-07-04;GVE;dienst;Getränke;Ausgabe (Bier);20:00:00;01:00:00;1;0;0;Zapfen nach Bedarf
+2026-07-04;GVE;dienst;Spülen;Spülen (Gläser);20:00:00;00:00:00;1;0;0;Gläser Spülen
+2026-07-04;SCJ;dienst;Getränke;Zapfen (Bier);21:00:00;01:00:00;1;0;0;Zapfen
+2026-07-04;TVW;dienst;Getränke;Ausgabe (Bier);21:00:00;01:00:00;1;0;0;Ausgabe oder  Zapfer nach Bedarf
+2026-07-04;TVW;dienst;Spülen;Spülen (Gläser);21:00:00;01:00:00;1;0;0;Gläser Spülen
+2026-07-04;TVW;dienst;Nachtwache;Nachtwache;23:00:00;08:59:00;1;0;0;Sa auf So
+2026-07-04;SCJ;dienst;Nachtwache;Nachtwache;23:00:00;08:59:00;1;0;0;Sa auf So
+2026-07-05;TVW;dienst;Kinder;Betreuung;08:00:00;13:00:00;1;0;0;
+2026-07-05;VR;dienst;Betreuung;Aufsicht Küche;09:00:00;16:00:00;1;0;0;Schichtleitung
+2026-07-05;FFW;dienst;Kalte Speisen;Vorbereitung (Salat & Sonder Speisen);09:00:00;13:00:00;1;0;0;
+2026-07-05;TVW;dienst;Betreuung;Spielstraße;09:00:00;15:00:00;6;0;0;
+2026-07-05;GVE;dienst;Kalte Speisen;Ausgabe (Salat & Sonder Speisen);10:00:00;14:00:00;1;0;0;Vorbereit.Essen u. Salat >  Ausgabe
+2026-07-05;VR;dienst;Betreuung;Aufsicht Getränke;10:30:00;17:30:00;1;0;0;Schichtleitung
+2026-07-05;SCJ;dienst;Getränke;Springer Getränke Bereich;10:30:00;14:30:00;1;0;0;Zapfen + Getränkestand Versorg.
+2026-07-05;SCJ;dienst;Getränke;Ausgabe (Bier);10:30:00;14:30:00;1;0;0;Ausgabe Bier
+2026-07-05;SCJ;dienst;Getränke;Getränkeausgabe (Wein & alkoholfrei);10:30:00;14:30:00;1;0;0;Ausgabe u. Auffüllen  Cola/Fanta/Wein
+2026-07-05;GVE;dienst;Kasse;Bonkasse;10:30:00;14:30:00;1;0;0;
+2026-07-05;SCJ;dienst;Warme Speisen;Zubereitung (Grill);10:30:00;14:30:00;1;0;0;Zubereitung und Vorbereitung
+2026-07-05;TVW;dienst;Warme Speisen;Zubereitung (Pommes);10:30:00;14:30:00;1;0;0;Zubereitung
+2026-07-05;GVE;dienst;Warme Speisen;Ausgabe (Grill & Pommes);10:30:00;14:30:00;1;0;0;Vorbereitung Essenstand u  Essen Ausg.
+2026-07-05;SCJ;dienst;Warme Speisen;Ausgabe (Grill & Pommes);10:30:00;14:30:00;1;0;0;Vorbereitung Essenstand u  Essen Ausg.
+2026-07-05;TVW;dienst;Warme Speisen;Ausgabe (Grill & Pommes);10:30:00;14:30:00;1;0;0;Zusatzschicht Mittagesssen
+2026-07-05;SCJ;dienst;Getränke;Getränkeausgabe (Wein & alkoholfrei);11:00:00;15:00:00;1;0;0;Ausgabe u. Auffüllen  Cola/Fanta/Wein
+2026-07-05;FFW;dienst;Spülen;Spülen (Gläser);11:00:00;15:00:00;1;0;0;
+2026-07-05;SCJ;dienst;Spülen;Tellerspülen;11:00:00;15:00:00;1;0;0;incl Tellerrücknahmen
+2026-07-05;GVE;dienst;Warme Speisen;Zubereitung (Grill);11:00:00;15:00:00;1;0;0;Zubereitung
+2026-07-05;FFW;dienst;Warme Speisen;Springer Küche;11:00:00;15:00:00;1;0;0;Springer Pommes oder Grill
+2026-07-05;GVE;dienst;Getränke;Zapfen (Bier);11:30:00;15:30:00;1;0;0;Zapfen
+2026-07-05;GVE;dienst;Getränke;Ausgabe (Bier);11:30:00;15:30:00;1;0;0;Ausgabe Bier
+2026-07-05;TVW;dienst;Spülen;Tellerspülen;11:30:00;15:30:00;1;0;0;incl Tellerrücknahmen
+2026-07-05;TVW;dienst;Spülen;Tellerspülen;11:30:00;15:30:00;1;0;0;incl Tellerrücknahmen
+2026-07-05;TVW;dienst;Warme Speisen;Ausgabe (Grill & Pommes);11:30:00;15:30:00;1;0;0;Ausgabe
+2026-07-05;FFW;dienst;Getränke;Springer Getränke Bereich;12:00:00;16:00:00;1;0;0;Zapfen oder Ausgabe wo Bedarf
+2026-07-05;FFW;dienst;Kuchen;Ausgabe (Kuchen);12:00:00;16:00:00;1;0;0;
+2026-07-05;FFW;dienst;Getränke;Zapfen (Bier);12:30:00;16:30:00;1;0;0;Zapfen
+2026-07-05;GVE;dienst;Kuchen;Ausgabe (Kuchen);12:30:00;16:30:00;1;0;0;
+2026-07-05;GVE;dienst;Kuchen;Ausgabe (Kuchen);12:30:00;16:30:00;1;0;0;
+2026-07-05;TVW;dienst;Kuchen;Ausgabe (Kuchen);13:00:00;17:00:00;1;0;0;
+2026-07-05;SCJ;dienst;Kalte Speisen;Ausgabe (Salat & Sonder Speisen);13:00:00;17:00:00;1;0;0;Vorbereit.Essen u. Salat >  Ausgabe
+2026-07-05;GVE;dienst;Spülen;Tellerspülen;13:30:00;17:30:00;1;0;0;incl Tellerrücknahmen
+2026-07-05;TVW;dienst;Warme Speisen;Zubereitung (Grill);14:00:00;18:00:00;1;0;0;Zubereitung
+2026-07-05;GVE;dienst;Getränke;Getränkeausgabe (Wein & alkoholfrei);14:30:00;18:30:00;1;0;0;Ausgabe u. Auffüllen  Cola/Fanta/Wein
+2026-07-05;TVW;dienst;Spülen;Tellerspülen;14:30:00;18:30:00;1;0;0;incl Tellerrücknahmen
+2026-07-05;SCJ;dienst;Kasse;Bonkasse;14:30:00;18:30:00;1;0;0;
+2026-07-05;GVE;dienst;Warme Speisen;Ausgabe (Grill & Pommes);14:30:00;18:30:00;1;0;0;Ausgabe
+2026-07-05;GVE;dienst;Spülen;Spülen (Gläser);15:00:00;19:00:00;1;0;0;
+2026-07-05;GVE;dienst;Spülen;Spülen (Gläser);15:00:00;19:00:00;1;0;0;
+2026-07-05;SCJ;dienst;Warme Speisen;Zubereitung (Pommes);15:00:00;19:00:00;1;0;0;Zubereitung
+2026-07-05;TVW;dienst;Getränke;Ausgabe (Bier);15:30:00;19:30:00;1;0;0;Ausgabe Bier
+2026-07-05;VR;dienst;Betreuung;Aufsicht Küche;16:00:00;22:30:00;1;0;0;Schichtleitung
+2026-07-05;TVW;dienst;Getränke;Zapfen (Bier);16:30:00;20:30:00;1;0;0;Zapfen
+2026-07-05;TVW;dienst;Getränke;Zapfen (Bier);16:30:00;20:30:00;1;0;0;Zapfen
+2026-07-05;TVW;dienst;Getränke;Ausgabe (Bier);16:30:00;20:30:00;1;0;0;Ausgabe Bier
+2026-07-05;FFW;dienst;Kalte Speisen;Ausgabe (Salat & Sonder Speisen);17:00:00;21:00:00;1;0;0;Vorbereit.Essen u. Salat >  Ausgabe
+2026-07-05;GVE;dienst;Warme Speisen;Zubereitung (Grill);17:00:00;21:00:00;1;0;0;Zubereitung
+2026-07-05;TVW;dienst;Warme Speisen;Ausgabe (Grill & Pommes);17:00:00;21:00:00;1;0;0;Ausgabe
+2026-07-05;FFW;dienst;Getränke;Getränkeausgabe (Wein & alkoholfrei);17:30:00;21:30:00;1;0;0;Ausgabe u. Auffüllen  Cola/Fanta/Wein
+2026-07-05;FFW;dienst;Spülen;Tellerspülen;17:30:00;21:30:00;1;0;0;incl Tellerrücknahmen
+2026-07-05;VR;dienst;Betreuung;Betreuung Getränkebereich;17:30:00;01:30:00;1;0;0;Schichtleitung
+2026-07-05;TVW;dienst;Kalte Speisen;Ausgabe (Salat & Sonder Speisen);18:00:00;22:00:00;1;0;0;Vorbereit.Essen u. Salat >  Ausgabe
+2026-07-05;SCJ;dienst;Getränke;Getränkeausgabe (Wein & alkoholfrei);18:30:00;23:00:00;1;0;0;Ausgabe Cola Fanta Wein
+2026-07-05;SCJ;dienst;Spülen;Tellerspülen;18:30:00;22:30:00;1;0;0;incl Tellerrücknahmen
+2026-07-05;FFW;dienst;Kasse;Bonkasse;18:30:00;22:00:00;1;0;0;
+2026-07-05;SCJ;dienst;Warme Speisen;Zubereitung (Grill);18:30:00;22:30:00;1;0;0;Zubereitung und Saubermachen
+2026-07-05;TVW;dienst;Warme Speisen;Ausgabe (Grill & Pommes);18:30:00;22:30:00;1;0;0;Ausgabe u. Saubermachen
+2026-07-05;FFW;dienst;Spülen;Spülen (Gläser);19:00:00;23:00:00;1;0;0;
+2026-07-05;FFW;dienst;Warme Speisen;Zubereitung (Pommes);19:00:00;23:00:00;1;0;0;Zubereitung
+2026-07-05;SCJ;dienst;Getränke;Zapfen (Bier);20:30:00;00:00:00;1;0;0;Zapfen
+2026-07-05;SCJ;dienst;Getränke;Ausgabe (Bier);20:30:00;00:00:00;1;0;0;Ausgabe Bier
+2026-07-05;GVE;dienst;Nachtwache;Nachtwache;23:00:00;08:59:00;1;0;0;So auf Mo
+2026-07-05;FFW;dienst;Nachtwache;Nachtwache;23:00:00;08:59:00;1;0;0;So auf Mo
+2026-07-06;VR;dienst;Betreuung;Betreuung Küche;09:00:00;16:00:00;1;0;0;
+2026-07-06;TVW;dienst;Kalte Speisen;Ausgabe (Salat & Sonder Speisen);09:00:00;13:00:00;1;0;0;Vorbereitung / Ausgabe /Salat
+2026-07-06;TVW;dienst;Kalte Speisen;Ausgabe (Salat & Sonder Speisen);09:30:00;13:30:00;1;0;0;Vorbereitung / Ausgabe /Salat
+2026-07-06;SCJ;dienst;Kasse;Bonkasse;10:00:00;14:00:00;1;0;0;
+2026-07-06;FFW;dienst;Getränke;Zapfen (Bier);10:30:00;14:30:00;1;0;0;
+2026-07-06;GVE;dienst;Getränke;Ausgabe (Bier);10:30:00;14:30:00;1;0;0;
+2026-07-06;TVW;dienst;Getränke;Getränkeausgabe (Wein & alkoholfrei);10:30:00;14:30:00;1;0;0;
+2026-07-06;TVW;dienst;Spülen;Tellerspülen;10:30:00;14:30:00;1;0;0;incl Tellerrücknahmen
+2026-07-06;SCJ;dienst;Warme Speisen;Zubereitung (Grill);10:30:00;14:30:00;1;0;0;
+2026-07-06;FFW;dienst;Warme Speisen;Ausgabe (Grill & Pommes);10:30:00;14:30:00;1;0;0;
+2026-07-06;SCJ;dienst;Warme Speisen;Zubereitung (Kesselfleisch);10:30:00;14:30:00;1;0;0;
+2026-07-06;GVE;dienst;Warme Speisen;Ausgabe (Kesselfleisch);10:30:00;14:30:00;1;0;0;Kesselfleisch
+2026-07-06;VR;dienst;Betreuung;Betreuung Getränkebereich;11:00:00;18:00:00;1;0;0;
+2026-07-06;TVW;dienst;Getränke;Zapfen (Bier);11:00:00;15:00:00;1;0;0;
+2026-07-06;SCJ;dienst;Spülen;Spülen (Gläser);11:00:00;15:00:00;1;0;0;
+2026-07-06;SCJ;dienst;Spülen;Tellerspülen;11:00:00;15:00:00;1;0;0;incl Tellerrücknahmen
+2026-07-06;TVW;dienst;Warme Speisen;Zubereitung (Pommes);11:00:00;15:00:00;1;0;0;
+2026-07-06;GVE;dienst;Warme Speisen;Ausgabe (Grill & Pommes);11:00:00;15:00:00;1;0;0;Vorber. Essenstand u  Essen Ausg.
+2026-07-06;GVE;dienst;Getränke;Zapfen (Bier);11:30:00;15:30:00;1;0;0;
+2026-07-06;TVW;dienst;Getränke;Ausgabe (Bier);11:30:00;15:30:00;1;0;0;
+2026-07-06;GVE;dienst;Spülen;Tellerspülen;11:30:00;15:30:00;1;0;0;incl Tellerrücknahmen
+2026-07-06;TVW;dienst;Warme Speisen;Zubereitung (Grill);11:30:00;15:30:00;1;0;0;
+2026-07-06;SCJ;dienst;Warme Speisen;Ausgabe (Grill & Pommes);11:30:00;15:30:00;1;0;0;
+2026-07-06;GVE;dienst;Spülen;Spülen (Gläser);12:00:00;16:00:00;1;0;0;
+2026-07-06;SCJ;dienst;Warme Speisen;Zubereitung (Pommes);12:00:00;16:00:00;1;0;0;
+2026-07-06;GVE;dienst;Kalte Speisen;Ausgabe (Salat & Sonder Speisen);13:30:00;17:30:00;1;0;0;Vorbereitung / Ausgabe /Salat
+2026-07-06;TVW;dienst;Kasse;Bonkasse;14:00:00;18:00:00;1;0;0;
+2026-07-06;GVE;dienst;Getränke;Getränkeausgabe (Wein & alkoholfrei);14:30:00;18:30:00;1;0;0;
+2026-07-06;FFW;dienst;Spülen;Tellerspülen;14:30:00;18:30:00;1;0;0;incl Tellerrücknahmen
+2026-07-06;FFW;dienst;Warme Speisen;Zubereitung (Grill);14:30:00;18:30:00;1;0;0;
+2026-07-06;FFW;dienst;Getränke;Zapfen (Bier);15:00:00;19:00:00;1;0;0;
+2026-07-06;SCJ;dienst;Getränke;Ausgabe (Bier);15:00:00;19:00:00;1;0;0;
+2026-07-06;TVW;dienst;Warme Speisen;Ausgabe (Grill & Pommes);15:30:00;19:30:00;1;0;0;
+2026-07-06;FFW;dienst;Spülen;Spülen (Gläser);16:00:00;20:00:00;1;0;0;
+2026-07-06;VR;dienst;Betreuung;Betreuung Küche;16:00:00;22:30:00;1;0;0;
+2026-07-06;FFW;dienst;Warme Speisen;Zubereitung (Pommes);16:00:00;20:00:00;1;0;0;
+2026-07-06;GVE;dienst;Warme Speisen;Zubereitung (Grill);17:00:00;21:00:00;1;0;0;
+2026-07-06;SCJ;dienst;Warme Speisen;Ausgabe (Grill & Pommes);17:00:00;00:00:00;1;0;0;
+2026-07-06;GVE;dienst;Getränke;Zapfen (Bier);17:30:00;21:30:00;1;0;0;
+2026-07-06;SCJ;dienst;Getränke;Ausgabe (Bier);17:30:00;21:30:00;1;0;0;
+2026-07-06;SCJ;dienst;Kalte Speisen;Ausgabe (Salat & Sonder Speisen);17:30:00;21:30:00;1;0;0;Vorbereitung / Ausgabe /Salat
+2026-07-06;VR;dienst;Betreuung;Betreuung Getränkebereich;18:00:00;01:00:00;1;0;0;
+2026-07-06;FFW;dienst;Getränke;Zapfen (Bier);18:00:00;22:00:00;1;0;0;
+2026-07-06;GVE;dienst;Getränke;Ausgabe (Bier);18:00:00;22:00:00;1;0;0;
+2026-07-06;TVW;dienst;Spülen;Tellerspülen;18:00:00;22:00:00;1;0;0;incl Tellerrücknahmen
+2026-07-06;TVW;dienst;Spülen;Tellerspülen;18:00:00;22:00:00;1;0;0;incl Tellerrücknahmen
+2026-07-06;SCJ;dienst;Kasse;Bonkasse;18:00:00;22:00:00;1;0;0;
+2026-07-06;FFW;dienst;Kalte Speisen;Ausgabe (Salat & Sonder Speisen);18:00:00;22:00:00;1;0;0;Vorbereitung / Ausgabe /Salat
+2026-07-06;FFW;dienst;Warme Speisen;Zubereitung (Grill);18:00:00;22:00:00;1;0;0;
+2026-07-06;GVE;dienst;Warme Speisen;Zubereitung (Pommes);18:00:00;22:00:00;1;0;0;
+2026-07-06;TVW;dienst;Warme Speisen;Ausgabe (Grill & Pommes);18:00:00;22:00:00;1;0;0;
+2026-07-06;FFW;dienst;Getränke;Getränkeausgabe (Wein & alkoholfrei);18:30:00;22:30:00;1;0;0;
+2026-07-06;GVE;dienst;Getränke;Getränkeausgabe (Wein & alkoholfrei);18:30:00;22:30:00;1;0;0;
+2026-07-06;GVE;dienst;Spülen;Tellerspülen;18:30:00;22:30:00;1;0;0;incl Tellerrücknahmen
+2026-07-06;SCJ;dienst;Getränke;Zapfen (Bier);19:00:00;23:00:00;1;0;0;
+2026-07-06;FFW;dienst;Getränke;Ausgabe (Bier);19:00:00;23:00:00;1;0;0;
+2026-07-06;TVW;dienst;Spülen;Spülen (Gläser);19:00:00;23:00:00;1;0;0;
+2026-07-06;FFW;dienst;Warme Speisen;Springer Küche;19:00:00;22:00:00;1;0;0;
+2026-07-06;SCJ;dienst;Spülen;Tellerspülen;19:30:00;01:30:00;1;0;0;incl Tellerrücknahmen, Küche säubern
+2026-07-06;GVE;dienst;Spülen;Tellerspülen;19:30:00;01:30:00;1;0;0;incl Tellerrücknahmen, Küche säubern
+2026-07-06;SCJ;dienst;Getränke;Zapfen (Bier);20:00:00;00:00:00;1;0;0;
+2026-07-06;FFW;dienst;Getränke;Ausgabe (Bier);20:00:00;00:00:00;1;0;0;
+2026-07-06;GVE;dienst;Getränke;Getränkeausgabe (Wein & alkoholfrei);20:00:00;00:00:00;1;0;0;
+2026-07-06;FFW;dienst;Spülen;Spülen (Gläser);21:00:00;01:00:00;1;0;0;
+2026-07-06;GVE;dienst;Nachtwache;Nachtwache;23:00:00;08:59:00;1;0;0;
+2026-07-06;FFW;dienst;Nachtwache;Nachtwache;23:00:00;08:59:00;1;0;0;
+2026-07-06;TVW;dienst;Nachtwache;Nachtwache;23:00:00;08:59:00;1;0;0;
+2026-07-06;SCJ;dienst;Nachtwache;Nachtwache;23:00:00;08:59:00;1;0;0;
+2026-07-07;SCJ;dienst;Abbau;Abbau (Zelt Innenbereich & Aussenbereich);09:00:00;13:00:00;1;0;0;
+2026-07-07;GVE;dienst;Abbau;Abbau (Zelt Innenbereich & Aussenbereich);09:00:00;13:00:00;1;0;0;
+2026-07-07;FFW;dienst;Abbau;Abbau (Zelt Innenbereich & Aussenbereich);09:00:00;13:00:00;1;0;0;
+2026-07-07;TVW;dienst;Abbau;Abbau (Zelt Innenbereich & Aussenbereich);09:00:00;13:00:00;1;0;0;
+2026-07-07;SCJ;dienst;Abbau;Abbau (Zelt Innenbereich & Aussenbereich);09:00:00;13:00:00;1;0;0;
+2026-07-07;GVE;dienst;Abbau;Abbau (Zelt Innenbereich & Aussenbereich);09:00:00;13:00:00;1;0;0;
+2026-07-07;FFW;dienst;Abbau;Abbau (Zelt Innenbereich & Aussenbereich);09:00:00;13:00:00;1;0;0;
+2026-07-07;TVW;dienst;Abbau;Abbau (Zelt Innenbereich & Aussenbereich);09:00:00;13:00:00;1;0;0;
+2026-07-07;SCJ;dienst;Abbau;Abbau (Zelt Innenbereich & Aussenbereich);09:00:00;13:00:00;1;0;0;
+2026-07-07;GVE;dienst;Abbau;Abbau (Zelt Innenbereich & Aussenbereich);09:00:00;13:00:00;1;0;0;
+2026-07-07;FFW;dienst;Abbau;Abbau (Zelt Innenbereich & Aussenbereich);09:00:00;13:00:00;1;0;0;
+2026-07-07;TVW;dienst;Abbau;Abbau (Zelt Innenbereich & Aussenbereich);09:00:00;13:00:00;1;0;0;
+2026-07-09;SCJ;dienst;Abbau;Abbau (Zelt);14:00:00;18:00:00;1;0;0;Nur Zeltaufbau
+2026-07-09;GVE;dienst;Abbau;Abbau (Zelt);14:00:00;18:00:00;1;0;0;Nur Zeltaufbau
+2026-07-09;FFW;dienst;Abbau;Abbau (Zelt);14:00:00;18:00:00;1;0;0;Nur Zeltaufbau
+2026-07-09;TVW;dienst;Abbau;Abbau (Zelt);14:00:00;18:00:00;1;0;0;Nur Zeltaufbau
+2026-07-09;SCJ;dienst;Abbau;Abbau (Zelt);14:00:00;18:00:00;1;0;0;Nur Zeltaufbau

@@ -2013,7 +2013,7 @@ class Dienstplan_Database {
 
         $where_sql = !empty($where) ? "WHERE " . implode(" AND ", $where) : "";
 
-        $sql = "SELECT m.*, v.name as verein_name, vt.tag_nummer, vt.tag_datum,
+        $sql = "SELECT m.*, v.name as verein_name, v.kuerzel as verein_kuerzel, vt.tag_nummer, vt.tag_datum,
                ma.vorname as mitarbeiter_vorname, ma.nachname as mitarbeiter_nachname,
                TRIM(CONCAT(COALESCE(ma.vorname, ''), ' ', COALESCE(ma.nachname, ''))) as mitarbeiter_name,
                    COALESCE(NULLIF(m.bereich_name, ''), b.name, '') as mitbringen_bereich_name,

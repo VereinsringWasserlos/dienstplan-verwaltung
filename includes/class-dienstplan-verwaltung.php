@@ -423,6 +423,7 @@ class Dienstplan_Verwaltung {
         $this->loader->add_action('wp_ajax_dp_remove_assignment', $plugin_public, 'ajax_remove_assignment');
         $this->loader->add_action('wp_ajax_nopriv_dp_remove_assignment', $plugin_public, 'ajax_remove_assignment');
         $this->loader->add_action('wp_ajax_dp_take_mitbringen_item', $plugin_public, 'ajax_take_mitbringen_item');
+        $this->loader->add_action('wp_ajax_nopriv_dp_take_mitbringen_item', $plugin_public, 'ajax_take_mitbringen_item');
         $this->loader->add_action('wp_ajax_dp_frontend_admin_remove_slot', $plugin_public, 'ajax_frontend_admin_remove_slot');
         $this->loader->add_action('wp_ajax_dp_frontend_admin_split_dienst', $plugin_public, 'ajax_frontend_admin_split_dienst');
         

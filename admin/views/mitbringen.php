@@ -249,12 +249,12 @@ $nav_items = [
                         <th style="width: 190px;"><?php _e('Bereich', 'dienstplan-verwaltung'); ?></th>
                         <th style="width: 110px;"><?php _e('Menge', 'dienstplan-verwaltung'); ?></th>
                         <th style="width: 220px;"><?php _e('Verein', 'dienstplan-verwaltung'); ?></th>
-                        <th style="width: 140px;"><?php _e('Tag', 'dienstplan-verwaltung'); ?></th>
+                        <th style="width: 160px;"><?php _e('Tag', 'dienstplan-verwaltung'); ?></th>
                         <th style="width: 220px;"><?php _e('Person', 'dienstplan-verwaltung'); ?></th>
                         <th style="width: 120px;"><?php _e('Status', 'dienstplan-verwaltung'); ?></th>
                         <th><?php _e('Hinweis', 'dienstplan-verwaltung'); ?></th>
                         <?php if (!$is_restricted_club_admin): ?>
-                            <th style="width: 120px;"><?php _e('Aktionen', 'dienstplan-verwaltung'); ?></th>
+                            <th style="width: 160px;"><?php _e('Aktionen', 'dienstplan-verwaltung'); ?></th>
                         <?php endif; ?>
                     </tr>
                 </thead>
@@ -280,11 +280,13 @@ $nav_items = [
                                 <td>
                                     <?php echo intval($item->menge); ?>
                                 </td>
-                                <td><?php echo esc_html($item->verein_name ?? ''); ?></td>
+                                <td><?php echo esc_html($item->verein_kuerzel ?? $item->verein_name ?? ''); ?></td>
                                 <td>
                                     <?php
                                     if (!empty($item->tag_datum)) {
-                                        echo esc_html(date_i18n('d.m.Y', strtotime($item->tag_datum)));
+                                        $dp_ts_mb = strtotime($item->tag_datum);
+                                        $dp_wt_mb = ['1'=>'Mo','2'=>'Di','3'=>'Mi','4'=>'Do','5'=>'Fr','6'=>'Sa','7'=>'So'][date('N', $dp_ts_mb)] ?? '';
+                                        echo esc_html($dp_wt_mb . ' ' . date_i18n('d.m.Y', $dp_ts_mb));
                                     } else {
                                         echo '&mdash;';
                                     }
@@ -315,7 +317,7 @@ $nav_items = [
                                 </td>
                                 <?php if (!$is_restricted_club_admin): ?>
                                     <td>
-                                        <div style="display: flex; gap: 4px; flex-wrap: nowrap; justify-content: flex-end; align-items: center;">
+                                        <div style="display: flex; gap: 4px; flex-wrap: wrap; justify-content: flex-end; align-items: center;">
                                             <button type="button" class="button button-small" title="<?php esc_attr_e('Person zuordnen', 'dienstplan-verwaltung'); ?>"
                                                 onclick='dpOpenMitbringenAssignModal(<?php echo esc_attr(wp_json_encode(array(
                                                    'id' => intval($item->id ?? 0),

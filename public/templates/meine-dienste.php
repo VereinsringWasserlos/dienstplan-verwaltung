@@ -83,7 +83,11 @@ $dp_format_time = static function($time_value) use ($dp_time_format) {
                                         <div class="dp-dienst-details">
                                             <span class="dp-detail-item">
                                                 <span class="dp-icon">📅</span>
-                                                <?php echo date_i18n('d.m.Y', strtotime($dienst->tag_datum)); ?>
+                                                <?php
+                                                $dp_ts_md = strtotime($dienst->tag_datum);
+                                                $dp_wt_md = ['1'=>'Mo','2'=>'Di','3'=>'Mi','4'=>'Do','5'=>'Fr','6'=>'Sa','7'=>'So'][date('N', $dp_ts_md)] ?? '';
+                                                echo esc_html($dp_wt_md . ' ' . date_i18n('d.m.Y', $dp_ts_md));
+                                                ?>
                                             </span>
                                             <span class="dp-detail-item">
                                                 <span class="dp-icon">🕐</span>

@@ -128,6 +128,28 @@ foreach ($mitbringen_items as $mitbringen_item) {
 }
 ksort($mitbringen_nach_tagen);
 
+foreach ($mitbringen_nach_tagen as $tag_id => $tag_items) {
+    usort($tag_items, function ($a, $b) {
+        $a_offen = (($a->status ?? 'offen') === 'offen') ? 0 : 1;
+        $b_offen = (($b->status ?? 'offen') === 'offen') ? 0 : 1;
+
+        if ($a_offen !== $b_offen) {
+            return $a_offen <=> $b_offen;
+        }
+
+        $a_name = mb_strtolower(trim((string) ($a->bezeichnung ?? '')));
+        $b_name = mb_strtolower(trim((string) ($b->bezeichnung ?? '')));
+
+        if ($a_name === $b_name) {
+            return intval($a->id ?? 0) <=> intval($b->id ?? 0);
+        }
+
+        return $a_name <=> $b_name;
+    });
+
+    $mitbringen_nach_tagen[$tag_id] = $tag_items;
+}
+
 // Bereichsgruppen laden (für Frontend-Gruppierung nach Tätigkeit)
 $alle_bereichsgruppen = $db->get_bereichsgruppen(true); // nur aktive
 $taetigkeit_gruppe_cache = []; // taetigkeit_id => gruppe_obj|null
@@ -1366,7 +1388,13 @@ if ($dienst_start_dt !== null && $dienst_end_dt !== null) {
                         if ($t->id == $tag_id) { $tag = $t; break; }
                     }
                     $tag_raw   = $tag->tag_datum ?? ($tag->datum ?? null);
-                    $tag_datum = $tag_raw ? date('d.m.Y', strtotime($tag_raw)) : 'Unbekannt';
+                    if ($tag_raw) {
+                        $dp_ts_vv1 = strtotime($tag_raw);
+                        $dp_wt_vv1 = ['1'=>'Mo','2'=>'Di','3'=>'Mi','4'=>'Do','5'=>'Fr','6'=>'Sa','7'=>'So'][date('N', $dp_ts_vv1)] ?? '';
+                        $tag_datum = $dp_wt_vv1 . ' ' . date('d.m.Y', $dp_ts_vv1);
+                    } else {
+                        $tag_datum = 'Unbekannt';
+                    }
 
                     // Dienste nach Bereichsgruppe gruppieren
                     $kp_gruppen_map = [];
@@ -1500,7 +1528,13 @@ if ($dienst_start_dt !== null && $dienst_end_dt !== null) {
                         if ($t->id == $tag_id) { $tag = $t; break; }
                     }
                     $tag_raw   = $tag->tag_datum ?? ($tag->datum ?? null);
-                    $tag_datum = $tag_raw ? date('d.m.Y', strtotime($tag_raw)) : 'Unbekannt';
+                    if ($tag_raw) {
+                        $dp_ts_vv2 = strtotime($tag_raw);
+                        $dp_wt_vv2 = ['1'=>'Mo','2'=>'Di','3'=>'Mi','4'=>'Do','5'=>'Fr','6'=>'Sa','7'=>'So'][date('N', $dp_ts_vv2)] ?? '';
+                        $tag_datum = $dp_wt_vv2 . ' ' . date('d.m.Y', $dp_ts_vv2);
+                    } else {
+                        $tag_datum = 'Unbekannt';
+                    }
 
                     // Dienste dieses Tages nach Bereichsgruppe gruppieren
                     $gruppen_map = []; // gruppe_id (oder 0 = ohne Gruppe) => ['gruppe' => obj|null, 'dienste' => []]
@@ -1684,13 +1718,7 @@ if ($dienst_start_dt !== null && $dienst_end_dt !== null) {
                     </div>
 
                     <?php foreach ($mitbringen_nach_tagen as $mitbringen_tag_id => $mitbringen_tag_items): ?>
-                        <?php
-                        $mitbringen_tag_obj = $tage_by_id[intval($mitbringen_tag_id)] ?? null;
-                        $mitbringen_tag_raw = $mitbringen_tag_obj->tag_datum ?? ($mitbringen_tag_obj->datum ?? null);
-                        $mitbringen_tag_label = $mitbringen_tag_raw ? date('d.m.Y', strtotime($mitbringen_tag_raw)) : __('Ohne Tag', 'dienstplan-verwaltung');
-                        ?>
                         <div class="dp-mitbringen-panel" data-mitbringen-panel="<?php echo intval($mitbringen_tag_id); ?>" style="display:none;">
-                            <h3 class="dp-day-title" style="border-left-color: #0f766e;"><?php echo esc_html($mitbringen_tag_label); ?></h3>
                             <table class="dp-dienste-table">
                                 <thead>
                                     <tr>
@@ -2863,11 +2891,27 @@ document.addEventListener('DOMContentLoaded', function() {
         jQuery('#dp-mitbringen-takeover-vorname').val('').focus();
         jQuery('#dp-mitbringen-takeover-nachname').val('');
         jQuery('#dp-mitbringen-takeover-beschreibung').val('');
-        jQuery(modal).fadeIn(200);
+        modal.classList.add('dp-modal-force-open');
+        modal.style.setProperty('display', 'block', 'important');
+        modal.style.setProperty('visibility', 'visible', 'important');
+        modal.style.setProperty('opacity', '1', 'important');
+        jQuery(modal).stop(true, true).fadeIn(150);
+        jQuery('body').css('overflow', 'hidden');
     };
 
     window.dpCloseMitbringenTakeoverModal = function() {
-        jQuery('#dp-mitbringen-takeover-modal').fadeOut(200);
+        var modal = document.getElementById('dp-mitbringen-takeover-modal');
+        if (modal) {
+            modal.classList.remove('dp-modal-force-open');
+        }
+        jQuery('#dp-mitbringen-takeover-modal').stop(true, true).fadeOut(150, function() {
+            if (modal) {
+                modal.style.setProperty('display', 'none', 'important');
+                modal.style.removeProperty('visibility');
+                modal.style.removeProperty('opacity');
+            }
+        });
+        jQuery('body').css('overflow', 'auto');
         window.dpMitbringenTakeover = null;
     };
 
@@ -4879,6 +4923,14 @@ document.addEventListener('DOMContentLoaded', function() {
     .dp-mitbringen-modal-content {
         max-width: min(1200px, 96vw);
         width: min(1200px, 96vw);
+    }
+
+    .dp-mitbringen-modal-content .dp-modal-header {
+        position: sticky;
+        top: 0;
+        z-index: 20;
+        background: #ffffff;
+        border-bottom: 1px solid #e2e8f0;
     }
 
     .dp-mitbringen-tabs {

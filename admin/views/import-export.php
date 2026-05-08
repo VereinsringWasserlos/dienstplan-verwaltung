@@ -208,7 +208,8 @@ if (isset($stats['veranstaltungen'])) {
                     
                     <p><strong><?php _e('Veranstaltungen:', 'dienstplan-verwaltung'); ?></strong><br>
                     <code>name,start_datum,end_datum,beschreibung,dienst_von_zeit,dienst_bis_zeit</code><br>
-                    <small><?php _e('Datum: YYYY-MM-DD, Zeit: HH:MM', 'dienstplan-verwaltung'); ?></small></p>
+                    <small><?php _e('Datum: YYYY-MM-DD, Zeit: HH:MM. Dienstzeiten sind Pflichtfelder.', 'dienstplan-verwaltung'); ?><br>
+                    <?php _e('Optional für mehrtägige Imports: tag_nummer,tag_datum,von_zeit,bis_zeit,bis_datum,dienst_bis_datum,nur_dienst,notizen', 'dienstplan-verwaltung'); ?></small></p>
                     
                     <p><strong><?php _e('Dienste:', 'dienstplan-verwaltung'); ?></strong><br>
                     <code>datum,verein_kuerzel,dienst_typ,bereich_name,taetigkeit_name,von_zeit,bis_zeit,anzahl_personen,splittbar,admin_only,besonderheiten</code><br>

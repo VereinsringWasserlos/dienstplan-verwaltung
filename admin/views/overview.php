@@ -279,7 +279,10 @@ $bereiche = $db->get_bereiche();
                         $seen_tag_dates[] = $tag_date_key;
                     ?>
                         <option value="<?php echo $tag->id; ?>" <?php selected($selected_tag, $tag->id); ?>>
-                            Tag <?php echo $tag->tag_nummer; ?>: <?php echo date_i18n('d.m.Y', strtotime($tag->tag_datum)); ?>
+                            Tag <?php echo $tag->tag_nummer; ?>: <?php
+                            $dp_ts_ov = strtotime($tag->tag_datum);
+                            $dp_wt_ov = ['1'=>'Mo','2'=>'Di','3'=>'Mi','4'=>'Do','5'=>'Fr','6'=>'Sa','7'=>'So'][date('N', $dp_ts_ov)] ?? '';
+                            echo esc_html($dp_wt_ov . ' ' . date_i18n('d.m.Y', $dp_ts_ov)); ?>
                         </option>
                     <?php endforeach; ?>
                 </select>

@@ -46,14 +46,24 @@
         ],
         'veranstaltungen': [
             { key: 'name', label: 'Name', required: true },
+            { key: 'veranstaltung_name', label: 'Veranstaltung Name (Alias)', required: false },
             { key: 'start_datum', label: 'Start-Datum (YYYY-MM-DD)', required: true },
             { key: 'end_datum', label: 'End-Datum (YYYY-MM-DD)', required: true },
             { key: 'beschreibung', label: 'Beschreibung', required: false },
-            { key: 'dienst_von_zeit', label: 'Dienst von Zeit (HH:MM)', required: false },
-            { key: 'dienst_bis_zeit', label: 'Dienst bis Zeit (HH:MM)', required: false }
+            { key: 'dienst_von_zeit', label: 'Dienst von Zeit (HH:MM)', required: true },
+            { key: 'dienst_bis_zeit', label: 'Dienst bis Zeit (HH:MM)', required: true },
+            { key: 'tag_nummer', label: 'Tag Nummer (optional)', required: false },
+            { key: 'tag_datum', label: 'Tag Datum (YYYY-MM-DD, optional)', required: false },
+            { key: 'von_zeit', label: 'Tag Von Zeit (HH:MM, optional)', required: false },
+            { key: 'bis_zeit', label: 'Tag Bis Zeit (HH:MM, optional)', required: false },
+            { key: 'bis_datum', label: 'Tag Bis Datum (YYYY-MM-DD, optional)', required: false },
+            { key: 'dienst_bis_datum', label: 'Dienst Bis Datum (YYYY-MM-DD, optional)', required: false },
+            { key: 'nur_dienst', label: 'Nur Dienst (1/0, optional)', required: false },
+            { key: 'notizen', label: 'Notizen (optional)', required: false }
         ],
         'dienste': [
             { key: 'datum', label: 'Datum (YYYY-MM-DD)', required: true },
+            { key: 'tag_datum', label: 'Tag Datum (Alias für Datum)', required: false },
             { key: 'verein_kuerzel', label: 'Verein Kürzel', required: false },
             { key: 'bereich_name', label: 'Bereich Name', required: false },
             { key: 'taetigkeit_name', label: 'Tätigkeit Name', required: false },

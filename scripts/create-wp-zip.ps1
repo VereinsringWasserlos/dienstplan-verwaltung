@@ -34,11 +34,19 @@ if ([string]::IsNullOrWhiteSpace($OutputDir)) {
     $OutputDir = $DefaultOutputDir
 }
 
+# Resolve relative output paths against repository root to keep behavior stable
+# regardless of the caller's current working directory.
+if (-not [System.IO.Path]::IsPathRooted($OutputDir)) {
+    $OutputDir = Join-Path $RepoRoot $OutputDir
+}
+
+$OutputDir = [System.IO.Path]::GetFullPath($OutputDir)
+
 if (-not (Test-Path $OutputDir)) {
     New-Item -ItemType Directory -Path $OutputDir -Force | Out-Null
 }
 
-$OutputZip = Join-Path $OutputDir "$PluginSlug-$Version.zip"
+$OutputZip = [System.IO.Path]::GetFullPath((Join-Path $OutputDir "$PluginSlug-$Version.zip"))
 $ArchiveDir = Join-Path $RepoRoot 'release'
 
 $ExcludePatterns = @(

@@ -34,6 +34,9 @@ class Dienstplan_Admin
         // Admin-Notices
         add_action('admin_notices', array($this, 'show_admin_notices'));
 
+        // Fallback für Admin-Seitentitel, damit WordPress nie null in strip_tags() erhält.
+        add_action('current_screen', array($this, 'ensure_admin_page_title'), 1);
+
         // WordPress-Footer-Banner ausblenden
         add_filter('admin_footer_text', '__return_empty_string');
         add_filter('update_footer', '__return_empty_string');
@@ -734,21 +737,13 @@ class Dienstplan_Admin
     }
 
     /**
-     * Setzt die korrekten Titel für versteckte Admin-Seiten
-     * 
-     * @param string|null $admin_title
-     * @param string|null $title
-     * @return string Immer ein nicht-null String
+     * Liefert Titel-Mapping für versteckte und direkte Admin-Seiten.
+     *
+     * @return array<string,string>
      */
-    public function set_hidden_page_titles($admin_title, $title)
+    private function get_admin_page_titles_map()
     {
-        global $plugin_page;
-
-        // Sicherstellen dass wir mit gültigen Strings arbeiten
-        $admin_title = (string) ($admin_title ?? '');
-        $title = (string) ($title ?? '');
-
-        $page_titles = array(
+        return array(
             'dienstplan-vereine' => __('Vereine', 'dienstplan-verwaltung'),
             'dienstplan-veranstaltungen' => __('Veranstaltungen', 'dienstplan-verwaltung'),
             'dienstplan-statistik' => __('Statistik', 'dienstplan-verwaltung'),
@@ -768,6 +763,60 @@ class Dienstplan_Admin
             'dienstplan-portal' => __('Portal-Verwaltung', 'dienstplan-verwaltung'),
             'dienstplan-debug' => __('Debug & Wartung', 'dienstplan-verwaltung'),
         );
+    }
+
+    /**
+     * Setzt einen sicheren Seitentitel für Admin-Seiten, bevor WordPress den Header rendert.
+     * Verhindert strip_tags(null)-Warnings in neueren PHP-Versionen.
+     *
+     * @return void
+     */
+    public function ensure_admin_page_title()
+    {
+        global $title, $plugin_page;
+
+        if (is_string($title) && $title !== '') {
+            return;
+        }
+
+        $page_slug = '';
+        if (isset($plugin_page)) {
+            $page_slug = (string) $plugin_page;
+        }
+
+        if ($page_slug === '' && isset($_GET['page'])) {
+            $page_slug = sanitize_key((string) wp_unslash($_GET['page']));
+        }
+
+        if ($page_slug === '' || strpos($page_slug, 'dienstplan') !== 0) {
+            return;
+        }
+
+        $titles = $this->get_admin_page_titles_map();
+        if (isset($titles[$page_slug]) && is_string($titles[$page_slug]) && $titles[$page_slug] !== '') {
+            $title = $titles[$page_slug];
+            return;
+        }
+
+        $title = __('Dienstplan', 'dienstplan-verwaltung');
+    }
+
+    /**
+     * Setzt die korrekten Titel für versteckte Admin-Seiten
+     * 
+     * @param string|null $admin_title
+     * @param string|null $title
+     * @return string Immer ein nicht-null String
+     */
+    public function set_hidden_page_titles($admin_title, $title)
+    {
+        global $plugin_page;
+
+        // Sicherstellen dass wir mit gültigen Strings arbeiten
+        $admin_title = (string) ($admin_title ?? '');
+        $title = (string) ($title ?? '');
+
+        $page_titles = $this->get_admin_page_titles_map();
 
         if (isset($plugin_page) && isset($page_titles[$plugin_page])) {
             $blog_name = (string) (get_bloginfo('name') ?? '');
@@ -4863,6 +4912,9 @@ class Dienstplan_Admin
 
         $resolve_event_tag = function ($data, $tage_by_date, $tage_by_id, $tage_by_nummer, $tage_by_weekday, $row_number, $veranstaltung_start = '', $veranstaltung_ende = '') use ($parse_date, $weekday_to_iso, &$errors, &$error_details) {
             $datum_input = isset($data['datum']) ? trim((string) $data['datum']) : '';
+            if ($datum_input === '' && isset($data['tag_datum'])) {
+                $datum_input = trim((string) $data['tag_datum']);
+            }
             $tag_id_input = isset($data['tag_id']) ? trim((string) $data['tag_id']) : '';
             $tag_nummer_input = isset($data['tag_nummer']) ? trim((string) $data['tag_nummer']) : '';
             $wochentag_input = isset($data['wochentag']) ? trim((string) $data['wochentag']) : '';
@@ -4959,7 +5011,7 @@ class Dienstplan_Admin
             }
 
             $errors++;
-            $error_details[] = "Zeile {$row_number}: Es fehlt ein Tages-Mapping (Datum, Tag-ID, Tag-Nummer oder Wochentag)";
+            $error_details[] = "Zeile {$row_number}: Es fehlt ein Datum (Feld 'datum' oder 'tag_datum'). Optional gehen auch Tag-ID, Tag-Nummer oder Wochentag";
             return false;
         };
 
@@ -5036,6 +5088,11 @@ class Dienstplan_Admin
                         $data[$field] = isset($row[$csvIndex]) ? trim($row[$csvIndex]) : '';
                     }
 
+                    // Alias für mehrtägige CSV-Vorlagen.
+                    if ((empty($data['name']) || !isset($data['name'])) && !empty($data['veranstaltung_name'])) {
+                        $data['name'] = trim((string) $data['veranstaltung_name']);
+                    }
+
                     if (empty($data['name']) || empty($data['kuerzel'])) {
                         $errors++;
                         $error_details[] = "Zeile {$row_number}: Pflichtfelder fehlen (Name oder Kürzel)";
@@ -5074,7 +5131,34 @@ class Dienstplan_Admin
                 ));
                 $has_dienst_von_zeit_column = in_array('dienst_von_zeit', $veranstaltungen_columns, true);
                 $has_dienst_bis_zeit_column = in_array('dienst_bis_zeit', $veranstaltungen_columns, true);
-                $ensure_veranstaltung_tage = function ($veranstaltung_id, $start_date, $end_date, $row_number_for_error) use ($db, &$errors, &$error_details) {
+                $normalize_time_value = function ($time_string, $row_number_for_error, $field_name) use (&$errors, &$error_details) {
+                    $time_string = trim((string) $time_string);
+                    if ($time_string === '') {
+                        return '';
+                    }
+
+                    $normalized = str_replace('.', ':', $time_string);
+
+                    if (!preg_match('/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/', $normalized, $matches)) {
+                        $errors++;
+                        $error_details[] = "Zeile {$row_number_for_error}: Ungültige Zeit im Feld '{$field_name}' ('{$time_string}')";
+                        return false;
+                    }
+
+                    $hour = intval($matches[1]);
+                    $minute = intval($matches[2]);
+                    $second = isset($matches[3]) && $matches[3] !== '' ? intval($matches[3]) : 0;
+
+                    if ($hour < 0 || $hour > 23 || $minute < 0 || $minute > 59 || $second < 0 || $second > 59) {
+                        $errors++;
+                        $error_details[] = "Zeile {$row_number_for_error}: Ungültige Zeit im Feld '{$field_name}' ('{$time_string}')";
+                        return false;
+                    }
+
+                    return sprintf('%02d:%02d:%02d', $hour, $minute, $second);
+                };
+
+                $ensure_veranstaltung_tage = function ($veranstaltung_id, $start_date, $end_date, $row_number_for_error, $dienst_von_zeit = '08:00:00', $dienst_bis_zeit = '22:00:00') use ($db, &$errors, &$error_details) {
                     $veranstaltung_id = intval($veranstaltung_id);
                     if ($veranstaltung_id <= 0) {
                         return;
@@ -5101,10 +5185,10 @@ class Dienstplan_Admin
                             'veranstaltung_id' => $veranstaltung_id,
                             'tag_nummer' => $tag_nummer,
                             'tag_datum' => date('Y-m-d', $current_ts),
-                            'von_zeit' => '08:00:00',
-                            'bis_zeit' => '22:00:00',
-                            'dienst_von_zeit' => '08:00:00',
-                            'dienst_bis_zeit' => '22:00:00',
+                            'von_zeit' => $dienst_von_zeit,
+                            'bis_zeit' => $dienst_bis_zeit,
+                            'dienst_von_zeit' => $dienst_von_zeit,
+                            'dienst_bis_zeit' => $dienst_bis_zeit,
                             'nur_dienst' => 0,
                             'notizen' => ''
                         );
@@ -5161,12 +5245,27 @@ class Dienstplan_Admin
                     $data['end_datum'] = date('Y-m-d', $ende_timestamp);
                     unset($data['ende_datum']);
 
-                    // Setze Standardwerte wenn nicht gemappt
-                    if (!isset($data['dienst_von_zeit']) || empty($data['dienst_von_zeit'])) {
-                        $data['dienst_von_zeit'] = '08:00';
+                    // Dienst-Zeitfenster sind für den Veranstaltungs-Import Pflichtfelder
+                    // (werden für Veranstaltungstage und Dienst-Matching benötigt).
+                    $dienst_von_zeit = $normalize_time_value(isset($data['dienst_von_zeit']) ? $data['dienst_von_zeit'] : '', $row_number, 'dienst_von_zeit');
+                    $dienst_bis_zeit = $normalize_time_value(isset($data['dienst_bis_zeit']) ? $data['dienst_bis_zeit'] : '', $row_number, 'dienst_bis_zeit');
+
+                    if ($dienst_von_zeit === false || $dienst_bis_zeit === false) {
+                        continue;
                     }
-                    if (!isset($data['dienst_bis_zeit']) || empty($data['dienst_bis_zeit'])) {
-                        $data['dienst_bis_zeit'] = '22:00';
+
+                    if ($dienst_von_zeit === '' || $dienst_bis_zeit === '') {
+                        $errors++;
+                        $error_details[] = "Zeile {$row_number}: Pflichtfelder fehlen (dienst_von_zeit, dienst_bis_zeit)";
+                        continue;
+                    }
+
+                    $data['dienst_von_zeit'] = $dienst_von_zeit;
+                    $data['dienst_bis_zeit'] = $dienst_bis_zeit;
+
+                    $has_explicit_tag_row = false;
+                    if (!empty($data['tag_datum']) || !empty($data['tag_nummer']) || !empty($data['von_zeit']) || !empty($data['bis_zeit']) || !empty($data['bis_datum']) || !empty($data['dienst_bis_datum']) || !empty($data['notizen']) || isset($data['nur_dienst'])) {
+                        $has_explicit_tag_row = true;
                     }
 
                     // Abwaertskompatibilitaet: Manche Installationen haben die Zeitfenster-Spalten noch nicht.
@@ -5184,7 +5283,123 @@ class Dienstplan_Admin
                         $result = $db->update_veranstaltung($existing['id'], $data);
                         if ($result !== false) {
                             $updated++;
-                            $ensure_veranstaltung_tage($existing['id'], $data['start_datum'], $data['end_datum'], $row_number);
+
+                            $veranstaltung_id = intval($existing['id']);
+
+                            if ($has_explicit_tag_row) {
+                                $tag_datum = '';
+                                if (!empty($data['tag_datum'])) {
+                                    $tag_timestamp = $parse_date($data['tag_datum']);
+                                    if ($tag_timestamp === false) {
+                                        $errors++;
+                                        $error_details[] = "Zeile {$row_number}: Ungültiges Tages-Datum '{$data['tag_datum']}'";
+                                        continue;
+                                    }
+                                    $tag_datum = date('Y-m-d', $tag_timestamp);
+                                }
+
+                                $tag_nummer = isset($data['tag_nummer']) && $data['tag_nummer'] !== '' ? intval($data['tag_nummer']) : 0;
+
+                                if ($tag_datum === '' && $tag_nummer > 0) {
+                                    $tag_datum = date('Y-m-d', strtotime($data['start_datum'] . ' +' . ($tag_nummer - 1) . ' day'));
+                                }
+
+                                if ($tag_datum === '') {
+                                    $tag_datum = $data['start_datum'];
+                                }
+
+                                if ($tag_nummer <= 0) {
+                                    $start_dt = new DateTime($data['start_datum']);
+                                    $tag_dt = new DateTime($tag_datum);
+                                    $tag_nummer = intval($start_dt->diff($tag_dt)->format('%a')) + 1;
+                                }
+
+                                $von_zeit = $normalize_time_value(isset($data['von_zeit']) ? $data['von_zeit'] : '', $row_number, 'von_zeit');
+                                $bis_zeit = $normalize_time_value(isset($data['bis_zeit']) ? $data['bis_zeit'] : '', $row_number, 'bis_zeit');
+                                if ($von_zeit === false || $bis_zeit === false) {
+                                    continue;
+                                }
+
+                                if ($von_zeit === '') {
+                                    $von_zeit = $dienst_von_zeit;
+                                }
+                                if ($bis_zeit === '') {
+                                    $bis_zeit = $dienst_bis_zeit;
+                                }
+
+                                $bis_datum = '';
+                                if (!empty($data['bis_datum'])) {
+                                    $bis_datum_ts = $parse_date($data['bis_datum']);
+                                    if ($bis_datum_ts === false) {
+                                        $errors++;
+                                        $error_details[] = "Zeile {$row_number}: Ungültiges bis_datum '{$data['bis_datum']}'";
+                                        continue;
+                                    }
+                                    $bis_datum = date('Y-m-d', $bis_datum_ts);
+                                }
+                                if ($bis_datum === '' && strcmp($bis_zeit, $von_zeit) < 0) {
+                                    $bis_datum = date('Y-m-d', strtotime($tag_datum . ' +1 day'));
+                                }
+                                if ($bis_datum === '') {
+                                    $bis_datum = $tag_datum;
+                                }
+
+                                $dienst_bis_datum = '';
+                                if (!empty($data['dienst_bis_datum'])) {
+                                    $dienst_bis_datum_ts = $parse_date($data['dienst_bis_datum']);
+                                    if ($dienst_bis_datum_ts === false) {
+                                        $errors++;
+                                        $error_details[] = "Zeile {$row_number}: Ungültiges dienst_bis_datum '{$data['dienst_bis_datum']}'";
+                                        continue;
+                                    }
+                                    $dienst_bis_datum = date('Y-m-d', $dienst_bis_datum_ts);
+                                }
+                                if ($dienst_bis_datum === '' && strcmp($dienst_bis_zeit, $dienst_von_zeit) < 0) {
+                                    $dienst_bis_datum = date('Y-m-d', strtotime($tag_datum . ' +1 day'));
+                                }
+                                if ($dienst_bis_datum === '') {
+                                    $dienst_bis_datum = $tag_datum;
+                                }
+
+                                $tag_payload = array(
+                                    'veranstaltung_id' => $veranstaltung_id,
+                                    'tag_datum' => $tag_datum,
+                                    'tag_nummer' => max(1, $tag_nummer),
+                                    'von_zeit' => $von_zeit,
+                                    'bis_zeit' => $bis_zeit,
+                                    'bis_datum' => $bis_datum,
+                                    'dienst_von_zeit' => $dienst_von_zeit,
+                                    'dienst_bis_zeit' => $dienst_bis_zeit,
+                                    'dienst_bis_datum' => $dienst_bis_datum,
+                                    'nur_dienst' => $parse_bool(isset($data['nur_dienst']) ? $data['nur_dienst'] : '', 0),
+                                    'notizen' => isset($data['notizen']) ? sanitize_textarea_field($data['notizen']) : ''
+                                );
+
+                                $existing_tage = $db->get_veranstaltung_tage($veranstaltung_id);
+                                $existing_tag_id = 0;
+                                foreach ($existing_tage as $tag_item) {
+                                    if (!empty($tag_item->tag_datum) && $tag_item->tag_datum === $tag_datum) {
+                                        $existing_tag_id = intval($tag_item->id);
+                                        break;
+                                    }
+                                    if ($existing_tag_id === 0 && intval($tag_item->tag_nummer) === intval($tag_payload['tag_nummer'])) {
+                                        $existing_tag_id = intval($tag_item->id);
+                                    }
+                                }
+
+                                if ($existing_tag_id > 0) {
+                                    $tag_result = $db->update_veranstaltung_tag($existing_tag_id, $tag_payload);
+                                } else {
+                                    $tag_result = $db->add_veranstaltung_tag($tag_payload);
+                                }
+
+                                if ($tag_result === false) {
+                                    $errors++;
+                                    $error_details[] = "Zeile {$row_number}: Veranstaltungstag konnte nicht gespeichert werden";
+                                }
+                            } else {
+                                $ensure_veranstaltung_tage($veranstaltung_id, $data['start_datum'], $data['end_datum'], $row_number, $dienst_von_zeit, $dienst_bis_zeit);
+                            }
                         } else {
                             $errors++;
                             $error_details[] = "Zeile {$row_number}: Fehler beim Aktualisieren von Veranstaltung '{$data['name']}'";
@@ -5193,7 +5408,106 @@ class Dienstplan_Admin
                         $result = $db->add_veranstaltung($data);
                         if ($result !== false) {
                             $created++;
-                            $ensure_veranstaltung_tage($result, $data['start_datum'], $data['end_datum'], $row_number);
+
+                            $veranstaltung_id = intval($result);
+
+                            if ($has_explicit_tag_row) {
+                                $tag_datum = '';
+                                if (!empty($data['tag_datum'])) {
+                                    $tag_timestamp = $parse_date($data['tag_datum']);
+                                    if ($tag_timestamp === false) {
+                                        $errors++;
+                                        $error_details[] = "Zeile {$row_number}: Ungültiges Tages-Datum '{$data['tag_datum']}'";
+                                        continue;
+                                    }
+                                    $tag_datum = date('Y-m-d', $tag_timestamp);
+                                }
+
+                                $tag_nummer = isset($data['tag_nummer']) && $data['tag_nummer'] !== '' ? intval($data['tag_nummer']) : 0;
+
+                                if ($tag_datum === '' && $tag_nummer > 0) {
+                                    $tag_datum = date('Y-m-d', strtotime($data['start_datum'] . ' +' . ($tag_nummer - 1) . ' day'));
+                                }
+
+                                if ($tag_datum === '') {
+                                    $tag_datum = $data['start_datum'];
+                                }
+
+                                if ($tag_nummer <= 0) {
+                                    $start_dt = new DateTime($data['start_datum']);
+                                    $tag_dt = new DateTime($tag_datum);
+                                    $tag_nummer = intval($start_dt->diff($tag_dt)->format('%a')) + 1;
+                                }
+
+                                $von_zeit = $normalize_time_value(isset($data['von_zeit']) ? $data['von_zeit'] : '', $row_number, 'von_zeit');
+                                $bis_zeit = $normalize_time_value(isset($data['bis_zeit']) ? $data['bis_zeit'] : '', $row_number, 'bis_zeit');
+                                if ($von_zeit === false || $bis_zeit === false) {
+                                    continue;
+                                }
+
+                                if ($von_zeit === '') {
+                                    $von_zeit = $dienst_von_zeit;
+                                }
+                                if ($bis_zeit === '') {
+                                    $bis_zeit = $dienst_bis_zeit;
+                                }
+
+                                $bis_datum = '';
+                                if (!empty($data['bis_datum'])) {
+                                    $bis_datum_ts = $parse_date($data['bis_datum']);
+                                    if ($bis_datum_ts === false) {
+                                        $errors++;
+                                        $error_details[] = "Zeile {$row_number}: Ungültiges bis_datum '{$data['bis_datum']}'";
+                                        continue;
+                                    }
+                                    $bis_datum = date('Y-m-d', $bis_datum_ts);
+                                }
+                                if ($bis_datum === '' && strcmp($bis_zeit, $von_zeit) < 0) {
+                                    $bis_datum = date('Y-m-d', strtotime($tag_datum . ' +1 day'));
+                                }
+                                if ($bis_datum === '') {
+                                    $bis_datum = $tag_datum;
+                                }
+
+                                $dienst_bis_datum = '';
+                                if (!empty($data['dienst_bis_datum'])) {
+                                    $dienst_bis_datum_ts = $parse_date($data['dienst_bis_datum']);
+                                    if ($dienst_bis_datum_ts === false) {
+                                        $errors++;
+                                        $error_details[] = "Zeile {$row_number}: Ungültiges dienst_bis_datum '{$data['dienst_bis_datum']}'";
+                                        continue;
+                                    }
+                                    $dienst_bis_datum = date('Y-m-d', $dienst_bis_datum_ts);
+                                }
+                                if ($dienst_bis_datum === '' && strcmp($dienst_bis_zeit, $dienst_von_zeit) < 0) {
+                                    $dienst_bis_datum = date('Y-m-d', strtotime($tag_datum . ' +1 day'));
+                                }
+                                if ($dienst_bis_datum === '') {
+                                    $dienst_bis_datum = $tag_datum;
+                                }
+
+                                $tag_payload = array(
+                                    'veranstaltung_id' => $veranstaltung_id,
+                                    'tag_datum' => $tag_datum,
+                                    'tag_nummer' => max(1, $tag_nummer),
+                                    'von_zeit' => $von_zeit,
+                                    'bis_zeit' => $bis_zeit,
+                                    'bis_datum' => $bis_datum,
+                                    'dienst_von_zeit' => $dienst_von_zeit,
+                                    'dienst_bis_zeit' => $dienst_bis_zeit,
+                                    'dienst_bis_datum' => $dienst_bis_datum,
+                                    'nur_dienst' => $parse_bool(isset($data['nur_dienst']) ? $data['nur_dienst'] : '', 0),
+                                    'notizen' => isset($data['notizen']) ? sanitize_textarea_field($data['notizen']) : ''
+                                );
+
+                                $tag_result = $db->add_veranstaltung_tag($tag_payload);
+                                if ($tag_result === false) {
+                                    $errors++;
+                                    $error_details[] = "Zeile {$row_number}: Veranstaltungstag konnte nicht gespeichert werden";
+                                }
+                            } else {
+                                $ensure_veranstaltung_tage($veranstaltung_id, $data['start_datum'], $data['end_datum'], $row_number, $dienst_von_zeit, $dienst_bis_zeit);
+                            }
                         } else {
                             $errors++;
                             $error_details[] = "Zeile {$row_number}: Fehler beim Erstellen von Veranstaltung '{$data['name']}'";
