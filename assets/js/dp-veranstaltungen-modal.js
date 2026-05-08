@@ -47,15 +47,26 @@
     
     $(document).ready(function() {
         console.log('Veranstaltungen Modal geladen');
+        console.log('dpAjax:', dpAjax);
+        console.log('window.openVeranstaltungKonfigurationModal:', window.openVeranstaltungKonfigurationModal);
         
         // Event-Listener für Konfigurationsbutton
         $(document).on('click', '.dp-config-btn', function(e) {
             e.preventDefault();
             const veranstaltungId = $(this).data('veranstaltung-id');
+            console.log('Config button clicked! ID:', veranstaltungId);
             if (veranstaltungId) {
                 window.openVeranstaltungKonfigurationModal(veranstaltungId);
+            } else {
+                console.error('No ID in data attribute');
             }
         });
+        
+        // Alternative: Test if function is callable globally
+        window.testConfigModal = function() {
+            console.log('Test function called');
+            window.openVeranstaltungKonfigurationModal(2);
+        };
     });
     
     /**
@@ -536,6 +547,12 @@
     window.openVeranstaltungKonfigurationModal = function(veranstaltungId) {
         console.log('openVeranstaltungKonfigurationModal called with ID:', veranstaltungId);
         
+        if (!veranstaltungId) {
+            console.error('No veranstaltung ID provided');
+            alert('Fehler: Keine Veranstaltung ausgewählt');
+            return;
+        }
+        
         $.ajax({
             url: dpAjax.ajaxurl,
             type: 'POST',
@@ -553,6 +570,7 @@
                     $('#vk_status').val(v.status || 'geplant');
                     $('#vk_mitarbeiter_anzeige_modus').val(v.mitarbeiter_anzeige_modus || 'verkuerzt');
                     $('#veranstaltung-konfiguration-modal').css('display', 'flex');
+                    console.log('Modal opened successfully');
                 } else {
                     console.error('AJAX response was not successful:', response);
                     alert('Fehler: Veranstaltung konnte nicht geladen werden.');
@@ -560,7 +578,7 @@
             },
             error: function(xhr, status, error) {
                 console.error('Configuration AJAX error:', error, status, xhr);
-                alert('Fehler beim Laden der Konfiguration.');
+                alert('Fehler beim Laden der Konfiguration: ' + error);
             }
         });
     };
