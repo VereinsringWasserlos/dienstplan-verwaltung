@@ -2378,6 +2378,10 @@ class Dienstplan_Admin
             $normalized_update['mitarbeiter_id'] = $mitarbeiter_id;
         }
 
+        if (array_key_exists('admin_only', $update_data)) {
+            $normalized_update['admin_only'] = intval($update_data['admin_only']) > 0 ? 1 : 0;
+        }
+
         if (empty($normalized_update)) {
             wp_send_json_error(array('message' => 'Keine gültigen Änderungen angegeben.'));
             return;

@@ -11,6 +11,19 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ---
 
+## [0.9.6.3] - 2026-05-08 🚀 Release: Mitbringen Admin-only in Modal & Multi-Edit
+
+### ✨ Neu
+
+- **Mitbringen-Modal (Backend) erweitert**: Feld `Admin-only` ist nun im Erstellen/Bearbeiten-Modal als Checkbox vorhanden und wird beim Speichern übernommen.
+- **Multi-Edit erweitert**: Neue Bulk-Aktion `Admin-only ändern` ergänzt, inklusive Auswahl `Ja/Nein`.
+
+### 🧹 Verbesserungen
+
+- **Backend-Verarbeitung für Bulk-Updates**: `ajax_bulk_update_mitbringen()` unterstützt jetzt `admin_only` explizit als Update-Feld.
+
+---
+
 ## [0.9.6.2] - 2026-05-08 🚀 Release: Mitbringen UX, Import/CSV und Release-Pipeline
 
 ### ✨ Neu

@@ -221,6 +221,7 @@ $nav_items = [
                         <option value="change_bereich"><?php _e('Bereich ändern', 'dienstplan-verwaltung'); ?></option>
                         <option value="change_person"><?php _e('Person ändern', 'dienstplan-verwaltung'); ?></option>
                         <option value="change_status"><?php _e('Status ändern', 'dienstplan-verwaltung'); ?></option>
+                        <option value="change_admin_only"><?php _e('Admin-only ändern', 'dienstplan-verwaltung'); ?></option>
                         <option value="delete"><?php _e('Löschen', 'dienstplan-verwaltung'); ?></option>
                     </select>
 
@@ -492,6 +493,15 @@ $nav_items = [
                         </td>
                     </tr>
                     <tr>
+                        <th><label for="mb_admin_only"><?php _e('Admin-only', 'dienstplan-verwaltung'); ?></label></th>
+                        <td>
+                            <label style="display:inline-flex; align-items:center; gap:0.5rem;">
+                                <input type="checkbox" id="mb_admin_only" name="admin_only" value="1">
+                                <?php _e('Nur Admins dürfen übernehmen/zuweisen', 'dienstplan-verwaltung'); ?>
+                            </label>
+                        </td>
+                    </tr>
+                    <tr>
                         <th><label for="mb_hinweis"><?php _e('Hinweis', 'dienstplan-verwaltung'); ?></label></th>
                         <td>
                             <textarea id="mb_hinweis" name="hinweis" rows="3" class="large-text" style="width:100%;"></textarea>
@@ -734,6 +744,7 @@ function openMitbringenModal() {
         jQuery('#mb_verein_id').val(String(selectedVerein));
     }
     jQuery('#mb_mitarbeiter_id').val('');
+    jQuery('#mb_admin_only').prop('checked', false);
 
     jQuery('#dp-mitbringen-modal').css('display', 'flex');
     return false;
@@ -777,6 +788,7 @@ function dpSaveMitbringen() {
         tag_id: jQuery('#mb_tag_id').val(),
         verein_id: jQuery('#mb_verein_id').val(),
         mitarbeiter_id: jQuery('#mb_mitarbeiter_id').val(),
+        admin_only: jQuery('#mb_admin_only').is(':checked') ? 1 : 0,
         bereich_name: bereichName,
         bezeichnung: jQuery('#mb_bezeichnung').val(),
         menge: '1',
@@ -842,6 +854,7 @@ function dpEditMitbringenFromPayload(item) {
     jQuery('#mb_bezeichnung').val(item.bezeichnung || '');
     jQuery('#mb_menge').val(1);
     jQuery('#mb_status').val(item.status || 'offen');
+    jQuery('#mb_admin_only').prop('checked', String(item.admin_only || '0') === '1');
     jQuery('#mb_hinweis').val(item.hinweis || '');
 
     dpLoadVeranstaltungTage(item.veranstaltung_id || '', item.tag_id || '');
@@ -1157,6 +1170,10 @@ jQuery(function($) {
         status: [
             { value: 'offen', label: '<?php echo esc_js(__('Offen', 'dienstplan-verwaltung')); ?>' },
             { value: 'vergeben', label: '<?php echo esc_js(__('Vergeben', 'dienstplan-verwaltung')); ?>' }
+        ],
+        adminOnly: [
+            { value: '0', label: '<?php echo esc_js(__('Nein', 'dienstplan-verwaltung')); ?>' },
+            { value: '1', label: '<?php echo esc_js(__('Ja', 'dienstplan-verwaltung')); ?>' }
         ]
     };
 
@@ -1178,6 +1195,8 @@ jQuery(function($) {
                 return dpMitbringenBulkOptions.personen;
             case 'change_status':
                 return dpMitbringenBulkOptions.status;
+            case 'change_admin_only':
+                return dpMitbringenBulkOptions.adminOnly;
             default:
                 return [];
         }
@@ -1282,6 +1301,12 @@ jQuery(function($) {
                 return;
             }
             updateData.status = actionValue;
+        } else if (action === 'change_admin_only') {
+            if (actionValue === '') {
+                alert('<?php echo esc_js(__('Bitte Admin-only Auswahl treffen.', 'dienstplan-verwaltung')); ?>');
+                return;
+            }
+            updateData.admin_only = actionValue;
         } else {
             alert('<?php echo esc_js(__('Unbekannte Aktion.', 'dienstplan-verwaltung')); ?>');
             return;
