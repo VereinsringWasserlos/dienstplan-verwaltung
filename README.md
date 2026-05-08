@@ -1,6 +1,6 @@
 # Dienstplan Verwaltung
 
-**Version:** 0.9.6.5 (Wochentag-Anzeige überall hinzugefügt)  
+**Version:** 0.9.6.6 (Redundanten Neu-Button entfernt)  
 **Requires at least:** WordPress 5.0  
 **Tested up to:** WordPress 6.4  
 **Requires PHP:** 7.2  

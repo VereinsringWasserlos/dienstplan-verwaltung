@@ -209,14 +209,6 @@ $nav_items = [
                 <span style="background: rgba(255,255,255,0.22); padding: 0.2rem 0.65rem; border-radius: 999px; font-size: 0.85rem; font-weight: 600;">
                     <?php echo count($mitbringen_items); ?>
                 </span>
-                <?php if (!$is_restricted_club_admin): ?>
-                    <div style="margin-left: auto;">
-                        <button type="button" class="button dp-header-ghost-button" onclick="return openMitbringenModal();">
-                            <span class="dashicons dashicons-plus-alt"></span>
-                            <?php _e('Neu', 'dienstplan-verwaltung'); ?>
-                        </button>
-                    </div>
-                <?php endif; ?>
             </h3>
             <?php if (!$is_restricted_club_admin): ?>
                 <div class="bulk-actions-toolbar dp-mitbringen-bulk-toolbar" style="background: #f9fafb; padding: 1rem; border: 1px solid #e5e7eb; border-bottom: none; display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">

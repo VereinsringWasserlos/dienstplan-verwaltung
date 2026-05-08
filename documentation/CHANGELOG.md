@@ -11,6 +11,14 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ---
 
+## [0.9.6.6] - 2026-05-08 🚀 Release: UI-Cleanup
+
+### 🧹 Verbesserungen
+
+- **Redundanten Neu-Button entfernt**: Der doppelte "Neu" Button im Postbox-Header der Mitbringen-Liste wurde entfernt. Der Hauptbutton im Filter-Bereich ist ausreichend.
+
+---
+
 ## [0.9.6.5] - 2026-05-08 🚀 Release: Wochentag-Anzeige überall hinzugefügt
 
 ### ✨ Neu
