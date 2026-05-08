@@ -3313,9 +3313,15 @@ class Dienstplan_Admin
 
     public function ajax_save_veranstaltung_konfiguration()
     {
+        while (ob_get_level() > 0) {
+            ob_end_clean();
+        }
+        ob_start();
+
         check_ajax_referer('dp_ajax_nonce', 'nonce');
 
         if (!Dienstplan_Roles::can_manage_events()) {
+            ob_end_clean();
             wp_send_json_error(array('message' => 'Keine Berechtigung'));
             return;
         }
@@ -3325,11 +3331,13 @@ class Dienstplan_Admin
 
         $veranstaltung_id = isset($_POST['veranstaltung_id']) ? intval($_POST['veranstaltung_id']) : 0;
         if ($veranstaltung_id <= 0) {
+            ob_end_clean();
             wp_send_json_error(array('message' => 'Ungültige Veranstaltung'));
             return;
         }
 
         if (!$this->current_user_can_access_veranstaltung($db, $veranstaltung_id)) {
+            ob_end_clean();
             wp_send_json_error(array('message' => 'Keine Berechtigung für diese Veranstaltung'));
             return;
         }
@@ -3354,6 +3362,8 @@ class Dienstplan_Admin
             array('%s', '%s'),
             array('%d')
         );
+
+        ob_end_clean();
 
         if ($result === false) {
             wp_send_json_error(array('message' => 'Konfiguration konnte nicht gespeichert werden'));
@@ -3415,9 +3425,16 @@ class Dienstplan_Admin
 
     public function ajax_get_veranstaltung_konfiguration()
     {
+        // Alle PHP-Ausgaben (Warnings/Notices) wegpuffern damit die JSON-Antwort sauber bleibt
+        while (ob_get_level() > 0) {
+            ob_end_clean();
+        }
+        ob_start();
+
         check_ajax_referer('dp_ajax_nonce', 'nonce');
 
         if (!Dienstplan_Roles::can_manage_events()) {
+            ob_end_clean();
             wp_send_json_error(array('message' => 'Keine Berechtigung'));
             return;
         }
@@ -3428,11 +3445,14 @@ class Dienstplan_Admin
         $veranstaltung_id = intval($_POST['veranstaltung_id']);
 
         if (!$this->current_user_can_access_veranstaltung($db, $veranstaltung_id)) {
+            ob_end_clean();
             wp_send_json_error(array('message' => 'Keine Berechtigung für diese Veranstaltung'));
             return;
         }
 
         $veranstaltung = $db->get_veranstaltung($veranstaltung_id);
+
+        ob_end_clean();
 
         if ($veranstaltung) {
             // Nur notwendige Felder für Konfiguration zurückgeben - KEIN Laden von Tagen, Vereinen, Verantwortlichen
