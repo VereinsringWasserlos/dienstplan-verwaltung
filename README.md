@@ -1,6 +1,6 @@
 # Dienstplan Verwaltung
 
-**Version:** 0.9.6.4 (Kompakt als Standardansicht & FE-Übernehmen aufgeräumt)  
+**Version:** 0.9.6.5 (Wochentag-Anzeige überall hinzugefügt)  
 **Requires at least:** WordPress 5.0  
 **Tested up to:** WordPress 6.4  
 **Requires PHP:** 7.2  

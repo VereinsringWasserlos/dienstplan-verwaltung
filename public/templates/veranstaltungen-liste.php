@@ -167,8 +167,20 @@ if ($selected_verein_id) {
                         }
                         
                         // Formatiere Datum
-                        $start_datum = !empty($veranstaltung->start_datum) ? date_i18n('d.m.Y', strtotime($veranstaltung->start_datum)) : '';
-                        $end_datum = !empty($veranstaltung->end_datum) ? date_i18n('d.m.Y', strtotime($veranstaltung->end_datum)) : '';
+                        if (!empty($veranstaltung->start_datum)) {
+                            $dp_ts_vl1 = strtotime($veranstaltung->start_datum);
+                            $dp_wt_vl1 = ['1'=>'Mo','2'=>'Di','3'=>'Mi','4'=>'Do','5'=>'Fr','6'=>'Sa','7'=>'So'][date('N', $dp_ts_vl1)] ?? '';
+                            $start_datum = $dp_wt_vl1 . ' ' . date_i18n('d.m.Y', $dp_ts_vl1);
+                        } else {
+                            $start_datum = '';
+                        }
+                        if (!empty($veranstaltung->end_datum)) {
+                            $dp_ts_vl2 = strtotime($veranstaltung->end_datum);
+                            $dp_wt_vl2 = ['1'=>'Mo','2'=>'Di','3'=>'Mi','4'=>'Do','5'=>'Fr','6'=>'Sa','7'=>'So'][date('N', $dp_ts_vl2)] ?? '';
+                            $end_datum = $dp_wt_vl2 . ' ' . date_i18n('d.m.Y', $dp_ts_vl2);
+                        } else {
+                            $end_datum = '';
+                        }
                         $datum_text = $start_datum;
                         if ($end_datum && $end_datum !== $start_datum) {
                             $datum_text .= ' - ' . $end_datum;

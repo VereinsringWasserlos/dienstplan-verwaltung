@@ -616,7 +616,7 @@ if ($dienst_start_dt !== null && $dienst_end_dt !== null) {
         $filter_tag_raw = $filter_tag_obj->tag_datum ?? ($filter_tag_obj->datum ?? null);
         $filter_tage[] = array(
             'id' => intval($filter_tag_id),
-            'label' => 'Tag ' . $filter_tag_counter . ($filter_tag_raw ? ' (' . date('d.m.', strtotime($filter_tag_raw)) . ')' : '')
+            'label' => 'Tag ' . $filter_tag_counter . ($filter_tag_raw ? ' (' . (['1'=>'Mo','2'=>'Di','3'=>'Mi','4'=>'Do','5'=>'Fr','6'=>'Sa','7'=>'So'][date('N', strtotime($filter_tag_raw))] ?? '') . ' ' . date('d.m.', strtotime($filter_tag_raw)) . ')' : '')
         );
         $filter_tag_counter++;
     }

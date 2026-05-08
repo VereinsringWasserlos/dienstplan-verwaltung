@@ -165,9 +165,13 @@ if ($selected_verein) {
                         <?php foreach ($verein_events as $event):
                             $event_period = '';
                             if (!empty($event->start_datum)) {
-                                $event_period = date('d.m.Y', strtotime($event->start_datum));
+                                $dp_ts_vo1 = strtotime($event->start_datum);
+                                $dp_wt_vo1 = ['1'=>'Mo','2'=>'Di','3'=>'Mi','4'=>'Do','5'=>'Fr','6'=>'Sa','7'=>'So'][date('N', $dp_ts_vo1)] ?? '';
+                                $event_period = $dp_wt_vo1 . ' ' . date('d.m.Y', $dp_ts_vo1);
                                 if (!empty($event->end_datum) && $event->end_datum !== $event->start_datum) {
-                                    $event_period .= ' – ' . date('d.m.Y', strtotime($event->end_datum));
+                                    $dp_ts_vo2 = strtotime($event->end_datum);
+                                    $dp_wt_vo2 = ['1'=>'Mo','2'=>'Di','3'=>'Mi','4'=>'Do','5'=>'Fr','6'=>'Sa','7'=>'So'][date('N', $dp_ts_vo2)] ?? '';
+                                    $event_period .= ' – ' . $dp_wt_vo2 . ' ' . date('d.m.Y', $dp_ts_vo2);
                                 }
                             }
 

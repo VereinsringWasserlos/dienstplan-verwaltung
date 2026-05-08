@@ -11,6 +11,24 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ---
 
+## [0.9.6.5] - 2026-05-08 🚀 Release: Wochentag-Anzeige überall hinzugefügt
+
+### ✨ Neu
+
+- **Wochentag in allen Datums-Anzeigen**: Konsistente 2-stellige Wochentag-Präfixe (Mo/Di/Mi/Do/Fr/Sa/So) in:
+  - Mitbringen-Admin: Tag-Dropdown (Bulk-Aktion)
+  - Mitbringen-Admin: Veranstaltungs-Dropdowns (Filter & Modal)
+  - Dienste-Admin: Veranstaltungs-Dropdown
+  - Veranstaltungs-Liste (Frontend): Start- & End-Datums-Anzeige
+  - Vereins-Overview (Frontend): Event-Perioden-Anzeige
+  - Veranstaltungs-Filter: Tag-Dropdown-Anzeige
+
+### 🧹 Verbesserungen
+
+- **Konsistente Datums-Formatierung**: Alle Datum-Anzeigen folgen jetzt dem Format "Mo 05.07.2026" für bessere Lesbarkeit und Orientierung.
+
+---
+
 ## [0.9.6.4] - 2026-05-08 🚀 Release: Kompakt-Default & FE-Übernehmen aufgeräumt
 
 ### ✨ Neu

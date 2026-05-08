@@ -41,7 +41,13 @@ $mitbringen_tage = $selected_veranstaltung > 0
 
 $bulk_tag_options = array();
 foreach ((array) $mitbringen_tage as $tag) {
-    $tag_datum = !empty($tag->tag_datum) ? date_i18n('d.m.Y', strtotime($tag->tag_datum)) : '';
+    if (!empty($tag->tag_datum)) {
+        $dp_ts_bt = strtotime($tag->tag_datum);
+        $dp_wt_bt = ['1'=>'Mo','2'=>'Di','3'=>'Mi','4'=>'Do','5'=>'Fr','6'=>'Sa','7'=>'So'][date('N', $dp_ts_bt)] ?? '';
+        $tag_datum = $dp_wt_bt . ' ' . date_i18n('d.m.Y', $dp_ts_bt);
+    } else {
+        $tag_datum = '';
+    }
     $bulk_tag_options[] = array(
         'value' => intval($tag->id ?? 0),
         'label' => 'Tag ' . intval($tag->tag_nummer ?? 0) . ($tag_datum ? ': ' . $tag_datum : ''),
@@ -146,7 +152,11 @@ $nav_items = [
                     <?php foreach ($veranstaltungen as $v): ?>
                         <option value="<?php echo intval($v->id); ?>" <?php selected($selected_veranstaltung, intval($v->id)); ?>>
                             <?php echo esc_html($v->name); ?>
-                            (<?php echo date_i18n('d.m.Y', strtotime($v->start_datum)); ?>)
+                            (<?php 
+                                $dp_ts_ev1 = strtotime($v->start_datum);
+                                $dp_wt_ev1 = ['1'=>'Mo','2'=>'Di','3'=>'Mi','4'=>'Do','5'=>'Fr','6'=>'Sa','7'=>'So'][date('N', $dp_ts_ev1)] ?? '';
+                                echo $dp_wt_ev1 . ' ' . date_i18n('d.m.Y', $dp_ts_ev1);
+                            ?>)
                         </option>
                     <?php endforeach; ?>
                 </select>
@@ -403,7 +413,11 @@ $nav_items = [
                                 <option value=""><?php _e('-- Bitte wählen --', 'dienstplan-verwaltung'); ?></option>
                                 <?php foreach ($veranstaltungen as $v): ?>
                                     <option value="<?php echo intval($v->id); ?>" <?php selected($selected_veranstaltung, intval($v->id)); ?>>
-                                        <?php echo esc_html($v->name); ?> (<?php echo date_i18n('d.m.Y', strtotime($v->start_datum)); ?>)
+                                        <?php echo esc_html($v->name); ?> (<?php 
+                                            $dp_ts_ev3 = strtotime($v->start_datum);
+                                            $dp_wt_ev3 = ['1'=>'Mo','2'=>'Di','3'=>'Mi','4'=>'Do','5'=>'Fr','6'=>'Sa','7'=>'So'][date('N', $dp_ts_ev3)] ?? '';
+                                            echo $dp_wt_ev3 . ' ' . date_i18n('d.m.Y', $dp_ts_ev3);
+                                        ?>)
                                     </option>
                                 <?php endforeach; ?>
                             </select>

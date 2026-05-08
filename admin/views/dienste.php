@@ -174,7 +174,11 @@ $nav_items = [
                     <?php foreach ($veranstaltungen as $v): ?>
                         <option value="<?php echo $v->id; ?>" <?php selected($selected_veranstaltung, $v->id); ?>>
                             <?php echo esc_html($v->name); ?>
-                            (<?php echo date_i18n('d.m.Y', strtotime($v->start_datum)); ?>)
+                            (<?php 
+                                $dp_ts_di = strtotime($v->start_datum);
+                                $dp_wt_di = ['1'=>'Mo','2'=>'Di','3'=>'Mi','4'=>'Do','5'=>'Fr','6'=>'Sa','7'=>'So'][date('N', $dp_ts_di)] ?? '';
+                                echo $dp_wt_di . ' ' . date_i18n('d.m.Y', $dp_ts_di);
+                            ?>)
                         </option>
                     <?php endforeach; ?>
                 </select>
