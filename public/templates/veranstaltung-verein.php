@@ -141,40 +141,70 @@ foreach ($services as $service) {
 }
 ksort($dienste_nach_tagen);
 
-$mitbringen_nach_tagen = array();
+// Gruppiere Mitbringen nach Verein UND Tag
+$mitbringen_nach_verein_und_tagen = array();
+$mitbringen_vereine_map = array(); // verein_id => verein_obj (für Rendering)
+
 foreach ($mitbringen_items as $mitbringen_item) {
     if (!empty($mitbringen_item->admin_only) && !$can_manage_dienste) {
         continue;
     }
 
+    $mitbringen_verein_id = intval($mitbringen_item->verein_id ?? 0);
     $mitbringen_tag_id = intval($mitbringen_item->tag_id ?? 0);
-    if (!isset($mitbringen_nach_tagen[$mitbringen_tag_id])) {
-        $mitbringen_nach_tagen[$mitbringen_tag_id] = array();
+    
+    // Erstelle Verein-Ebene wenn nicht vorhanden
+    if (!isset($mitbringen_nach_verein_und_tagen[$mitbringen_verein_id])) {
+        $mitbringen_nach_verein_und_tagen[$mitbringen_verein_id] = array();
     }
-    $mitbringen_nach_tagen[$mitbringen_tag_id][] = $mitbringen_item;
+    
+    // Erstelle Tag-Ebene wenn nicht vorhanden
+    if (!isset($mitbringen_nach_verein_und_tagen[$mitbringen_verein_id][$mitbringen_tag_id])) {
+        $mitbringen_nach_verein_und_tagen[$mitbringen_verein_id][$mitbringen_tag_id] = array();
+    }
+    
+    $mitbringen_nach_verein_und_tagen[$mitbringen_verein_id][$mitbringen_tag_id][] = $mitbringen_item;
 }
-ksort($mitbringen_nach_tagen);
 
-foreach ($mitbringen_nach_tagen as $tag_id => $tag_items) {
-    usort($tag_items, function ($a, $b) {
-        $a_offen = (($a->status ?? 'offen') === 'offen') ? 0 : 1;
-        $b_offen = (($b->status ?? 'offen') === 'offen') ? 0 : 1;
+// Sortiere nach Verein
+ksort($mitbringen_nach_verein_und_tagen);
 
-        if ($a_offen !== $b_offen) {
-            return $a_offen <=> $b_offen;
+// Sortiere Tags innerhalb jeden Vereins und sortiere Items
+foreach ($mitbringen_nach_verein_und_tagen as $verein_id => $tage_array) {
+    ksort($tage_array);
+    
+    foreach ($tage_array as $tag_id => $tag_items) {
+        usort($tag_items, function ($a, $b) {
+            $a_offen = (($a->status ?? 'offen') === 'offen') ? 0 : 1;
+            $b_offen = (($b->status ?? 'offen') === 'offen') ? 0 : 1;
+
+            if ($a_offen !== $b_offen) {
+                return $a_offen <=> $b_offen;
+            }
+
+            $a_name = mb_strtolower(trim((string) ($a->bezeichnung ?? '')));
+            $b_name = mb_strtolower(trim((string) ($b->bezeichnung ?? '')));
+
+            if ($a_name === $b_name) {
+                return intval($a->id ?? 0) <=> intval($b->id ?? 0);
+            }
+
+            return $a_name <=> $b_name;
+        });
+
+        $mitbringen_nach_verein_und_tagen[$verein_id][$tag_id] = $tag_items;
+    }
+}
+
+// Erstelle auch die flache Struktur für Backward-Compatibility
+$mitbringen_nach_tagen = array();
+foreach ($mitbringen_nach_verein_und_tagen as $verein_id => $tage_array) {
+    foreach ($tage_array as $tag_id => $tag_items) {
+        if (!isset($mitbringen_nach_tagen[$tag_id])) {
+            $mitbringen_nach_tagen[$tag_id] = array();
         }
-
-        $a_name = mb_strtolower(trim((string) ($a->bezeichnung ?? '')));
-        $b_name = mb_strtolower(trim((string) ($b->bezeichnung ?? '')));
-
-        if ($a_name === $b_name) {
-            return intval($a->id ?? 0) <=> intval($b->id ?? 0);
-        }
-
-        return $a_name <=> $b_name;
-    });
-
-    $mitbringen_nach_tagen[$tag_id] = $tag_items;
+        $mitbringen_nach_tagen[$tag_id] = array_merge($mitbringen_nach_tagen[$tag_id], $tag_items);
+    }
 }
 
 // Bereichsgruppen laden (für Frontend-Gruppierung nach Tätigkeit)
@@ -1727,88 +1757,111 @@ if ($dienst_start_dt !== null && $dienst_end_dt !== null) {
                 </div>
                 <div class="dp-modal-body">
                     <div class="dp-mitbringen-tabs">
-                        <?php foreach ($mitbringen_nach_tagen as $mitbringen_tag_id => $mitbringen_tag_items): ?>
-                            <?php
-                            $mitbringen_tag_obj = $tage_by_id[intval($mitbringen_tag_id)] ?? null;
-                            $mitbringen_tag_raw = $mitbringen_tag_obj->tag_datum ?? ($mitbringen_tag_obj->datum ?? null);
-                            $mitbringen_tag_label = $mitbringen_tag_raw ? date('d.m.Y', strtotime($mitbringen_tag_raw)) : __('Ohne Tag', 'dienstplan-verwaltung');
-                            ?>
-                            <button
-                                type="button"
-                                class="dp-mitbringen-tab"
-                                data-mitbringen-tag="<?php echo intval($mitbringen_tag_id); ?>"
-                                onclick="dpSwitchMitbringenTag(<?php echo intval($mitbringen_tag_id); ?>)"
-                            >
-                                <?php echo esc_html($mitbringen_tag_label); ?>
-                            </button>
+                        <?php 
+                        $first_tab = true;
+                        foreach ($mitbringen_nach_verein_und_tagen as $mitbringen_verein_id => $tage_array):
+                            $mitbringen_verein_obj = $db->get_verein(intval($mitbringen_verein_id));
+                            $mitbringen_verein_name = $mitbringen_verein_obj ? ($mitbringen_verein_obj->name ?? '') : __('Unbekannter Verein', 'dienstplan-verwaltung');
+                            
+                            foreach ($tage_array as $mitbringen_tag_id => $mitbringen_tag_items):
+                                $mitbringen_tag_obj = $tage_by_id[intval($mitbringen_tag_id)] ?? null;
+                                $mitbringen_tag_raw = $mitbringen_tag_obj->tag_datum ?? ($mitbringen_tag_obj->datum ?? null);
+                                $mitbringen_tag_label = $mitbringen_tag_raw ? date('d.m.Y', strtotime($mitbringen_tag_raw)) : __('Ohne Tag', 'dienstplan-verwaltung');
+                                $tab_key = 'mb_' . intval($mitbringen_verein_id) . '_' . intval($mitbringen_tag_id);
+                                ?>
+                                <button
+                                    type="button"
+                                    class="dp-mitbringen-tab<?php echo $first_tab ? ' active' : ''; ?>"
+                                    data-mitbringen-tab="<?php echo esc_attr($tab_key); ?>"
+                                    onclick="dpSwitchMitbringenTab('<?php echo esc_attr($tab_key); ?>')"
+                                >
+                                    <strong><?php echo esc_html($mitbringen_verein_name); ?></strong>
+                                    <span style="opacity: 0.7;">—</span>
+                                    <?php echo esc_html($mitbringen_tag_label); ?>
+                                </button>
+                                <?php $first_tab = false; ?>
+                            <?php endforeach; ?>
                         <?php endforeach; ?>
                     </div>
 
-                    <?php foreach ($mitbringen_nach_tagen as $mitbringen_tag_id => $mitbringen_tag_items): ?>
-                        <div class="dp-mitbringen-panel" data-mitbringen-panel="<?php echo intval($mitbringen_tag_id); ?>" style="display:none;">
-                            <table class="dp-dienste-table">
-                                <thead>
-                                    <tr>
-                                        <th><?php _e('Bereich', 'dienstplan-verwaltung'); ?></th>
-                                        <th><?php _e('Mitbringen', 'dienstplan-verwaltung'); ?></th>
-                                        <th><?php _e('Menge', 'dienstplan-verwaltung'); ?></th>
-                                        <th><?php _e('Person', 'dienstplan-verwaltung'); ?></th>
-                                        <th><?php _e('Hinweis', 'dienstplan-verwaltung'); ?></th>
-                                        <th><?php _e('Status', 'dienstplan-verwaltung'); ?></th>
-                                        <th><?php _e('Aktion', 'dienstplan-verwaltung'); ?></th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php foreach ($mitbringen_tag_items as $mitbringen_item): ?>
-                                        <?php
-                                        $mitbringen_status = ($mitbringen_item->status ?? 'offen') === 'vergeben' ? __('Vergeben', 'dienstplan-verwaltung') : __('Offen', 'dienstplan-verwaltung');
-                                        $mitbringen_status_class = ($mitbringen_item->status ?? 'offen') === 'vergeben' ? 'full' : 'open';
-                                        $menge_value = intval($mitbringen_item->menge ?? 1);
-                                        $einheit_value = trim((string) ($mitbringen_item->einheit ?? ''));
-                                        $is_my_mitbringen = ($current_mitarbeiter_id > 0 && intval($mitbringen_item->mitarbeiter_id ?? 0) === intval($current_mitarbeiter_id));
-                                        ?>
+                    <?php 
+                    $first_panel = true;
+                    foreach ($mitbringen_nach_verein_und_tagen as $mitbringen_verein_id => $tage_array):
+                        $mitbringen_verein_obj = $db->get_verein(intval($mitbringen_verein_id));
+                        $mitbringen_verein_name = $mitbringen_verein_obj ? ($mitbringen_verein_obj->name ?? '') : __('Unbekannter Verein', 'dienstplan-verwaltung');
+                        
+                        foreach ($tage_array as $mitbringen_tag_id => $mitbringen_tag_items):
+                            $tab_key = 'mb_' . intval($mitbringen_verein_id) . '_' . intval($mitbringen_tag_id);
+                            ?>
+                            <div class="dp-mitbringen-panel" data-mitbringen-panel="<?php echo esc_attr($tab_key); ?>" style="display:<?php echo $first_panel ? 'block' : 'none'; ?>;">
+                                <div style="margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px solid #e5e7eb;">
+                                    <strong><?php echo esc_html($mitbringen_verein_name); ?></strong>
+                                </div>
+                                <table class="dp-dienste-table">
+                                    <thead>
                                         <tr>
-                                            <td><?php echo esc_html($mitbringen_item->mitbringen_bereich_name ?? ''); ?></td>
-                                            <td><strong><?php echo esc_html($mitbringen_item->bezeichnung ?? ''); ?></strong></td>
-                                            <td><?php echo esc_html($menge_value . ($einheit_value !== '' ? ' ' . $einheit_value : '')); ?></td>
-                                            <td>
-                                                <?php if (!empty(trim((string) ($mitbringen_item->mitarbeiter_name ?? '')))): ?>
-                                                    <?php echo esc_html(trim((string) $mitbringen_item->mitarbeiter_name)); ?>
-                                                <?php else: ?>
-                                                    <span class="dp-empty">—</span>
-                                                <?php endif; ?>
-                                            </td>
-                                            <td>
-                                                <?php if (!empty($mitbringen_item->hinweis)): ?>
-                                                    <span class="dp-dienst-hint"><?php echo esc_html($mitbringen_item->hinweis); ?></span>
-                                                <?php else: ?>
-                                                    <span class="dp-empty">—</span>
-                                                <?php endif; ?>
-                                                <?php if (!empty($mitbringen_item->besetzung_info)): ?>
-                                                    <div style="margin-top: 0.25rem;"><span class="dp-dienst-hint"><?php echo esc_html($mitbringen_item->besetzung_info); ?></span></div>
-                                                <?php endif; ?>
-                                            </td>
-                                            <td><span class="dp-status-badge <?php echo esc_attr($mitbringen_status_class); ?>"><?php echo esc_html($mitbringen_status); ?></span></td>
-                                            <td>
-                                                <?php if (($mitbringen_item->status ?? 'offen') === 'offen'): ?>
-                                                    <button
-                                                        type="button"
-                                                        class="dp-btn-mitbringen-uebernehmen"
-                                                        data-mitbringen-id="<?php echo intval($mitbringen_item->id); ?>"
-                                                    >
-                                                        Übernehmen
-                                                    </button>
-                                                <?php elseif ($is_my_mitbringen): ?>
-                                                    <span class="dp-mitbringen-action-own">von dir</span>
-                                                <?php else: ?>
-                                                    <span class="dp-empty">—</span>
-                                                <?php endif; ?>
-                                            </td>
+                                            <th><?php _e('Bereich', 'dienstplan-verwaltung'); ?></th>
+                                            <th><?php _e('Mitbringen', 'dienstplan-verwaltung'); ?></th>
+                                            <th><?php _e('Menge', 'dienstplan-verwaltung'); ?></th>
+                                            <th><?php _e('Person', 'dienstplan-verwaltung'); ?></th>
+                                            <th><?php _e('Hinweis', 'dienstplan-verwaltung'); ?></th>
+                                            <th><?php _e('Status', 'dienstplan-verwaltung'); ?></th>
+                                            <th><?php _e('Aktion', 'dienstplan-verwaltung'); ?></th>
                                         </tr>
-                                    <?php endforeach; ?>
-                                </tbody>
-                            </table>
-                        </div>
+                                    </thead>
+                                    <tbody>
+                                        <?php foreach ($mitbringen_tag_items as $mitbringen_item): ?>
+                                            <?php
+                                            $mitbringen_status = ($mitbringen_item->status ?? 'offen') === 'vergeben' ? __('Vergeben', 'dienstplan-verwaltung') : __('Offen', 'dienstplan-verwaltung');
+                                            $mitbringen_status_class = ($mitbringen_item->status ?? 'offen') === 'vergeben' ? 'full' : 'open';
+                                            $menge_value = intval($mitbringen_item->menge ?? 1);
+                                            $einheit_value = trim((string) ($mitbringen_item->einheit ?? ''));
+                                            $is_my_mitbringen = ($current_mitarbeiter_id > 0 && intval($mitbringen_item->mitarbeiter_id ?? 0) === intval($current_mitarbeiter_id));
+                                            ?>
+                                            <tr>
+                                                <td><?php echo esc_html($mitbringen_item->mitbringen_bereich_name ?? ''); ?></td>
+                                                <td><strong><?php echo esc_html($mitbringen_item->bezeichnung ?? ''); ?></strong></td>
+                                                <td><?php echo esc_html($menge_value . ($einheit_value !== '' ? ' ' . $einheit_value : '')); ?></td>
+                                                <td>
+                                                    <?php if (!empty(trim((string) ($mitbringen_item->mitarbeiter_name ?? '')))): ?>
+                                                        <?php echo esc_html(trim((string) $mitbringen_item->mitarbeiter_name)); ?>
+                                                    <?php else: ?>
+                                                        <span class="dp-empty">—</span>
+                                                    <?php endif; ?>
+                                                </td>
+                                                <td>
+                                                    <?php if (!empty($mitbringen_item->hinweis)): ?>
+                                                        <span class="dp-dienst-hint"><?php echo esc_html($mitbringen_item->hinweis); ?></span>
+                                                    <?php else: ?>
+                                                        <span class="dp-empty">—</span>
+                                                    <?php endif; ?>
+                                                    <?php if (!empty($mitbringen_item->besetzung_info)): ?>
+                                                        <div style="margin-top: 0.25rem;"><span class="dp-dienst-hint"><?php echo esc_html($mitbringen_item->besetzung_info); ?></span></div>
+                                                    <?php endif; ?>
+                                                </td>
+                                                <td><span class="dp-status-badge <?php echo esc_attr($mitbringen_status_class); ?>"><?php echo esc_html($mitbringen_status); ?></span></td>
+                                                <td>
+                                                    <?php if (($mitbringen_item->status ?? 'offen') === 'offen'): ?>
+                                                        <button
+                                                            type="button"
+                                                            class="dp-btn-mitbringen-uebernehmen"
+                                                            data-mitbringen-id="<?php echo intval($mitbringen_item->id); ?>"
+                                                        >
+                                                            Übernehmen
+                                                        </button>
+                                                    <?php elseif ($is_my_mitbringen): ?>
+                                                        <span class="dp-mitbringen-action-own">von dir</span>
+                                                    <?php else: ?>
+                                                        <span class="dp-empty">—</span>
+                                                    <?php endif; ?>
+                                                </td>
+                                            </tr>
+                                        <?php endforeach; ?>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <?php $first_panel = false; ?>
+                        <?php endforeach; ?>
                     <?php endforeach; ?>
                 </div>
                 <div class="dp-modal-footer">
@@ -2040,20 +2093,20 @@ window.dpCloseLoggedInModal = function() {
     }
 };
 
-window.dpSwitchMitbringenTag = function(tagId) {
-    tagId = parseInt(tagId || '0', 10);
-    if (!tagId) {
+window.dpSwitchMitbringenTab = function(tabKey) {
+    tabKey = (tabKey || '').toString();
+    if (!tabKey) {
         return;
     }
 
     document.querySelectorAll('.dp-mitbringen-tab').forEach(function(tab) {
-        var isActive = parseInt(tab.getAttribute('data-mitbringen-tag') || '0', 10) === tagId;
+        var isActive = tab.getAttribute('data-mitbringen-tab') === tabKey;
         tab.classList.toggle('active', isActive);
     });
 
     document.querySelectorAll('.dp-mitbringen-panel').forEach(function(panel) {
-        var isActive = parseInt(panel.getAttribute('data-mitbringen-panel') || '0', 10) === tagId;
-        panel.style.display = isActive ? '' : 'none';
+        var isActive = panel.getAttribute('data-mitbringen-panel') === tabKey;
+        panel.style.display = isActive ? 'block' : 'none';
     });
 };
 
@@ -2071,8 +2124,10 @@ window.dpOpenMitbringenModal = function(tagId) {
     jQuery('body').css('overflow', 'hidden');
 
     var firstTab = document.querySelector('.dp-mitbringen-tab');
-    var firstTagId = firstTab ? parseInt(firstTab.getAttribute('data-mitbringen-tag') || '0', 10) : 0;
-    window.dpSwitchMitbringenTag(tagId || firstTagId);
+    var firstTabKey = firstTab ? firstTab.getAttribute('data-mitbringen-tab') : null;
+    if (firstTabKey) {
+        window.dpSwitchMitbringenTab(firstTabKey);
+    }
     return false;
 };
 

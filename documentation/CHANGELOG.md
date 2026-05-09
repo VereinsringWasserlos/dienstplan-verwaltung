@@ -11,7 +11,22 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ---
 
-## [0.9.7.1] - 2026-05-08 🚀 Release: Versions-Hotfix
+## [0.9.7.6] - 2026-05-09 🚀 Release: Mitbringen-Gruppierung nach Verein & Tag
+
+### ✨ Neu
+
+- **Mitbringen nach Verein und Tag gruppiert**: Mitbringen-Modal zeigt Items jetzt hierarchisch sortiert nach Verein (Club) → Tag, für bessere Organisation.
+- **Verbesserte Tab-Anzeige**: Tab-Label zeigen jetzt "Verein — Datum" Format für schnellere Orientierung.
+- **Auto-Filter für Single-Event**: Wenn nur eine offene Veranstaltung existiert, wird diese automatisch im Portal vorausgewählt ohne Filter-Dropdown.
+
+### 🧹 Verbesserungen
+
+- **Frontend Portal-Navigation**: Weniger Klicks wenn nur eine Veranstaltung offen ist (Redirect zur Event-Detail-View).
+- **Mitbringen-Modal UX**: Klarere Struktur mit optionalem Verein-Header in jedem Tab-Panel.
+
+---
+
+## [0.9.7.5] - 2026-05-09 🚀 Release: AJAX-Performance & Schema-Guards
 
 ### 🧹 Verbesserungen
 

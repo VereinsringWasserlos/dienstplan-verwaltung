@@ -108,6 +108,9 @@ if ($is_logged_in && in_array(Dienstplan_Roles::ROLE_CREW, $current_user->roles,
     }
 }
 
+// Base URL für Links
+$hub_base_url = get_permalink();
+
 // View-Handling
 $view = isset($_GET['view']) ? sanitize_text_field($_GET['view']) : 'hub';
 
@@ -121,6 +124,18 @@ if ($view === 'profil' && $is_logged_in) {
     return;
 }
 
+// Auto-Filter: Wenn nur eine offene Veranstaltung vorhanden, automatisch weiterleiten
+if (empty($_GET['veranstaltung_id']) && count($aktuelle_veranstaltungen) === 1) {
+    $single_event = reset($aktuelle_veranstaltungen);
+    $auto_view_mode = in_array($view, array('kachel', 'kompakt', 'timeline'), true) ? $view : 'kachel';
+    $redirect_url = add_query_arg(array(
+        'veranstaltung_id' => intval($single_event->id),
+        'view' => $auto_view_mode
+    ), $hub_base_url ?? get_permalink());
+    wp_redirect($redirect_url);
+    exit;
+}
+
 if (in_array($view, array('anmeldung', 'details', 'kachel', 'kompakt', 'timeline'), true) && !empty($_GET['veranstaltung_id'])) {
     $hub_veranstaltung_id = intval($_GET['veranstaltung_id']);
     $hub_verein_id = isset($_GET['verein_id']) ? intval($_GET['verein_id']) : 0;
@@ -128,8 +143,6 @@ if (in_array($view, array('anmeldung', 'details', 'kachel', 'kompakt', 'timeline
     echo do_shortcode('[dienstplan veranstaltung_id="' . $hub_veranstaltung_id . '" verein_id="' . $hub_verein_id . '" view="' . $hub_view_mode . '"]');
     return;
 }
-
-$hub_base_url = get_permalink();
 ?>
 
 <div class="dp-hub-container">
